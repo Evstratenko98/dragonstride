@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f1b8276d416a4a0aad600b081b36fdf, type: 3}
+  m_Name: GameConfig
+  m_EditorClassIdentifier: Assembly-CSharp::ConfigScriptableObject
+  CELL_SIZE: 10
+  FIELD_WIDTH: 3
+  FIELD_HEIGHT: 3
+  EXTRA_CONNECTION_CHANCE: 0.2
+  CHARACTER_SPEED: 2.5
+  CHARACTER_HEIGHT: 1.1
