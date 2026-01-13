@@ -1,19 +1,18 @@
 using UnityEngine;
 using UnityEngine.UI;
 using VContainer;
-using VContainer.Unity;
 
-public class UIScope : LifetimeScope
+public class UIScope : MonoBehaviour
 {
     [SerializeField] private CharacterMenuView characterMenuView;
     [SerializeField] private FinishGameView finishGameView;
     
-    protected override void Configure(IContainerBuilder builder)
+    public void Install(IContainerBuilder builder)
     {
-        // builder.RegisterComponent(characterMenuView);
+        builder.RegisterComponent(characterMenuView);
         builder.RegisterComponent(finishGameView);
-        
-        // builder.RegisterEntryPoint<CharacterMenuController>();
+
+        builder.RegisterEntryPoint<CharacterMenuController>();
         builder.RegisterEntryPoint<FinishGameController>();
     }
 }

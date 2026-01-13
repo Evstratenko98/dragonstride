@@ -5,7 +5,7 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
-public class CharacterController : IPostInitializable, ITickable, IDisposable
+public class CharacterController : ICharacterController
 {
     private readonly ICharacterService _characterService;
     private readonly IEventBus _eventBus;

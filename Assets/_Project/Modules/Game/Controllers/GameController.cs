@@ -12,8 +12,8 @@ public class GameController : IGameController, IPostInitializable, IDisposable, 
     private IDisposable _resetButtonSub;
 
     // Controllers
-    private FieldController _fieldController;
-    private CharacterController _characterController;
+    private IFieldController _fieldController;
+    private ICharacterController _characterController;
     private ITurnController _turnController;
 
     private IReadOnlyList<ICharacterInstance> _players;
@@ -31,8 +31,8 @@ public class GameController : IGameController, IPostInitializable, IDisposable, 
     public GameController(
         IEventBus eventBus, 
         ITurnController turnController,
-        FieldController fieldController,
-        CharacterController characterController    
+        IFieldController fieldController,
+        ICharacterController characterController    
     )
     {
         _eventBus = eventBus;

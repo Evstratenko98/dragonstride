@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
-using System.Linq;
 
-public class FieldController
+public class FieldController : IFieldController
 {
     private readonly ConfigScriptableObject _config;
     private readonly IFieldService _fieldService;

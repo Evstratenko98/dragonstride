@@ -147,11 +147,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4eed6f24acb364389bb23c831c4fa22e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UIScope
-  parentReference:
-    TypeName: AppScope
-  autoRun: 1
-  autoInjectGameObjects: []
+  m_EditorClassIdentifier: 
   characterMenuView: {fileID: 1488908698}
   finishGameView: {fileID: 1662576162}
 --- !u!4 &17617026
@@ -812,6 +808,8 @@ GameObject:
   m_Component:
   - component: {fileID: 556131712}
   - component: {fileID: 556131711}
+  - component: {fileID: 556131713}
+  - component: {fileID: 556131714}
   m_Layer: 0
   m_Name: GameScope
   m_TagString: Untagged
@@ -837,9 +835,36 @@ MonoBehaviour:
   autoInjectGameObjects: []
   _config: {fileID: 11400000, guid: 20122fe02207a4238bdcec742babcd2b, type: 2}
   _itemConfig: {fileID: 11400000, guid: ed2b4f35745ba47cb80cd71f9d9f70d3, type: 2}
+  _fieldScope: {fileID: 556131713}
+  _characterScope: {fileID: 556131714}
+  _uiScope: {fileID: 17617025}
+--- !u!114 &556131713
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 556131710}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22d48e8173a54922989572abaf6fd1f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
   cellViewPrefab: {fileID: -8912371991172390247, guid: f258b482df9b54c8fa2cf722f448bd1a, type: 3}
   linkView: {fileID: 124630294}
   colorTheme: {fileID: 11400000, guid: 3c5a60189c3f24831bd9e36b141979ef, type: 2}
+--- !u!114 &556131714
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 556131710}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adfa439c581f4950ac9d2e2ce8d051d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
   characterPrefabs:
   - {fileID: 7429786598836075207, guid: 00ad913299d094678b8385ed0830ddee, type: 3}
   - {fileID: 1718596269872910320, guid: 892dc82cc6ab94df68e7aa7ebef4407e, type: 3}
