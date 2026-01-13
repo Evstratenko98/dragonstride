@@ -10,10 +10,10 @@ public class UIScope : LifetimeScope
     
     protected override void Configure(IContainerBuilder builder)
     {
-        // builder.RegisterComponent(characterMenuView);
+        builder.RegisterComponent(characterMenuView);
         builder.RegisterComponent(finishGameView);
         
-        // builder.RegisterEntryPoint<CharacterMenuController>();
+        builder.RegisterEntryPoint<CharacterMenuController>();
         builder.RegisterEntryPoint<FinishGameController>();
     }
 }
