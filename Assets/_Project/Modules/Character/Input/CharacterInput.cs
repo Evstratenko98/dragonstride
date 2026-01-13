@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class CharacterInput : IDisposable
 {
-    private readonly EventBus _eventBus;
+    private readonly IEventBus _eventBus;
     private readonly InputSystem _actions;
     private IDisposable _gameStateSub;
 
@@ -16,7 +16,7 @@ public class CharacterInput : IDisposable
 
     private GameState _gameState = GameState.Init;
 
-    public CharacterInput(EventBus eventBus)
+    public CharacterInput(IEventBus eventBus)
     {
         _eventBus = eventBus;
 

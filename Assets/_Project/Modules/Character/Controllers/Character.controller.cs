@@ -8,7 +8,7 @@ using VContainer.Unity;
 public class CharacterController : IPostInitializable, ITickable, IDisposable
 {
     private readonly CharacterService _characterService;
-    private readonly EventBus _eventBus;
+    private readonly IEventBus _eventBus;
     private readonly CharacterInput _input;
 
     private IDisposable _turnStateSubscription;
@@ -18,7 +18,7 @@ public class CharacterController : IPostInitializable, ITickable, IDisposable
 
     public CharacterController(
         CharacterService characterService,
-        EventBus eventBus,
+        IEventBus eventBus,
         CharacterInput input
     )
     {

@@ -5,7 +5,7 @@ using VContainer.Unity;
 
 public class TurnController : IPostInitializable, IDisposable
 {
-    private readonly EventBus _eventBus;
+    private readonly IEventBus _eventBus;
 
     private IDisposable _stepSubscription;
     private IDisposable _endTurnSubscription;
@@ -17,7 +17,7 @@ public class TurnController : IPostInitializable, IDisposable
     public CharacterInstance CurrentPlayer { get; private set; }
     private bool _allowEndTurn = false;
 
-    public TurnController(EventBus eventBus)
+    public TurnController(IEventBus eventBus)
     {
         _eventBus = eventBus;
     }

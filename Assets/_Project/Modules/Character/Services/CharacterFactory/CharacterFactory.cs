@@ -1,11 +1,11 @@
 public class CharacterFactory
 {
     private readonly ConfigScriptableObject _config;
-    private readonly EventBus _eventBus;
+    private readonly IEventBus _eventBus;
     private readonly CharacterView[] _prefabs;
     private readonly ItemService _itemService;
 
-    public CharacterFactory(ConfigScriptableObject config, EventBus eventBus, CharacterView[] prefabs, ItemService itemService)
+    public CharacterFactory(ConfigScriptableObject config, IEventBus eventBus, CharacterView[] prefabs, ItemService itemService)
     {
         _config = config;
         _eventBus = eventBus;

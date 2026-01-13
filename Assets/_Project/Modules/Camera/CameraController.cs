@@ -7,14 +7,14 @@ public class CameraController : ITickable, IPostInitializable, IDisposable
 {
     private readonly CameraService _cameraService;
     private readonly Camera _camera;
-    private readonly EventBus _eventBus;
+    private readonly IEventBus _eventBus;
     private IDisposable _subscription;
     private IDisposable _gameStateSub;
 
     private float smooth = 3f;
     private Vector3 offset = new Vector3(0, 15, -15);
 
-    public CameraController(CameraService cameraService, Camera camera, EventBus eventBus)
+    public CameraController(CameraService cameraService, Camera camera, IEventBus eventBus)
     {
         _cameraService = cameraService;
         _camera = camera;

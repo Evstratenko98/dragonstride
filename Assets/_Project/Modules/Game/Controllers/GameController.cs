@@ -6,7 +6,7 @@ using VContainer.Unity;
 
 public class GameController : IPostInitializable, IDisposable, IStartable
 {
-    private readonly EventBus _eventBus;
+    private readonly IEventBus _eventBus;
     private IDisposable _turnEndSub;
     private IDisposable _gameStateSub;
     private IDisposable _resetButtonSub;
@@ -29,7 +29,7 @@ public class GameController : IPostInitializable, IDisposable, IStartable
         : _players[_currentPlayerIndex];
 
     public GameController(
-        EventBus eventBus, 
+        IEventBus eventBus, 
         TurnController turnController,
         FieldController fieldController,
         CharacterController characterController    

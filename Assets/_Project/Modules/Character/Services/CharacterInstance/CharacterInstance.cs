@@ -9,7 +9,7 @@ public class CharacterInstance
     public bool IsMoving { get; private set; }
     public string Name { get; private set; }
 
-    private readonly EventBus _eventBus;
+    private readonly IEventBus _eventBus;
 
     private CharacterView _prefab;
 
@@ -18,7 +18,7 @@ public class CharacterInstance
         CharacterModel model,
         CharacterView prefab,
         string name,
-        EventBus eventBus
+        IEventBus eventBus
     )
     {
         _config = config;
