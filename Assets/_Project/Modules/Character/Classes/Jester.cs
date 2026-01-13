@@ -1,8 +1,8 @@
-public class JesterClass : ICharacterClass
+public class JesterClass : CharacterClass
 {
-    public string Name => "Шут";
+    public override string Name => "Шут";
 
-    public void Apply(CharacterModel model)
+    public override void Apply(CharacterModel model)
     {
         model.AddLuck(0.10f);
         model.AddDodge(0.10f);

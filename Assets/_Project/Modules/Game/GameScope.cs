@@ -26,22 +26,22 @@ public class GameScope : LifetimeScope
         //FieldModule
         builder.RegisterInstance(colorTheme);
         builder.RegisterComponent(cellViewPrefab);
-        builder.RegisterComponent(linkView).As<ILinkView>();
+        builder.RegisterComponent(linkView);
         builder.Register<CellModel>(Lifetime.Transient);
         builder.Register<LinkModel>(Lifetime.Transient);
-        builder.Register<IFieldService, FieldService>(Lifetime.Singleton);
-        builder.Register<IMazeGenerator, MazeGenerator>(Lifetime.Singleton);
+        builder.Register<FieldService>(Lifetime.Singleton);
+        builder.Register<MazeGenerator>(Lifetime.Singleton);
 
         //CharacterModule
         builder.RegisterInstance(characterPrefabs).As<CharacterView[]>();
         builder.Register<CharacterModel>(Lifetime.Transient);
-        builder.Register<ICharacterInstance, CharacterInstance>(Lifetime.Transient);
-        builder.Register<ICharacterInput, CharacterInput>(Lifetime.Singleton);
-        builder.Register<ICharacterFactory, CharacterFactory>(Lifetime.Singleton);
-        builder.Register<ICharacterService, CharacterService>(Lifetime.Singleton);
+        builder.Register<CharacterInstance>(Lifetime.Transient);
+        builder.Register<CharacterInput>(Lifetime.Singleton);
+        builder.Register<CharacterFactory>(Lifetime.Singleton);
+        builder.Register<CharacterService>(Lifetime.Singleton);
 
         //ItemModule
-        builder.Register<ItemService>(Lifetime.Singleton).As<IItemService>();
+        builder.Register<ItemService>(Lifetime.Singleton);
 
         // Controllers
         builder.Register<FieldController>(Lifetime.Singleton);

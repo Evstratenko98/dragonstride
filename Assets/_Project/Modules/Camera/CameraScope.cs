@@ -7,7 +7,7 @@ public class CameraScope : LifetimeScope
     protected override void Configure(IContainerBuilder builder)
     {
         builder.RegisterInstance(Camera.main);
-        builder.Register<ICameraService, CameraService>(Lifetime.Singleton);
+        builder.Register<CameraService>(Lifetime.Singleton);
         builder.RegisterEntryPoint<CameraController>();
     }
 }

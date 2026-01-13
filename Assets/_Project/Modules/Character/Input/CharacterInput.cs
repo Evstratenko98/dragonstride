@@ -2,9 +2,9 @@ using System;
 using UnityEngine.InputSystem;
 using UnityEngine;
 
-public class CharacterInput : ICharacterInput, IDisposable
+public class CharacterInput : IDisposable
 {
-    private readonly IEventBus _eventBus;
+    private readonly EventBus _eventBus;
     private readonly InputSystem _actions;
     private IDisposable _gameStateSub;
 
@@ -16,7 +16,7 @@ public class CharacterInput : ICharacterInput, IDisposable
 
     private GameState _gameState = GameState.Init;
 
-    public CharacterInput(IEventBus eventBus)
+    public CharacterInput(EventBus eventBus)
     {
         _eventBus = eventBus;
 

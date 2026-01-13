@@ -1,11 +1,11 @@
-public class CharacterFactory : ICharacterFactory
+public class CharacterFactory
 {
     private readonly ConfigScriptableObject _config;
-    private readonly IEventBus _eventBus;
+    private readonly EventBus _eventBus;
     private readonly CharacterView[] _prefabs;
-    private readonly IItemService _itemService;
+    private readonly ItemService _itemService;
 
-    public CharacterFactory(ConfigScriptableObject config, IEventBus eventBus, CharacterView[] prefabs, IItemService itemService)
+    public CharacterFactory(ConfigScriptableObject config, EventBus eventBus, CharacterView[] prefabs, ItemService itemService)
     {
         _config = config;
         _eventBus = eventBus;
@@ -13,7 +13,7 @@ public class CharacterFactory : ICharacterFactory
         _itemService = itemService;
     }
 
-    public ICharacterInstance Create(string name, int prefabIndex, ICharacterClass characterClass)
+    public CharacterInstance Create(string name, int prefabIndex, CharacterClass characterClass)
     {
         CharacterModel model = new CharacterModel();
         model.InitializeInventory(30);
@@ -27,7 +27,7 @@ public class CharacterFactory : ICharacterFactory
             model.Inventory.AddItem(sword.Definition);
         }
 
-        ICharacterInstance instance = new CharacterInstance(_config, model, _prefabs[prefabIndex], name, _eventBus);
+        CharacterInstance instance = new CharacterInstance(_config, model, _prefabs[prefabIndex], name, _eventBus);
 
         return instance;
     }

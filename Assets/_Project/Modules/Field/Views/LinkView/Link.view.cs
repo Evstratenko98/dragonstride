@@ -1,13 +1,13 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public class LinkView : MonoBehaviour, ILinkView
+public class LinkView : MonoBehaviour
 {
     [SerializeField] private Material defaultMaterial;
 
     private readonly List<(LinkModel model, LineRenderer lr)> _visualLinks = new();
 
-    public void CreateVisualLink(ILinkModel linkModel, ICellView aView, ICellView bView)
+    public void CreateVisualLink(LinkModel linkModel, CellView aView, CellView bView)
     {
         LineRenderer lr = CreateLineRenderer(aView.transform, bView.transform);
         _visualLinks.Add(((LinkModel)linkModel, lr));

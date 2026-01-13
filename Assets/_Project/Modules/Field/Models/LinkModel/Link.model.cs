@@ -1,15 +1,15 @@
-public class LinkModel : ILinkModel
+public class LinkModel
 {
-    public ICellModel A { get; }
-    public ICellModel B { get; }
+    public CellModel A { get; }
+    public CellModel B { get; }
 
-    public LinkModel(ICellModel a, ICellModel b)
+    public LinkModel(CellModel a, CellModel b)
     {
         A = a;
         B = b;
     }
 
-    public bool Connects(ICellModel x, ICellModel y)
+    public bool Connects(CellModel x, CellModel y)
     {
         return (x == A && y == B) || (x == B && y == A);
     }

@@ -2,11 +2,11 @@ using System;
 
 public class FinishGameController
 {
-    private readonly IEventBus _eventBus;
+    private readonly EventBus _eventBus;
     private readonly FinishGameView _view;
     private IDisposable _gameStateSub;
     
-    public FinishGameController(IEventBus eventBus, FinishGameView view)
+    public FinishGameController(EventBus eventBus, FinishGameView view)
     {
         _eventBus = eventBus;
         _view = view;

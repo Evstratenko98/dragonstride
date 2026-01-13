@@ -1,8 +1,8 @@
-public class SamuraiClass : ICharacterClass
+public class SamuraiClass : CharacterClass
 {
-    public string Name => "Самурай";
+    public override string Name => "Самурай";
 
-    public void Apply(CharacterModel model)
+    public override void Apply(CharacterModel model)
     {
         model.AddAttack(5);
         model.AddDodge(0.10f);

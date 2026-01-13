@@ -4,9 +4,9 @@ public class CharacterModel
     // -----------------------------------
     //       ПОЛОЖЕНИЕ НА КАРТЕ
     // -----------------------------------
-    public ICellModel CurrentCell { get; private set; }
+    public CellModel CurrentCell { get; private set; }
 
-    public void SetCell(ICellModel cell)
+    public void SetCell(CellModel cell)
     {
         CurrentCell = cell;
     }

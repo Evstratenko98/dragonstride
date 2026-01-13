@@ -1,8 +1,8 @@
-public class TravelerClass : ICharacterClass
+public class TravelerClass : CharacterClass
 {
-    public string Name => "Путник";
+    public override string Name => "Путник";
 
-    public void Apply(CharacterModel model)
+    public override void Apply(CharacterModel model)
     {
         // ничего не меняется
     }

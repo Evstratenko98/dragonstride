@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 
-public class FieldService : IFieldService
+public class FieldService
 {
     public int Width { get; private set; }
     public int Height { get; private set; }
 
-    public ICellModel[,] Grid { get; private set; }
+    public CellModel[,] Grid { get; private set; }
 
     private readonly List<LinkModel> _links = new List<LinkModel>();
 
@@ -17,7 +17,7 @@ public class FieldService : IFieldService
         Width = width;
         Height = height;
 
-        Grid = new ICellModel[Width, Height];
+        Grid = new CellModel[Width, Height];
         _links.Clear();
 
         for (int x = 0; x < Width; x++)
@@ -41,7 +41,7 @@ public class FieldService : IFieldService
                y >= 0 && y < Height;
     }
 
-    public ICellModel GetCell(int x, int y)
+    public CellModel GetCell(int x, int y)
     {
         if (!IsInside(x, y))
             return null;
@@ -49,7 +49,7 @@ public class FieldService : IFieldService
         return Grid[x, y];
     }
 
-    public IEnumerable<ICellModel> GetAllCells()
+    public IEnumerable<CellModel> GetAllCells()
     {
         if (Grid == null)
             yield break;
@@ -63,7 +63,7 @@ public class FieldService : IFieldService
         }
     }
 
-    public IEnumerable<ICellModel> GetCellsByType(CellModelType type)
+    public IEnumerable<CellModel> GetCellsByType(CellModelType type)
     {
         foreach (var cell in GetAllCells())
         {
@@ -77,10 +77,10 @@ public class FieldService : IFieldService
     // -----------------------------------
     public void InitializeTypes()
     {
-        ICellModel startCell = this.GetCell(Width / 2, Height / 2);
+        CellModel startCell = this.GetCell(Width / 2, Height / 2);
         startCell.Type = CellModelType.Start;
 
-        ICellModel finishCell = GetRandomFinishCell();
+        CellModel finishCell = GetRandomFinishCell();
         finishCell.Type = CellModelType.End;
     }
 
@@ -88,12 +88,12 @@ public class FieldService : IFieldService
     // -----------------------------------
     //          РАБОТА СО СВЯЗЯМИ
     // -----------------------------------
-    public IEnumerable<ILinkModel> GetAllLinks()
+    public IEnumerable<LinkModel> GetAllLinks()
     {
         return _links;
     }
 
-    public bool LinkExists(ICellModel a, ICellModel b)
+    public bool LinkExists(CellModel a, CellModel b)
     {
         if (a == null || b == null || a == b)
             return false;
@@ -107,7 +107,7 @@ public class FieldService : IFieldService
         return false;
     }
 
-    public LinkModel CreateLink(ICellModel a, ICellModel b)
+    public LinkModel CreateLink(CellModel a, CellModel b)
     {
         if (a == null || b == null || a == b)
             return null;
@@ -125,9 +125,9 @@ public class FieldService : IFieldService
         return link;
     }
 
-    private ICellModel GetRandomFinishCell()
+    private CellModel GetRandomFinishCell()
     {
-        List<ICellModel> candidates = new List<ICellModel>();
+        List<CellModel> candidates = new List<CellModel>();
 
         foreach (var cell in GetAllCells())
         {

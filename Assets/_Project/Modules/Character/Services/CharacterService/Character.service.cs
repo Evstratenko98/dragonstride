@@ -3,23 +3,23 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
-public class CharacterService : ICharacterService
+public class CharacterService
 {
-    private List<ICharacterInstance> _characters = new List<ICharacterInstance>();
-    public IReadOnlyList<ICharacterInstance> AllCharacters => _characters;
+    private List<CharacterInstance> _characters = new List<CharacterInstance>();
+    public IReadOnlyList<CharacterInstance> AllCharacters => _characters;
 
     //TODO: удалить, когда станет понятно, что работает отлично без этого метода
     public bool IsMoving => _characters.Any(c => c.IsMoving);
-    private readonly ICharacterFactory _factory;
+    private readonly CharacterFactory _factory;
 
-    public CharacterService(ICharacterFactory factory)
+    public CharacterService(CharacterFactory factory)
     {
         _factory = factory;
     }
 
-    public ICharacterInstance CreateCharacter(ICellModel startCell, string name, int prefabIndex, ICharacterClass characterClass)
+    public CharacterInstance CreateCharacter(CellModel startCell, string name, int prefabIndex, CharacterClass characterClass)
     {
-        ICharacterInstance character = _factory.Create(name, prefabIndex, characterClass);
+        CharacterInstance character = _factory.Create(name, prefabIndex, characterClass);
         
         character.Spawn(startCell);
 
@@ -27,14 +27,14 @@ public class CharacterService : ICharacterService
         return character;
     }
 
-    public async Task TryMove(ICharacterInstance characterInstance, Vector2Int dir)
+    public async Task TryMove(CharacterInstance characterInstance, Vector2Int dir)
     {  
         if(characterInstance == null || characterInstance.Model == null) return;
 
-        ICellModel currentCell = characterInstance.Model.CurrentCell;
+        CellModel currentCell = characterInstance.Model.CurrentCell;
         if (currentCell == null) return;
 
-        ICellModel neighborCell = currentCell.GetNeighbor(dir);
+        CellModel neighborCell = currentCell.GetNeighbor(dir);
         if (neighborCell == null) return;
 
         await characterInstance.MoveTo(neighborCell);
