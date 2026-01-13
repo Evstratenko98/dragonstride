@@ -47,6 +47,7 @@ public class GameScope : LifetimeScope
         builder.Register<FieldController>(Lifetime.Singleton);
         // TODO: исправить эту хуйню
         builder.Register<CharacterController>(Lifetime.Singleton);
+        builder.Register<TurnController>(Lifetime.Singleton);
 
         builder.RegisterEntryPoint<CharacterController>();
         builder.RegisterEntryPoint<TurnController>();
