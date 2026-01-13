@@ -7,19 +7,19 @@ using VContainer.Unity;
 
 public class CharacterController : IPostInitializable, ITickable, IDisposable
 {
-    private readonly ICharacterService _characterService;
+    private readonly CharacterService _characterService;
     private readonly IEventBus _eventBus;
-    private readonly ICharacterInput _input;
+    private readonly CharacterInput _input;
 
     private IDisposable _turnStateSubscription;
 
-    private ICharacterInstance _currentCharacter;
+    private CharacterInstance _currentCharacter;
     private TurnState _currentTurnState = TurnState.None;
 
     public CharacterController(
-        ICharacterService characterService,
+        CharacterService characterService,
         IEventBus eventBus,
-        ICharacterInput input
+        CharacterInput input
     )
     {
         _characterService = characterService;
@@ -33,7 +33,7 @@ public class CharacterController : IPostInitializable, ITickable, IDisposable
         _turnStateSubscription = _eventBus.Subscribe<TurnStateChangedMessage>(OnTurnStateChanged);
     }
 
-    public IReadOnlyList<ICharacterInstance> SpawnCharacters(ICellModel startCell)
+    public IReadOnlyList<CharacterInstance> SpawnCharacters(CellModel startCell)
     {   
         _characterService.CreateCharacter(startCell, "Arnoldo", 0, new SamuraiClass());
         _characterService.CreateCharacter(startCell, "Patrick", 1, new RunnerClass());

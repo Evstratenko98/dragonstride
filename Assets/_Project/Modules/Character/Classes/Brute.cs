@@ -1,8 +1,8 @@
-public class BruteClass : ICharacterClass
+public class BruteClass : CharacterClass
 {
-    public string Name => "Громила";
+    public override string Name => "Громила";
 
-    public void Apply(CharacterModel model)
+    public override void Apply(CharacterModel model)
     {
         model.AddHealth(20);
         model.AddAttack(5);

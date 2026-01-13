@@ -4,7 +4,7 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
-public class GameController : IGameController, IPostInitializable, IDisposable, IStartable
+public class GameController : IPostInitializable, IDisposable, IStartable
 {
     private readonly IEventBus _eventBus;
     private IDisposable _turnEndSub;
@@ -14,23 +14,23 @@ public class GameController : IGameController, IPostInitializable, IDisposable, 
     // Controllers
     private FieldController _fieldController;
     private CharacterController _characterController;
-    private ITurnController _turnController;
+    private TurnController _turnController;
 
-    private IReadOnlyList<ICharacterInstance> _players;
+    private IReadOnlyList<CharacterInstance> _players;
     private int _currentPlayerIndex = -1;
 
     public GameState GameState { get; private set; } = GameState.Init;
     public GameTurnState GameTurnState { get; private set; } = GameTurnState.Init;
 
-    public IReadOnlyList<ICharacterInstance> Players => _players;
-    public ICharacterInstance CurrentPlayer =>
+    public IReadOnlyList<CharacterInstance> Players => _players;
+    public CharacterInstance CurrentPlayer =>
         (_currentPlayerIndex < 0 || _currentPlayerIndex >= _players.Count)
         ? null
         : _players[_currentPlayerIndex];
 
     public GameController(
         IEventBus eventBus, 
-        ITurnController turnController,
+        TurnController turnController,
         FieldController fieldController,
         CharacterController characterController    
     )
@@ -72,7 +72,7 @@ public class GameController : IGameController, IPostInitializable, IDisposable, 
         SetGameState(GameState.Loading);
 
         _fieldController.CreateField();
-        ICellModel startCell = _fieldController.StartCellModel;
+        CellModel startCell = _fieldController.StartCellModel;
 
         _players = _characterController.SpawnCharacters(startCell);
 

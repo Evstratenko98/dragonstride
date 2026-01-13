@@ -1,11 +1,11 @@
 using System;
 using UnityEngine;
 
-public class CellView : MonoBehaviour, ICellView
+public class CellView : MonoBehaviour
 {
     private Renderer _renderer;
     private IDisposable _subscription;
-    private ICellModel _model;
+    private CellModel _model;
     private CellColorTheme _theme;
 
     private void Awake()
@@ -18,7 +18,7 @@ public class CellView : MonoBehaviour, ICellView
         _theme = theme;
     }
 
-    public void Bind(ICellModel model)
+    public void Bind(CellModel model)
     {
         _model = model;
         UpdateMaterial(model.Type);

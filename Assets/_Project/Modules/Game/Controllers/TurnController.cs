@@ -3,7 +3,7 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
-public class TurnController : ITurnController, IPostInitializable, IDisposable
+public class TurnController : IPostInitializable, IDisposable
 {
     private readonly IEventBus _eventBus;
 
@@ -14,7 +14,7 @@ public class TurnController : ITurnController, IPostInitializable, IDisposable
     public int StepsAvailable { get; private set; }
     public int StepsRemaining { get; private set; }
 
-    public ICharacterInstance CurrentPlayer { get; private set; }
+    public CharacterInstance CurrentPlayer { get; private set; }
     private bool _allowEndTurn = false;
 
     public TurnController(IEventBus eventBus)
@@ -35,7 +35,7 @@ public class TurnController : ITurnController, IPostInitializable, IDisposable
     }
     // ---------------- PUBLIC API ----------------
 
-    public void StartTurn(ICharacterInstance character)
+    public void StartTurn(CharacterInstance character)
     {
         CurrentPlayer = character;
         StepsAvailable = 0;

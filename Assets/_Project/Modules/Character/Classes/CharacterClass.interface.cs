@@ -1,7 +1,7 @@
-public interface ICharacterClass
+public abstract class CharacterClass
 {
-    string Name { get; }
+    public abstract string Name { get; }
 
     // Применяет модификатор к модели
-    void Apply(CharacterModel model);
+    public abstract void Apply(CharacterModel model);
 }

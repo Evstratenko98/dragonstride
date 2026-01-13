@@ -2,7 +2,7 @@ using System;
 using UnityEngine.InputSystem;
 using UnityEngine;
 
-public class CharacterInput : ICharacterInput, IDisposable
+public class CharacterInput : IDisposable
 {
     private readonly IEventBus _eventBus;
     private readonly InputSystem _actions;

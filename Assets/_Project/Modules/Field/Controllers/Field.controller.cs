@@ -8,24 +8,24 @@ using System.Linq;
 public class FieldController
 {
     private readonly ConfigScriptableObject _config;
-    private readonly IFieldService _fieldService;
-    private readonly IMazeGenerator _mazeGenerator;
+    private readonly FieldService _fieldService;
+    private readonly MazeGenerator _mazeGenerator;
 
     private readonly CellView _cellPrefab;
-    private readonly ILinkView _linkView;
+    private readonly LinkView _linkView;
     private readonly CellColorTheme _theme;
 
     private readonly Transform _root;
-    private readonly Dictionary<ICellModel, CellView> _views = new();
+    private readonly Dictionary<CellModel, CellView> _views = new();
 
-    public ICellModel StartCellModel => _fieldService.GetCellsByType(CellModelType.Start).FirstOrDefault();
+    public CellModel StartCellModel => _fieldService.GetCellsByType(CellModelType.Start).FirstOrDefault();
 
     public FieldController(
         ConfigScriptableObject config,
-        IFieldService fieldService,
-        IMazeGenerator mazeGenerator,
+        FieldService fieldService,
+        MazeGenerator mazeGenerator,
         CellView cellPrefab,
-        ILinkView linkView,
+        LinkView linkView,
         CellColorTheme theme)
     {
         _config = config;

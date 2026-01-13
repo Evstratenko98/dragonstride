@@ -1,8 +1,8 @@
 public readonly struct CharacterMovedMessage
 {
-    public ICharacterInstance Character { get; }
+    public CharacterInstance Character { get; }
 
-    public CharacterMovedMessage(ICharacterInstance character)
+    public CharacterMovedMessage(CharacterInstance character)
     {
         Character = character;
     }

@@ -1,8 +1,8 @@
-public class SavageClass : ICharacterClass
+public class SavageClass : CharacterClass
 {
-    public string Name => "Дикарь";
+    public override string Name => "Дикарь";
 
-    public void Apply(CharacterModel model)
+    public override void Apply(CharacterModel model)
     {
         model.AddHealth(10);
         model.AddAttack(5);

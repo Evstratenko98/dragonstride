@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 
-public class MazeGenerator : IMazeGenerator
+public class MazeGenerator
 {
     private System.Random _rng = new System.Random();
 
-    public void Generate(IFieldService field, float extraConnectionChance)
+    public void Generate(FieldService field, float extraConnectionChance)
     {
         int width = field.Width;
         int height = field.Height;
@@ -22,7 +22,7 @@ public class MazeGenerator : IMazeGenerator
     // -------------------------------------------------------------------
     //                     1. ИДЕАЛЬНЫЙ DFS-ЛАБИРИНТ
     // -------------------------------------------------------------------
-    private void GeneratePerfectMaze(IFieldService field)
+    private void GeneratePerfectMaze(FieldService field)
     {
         int width = field.Width;
         int height = field.Height;
@@ -58,7 +58,7 @@ public class MazeGenerator : IMazeGenerator
         }
     }
 
-    private List<(int x, int y)> GetUnvisitedNeighbors(int x, int y, bool[,] visited, IFieldService field)
+    private List<(int x, int y)> GetUnvisitedNeighbors(int x, int y, bool[,] visited, FieldService field)
     {
         List<(int, int)> list = new List<(int, int)>();
 
@@ -73,7 +73,7 @@ public class MazeGenerator : IMazeGenerator
     // -------------------------------------------------------------------
     //                2. ДОПОЛНИТЕЛЬНЫЕ КОРОТКИЕ СВЯЗИ
     // -------------------------------------------------------------------
-    private void AddExtraConnections(IFieldService field, float chance)
+    private void AddExtraConnections(FieldService field, float chance)
     {
         for (int x = 0; x < field.Width; x++)
         {
@@ -98,7 +98,7 @@ public class MazeGenerator : IMazeGenerator
         }
     }
 
-    private List<(int x, int y)> GetDirectNeighbors(int x, int y, IFieldService field)
+    private List<(int x, int y)> GetDirectNeighbors(int x, int y, FieldService field)
     {
         List<(int, int)> list = new List<(int, int)>();
 
@@ -113,12 +113,12 @@ public class MazeGenerator : IMazeGenerator
     // -------------------------------------------------------------------
     //                  3. ГАРАНТИЯ СВЯЗНОСТИ (BFS)
     // -------------------------------------------------------------------
-    private void EnsureFullConnectivity(IFieldService field)
+    private void EnsureFullConnectivity(FieldService field)
     {
         var start = field.GetCell(0, 0);
 
-        HashSet<ICellModel> visited = new HashSet<ICellModel>();
-        Queue<ICellModel> queue = new Queue<ICellModel>();
+        HashSet<CellModel> visited = new HashSet<CellModel>();
+        Queue<CellModel> queue = new Queue<CellModel>();
 
         visited.Add(start);
         queue.Enqueue(start);

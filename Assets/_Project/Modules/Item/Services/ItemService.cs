@@ -3,7 +3,7 @@ using System.Linq;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-public class ItemService : IItemService
+public class ItemService
 {
     private readonly ItemConfig _config;
 

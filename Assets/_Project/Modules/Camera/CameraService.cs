@@ -1,8 +1,8 @@
-public class CameraService : ICameraService
+public class CameraService
 {
-    public ICharacterInstance CurrentTarget { get; private set; }
+    public CharacterInstance CurrentTarget { get; private set; }
 
-    public void SetTarget(ICharacterInstance character)
+    public void SetTarget(CharacterInstance character)
     {
         CurrentTarget = character;
     }

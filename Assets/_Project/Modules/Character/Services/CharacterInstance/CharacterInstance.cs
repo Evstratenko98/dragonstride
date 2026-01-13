@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using UnityEngine;
 
-public class CharacterInstance : ICharacterInstance
+public class CharacterInstance
 {
     private readonly ConfigScriptableObject _config;
     public CharacterModel Model { get; private set; }
@@ -34,14 +34,14 @@ public class CharacterInstance : ICharacterInstance
         return new Vector3(x * _config.CELL_SIZE, _config.CHARACTER_HEIGHT, y * _config.CELL_SIZE);
     }
 
-    public void Spawn(ICellModel cell)
+    public void Spawn(CellModel cell)
     {
         Model.SetCell(cell);
         View = GameObject.Instantiate(_prefab);
         View.SetPosition(GetCoordinatesForCellView(cell.X, cell.Y));
     }
 
-    public async Task MoveTo(ICellModel nextTarget)
+    public async Task MoveTo(CellModel nextTarget)
     {
         if (IsMoving) return;
         IsMoving = true;
