@@ -13,12 +13,28 @@ public class CharacterMenuController : IStartable, IDisposable
     public void Start()
     {
         _view.OpenButton.onClick.AddListener(_view.Open);
-        _view.CloseButton.onClick.AddListener(_view.Close);
+        if (_view.BackgroundButton != null)
+        {
+            _view.BackgroundButton.onClick.AddListener(_view.Close);
+        }
+
+        if (_view.CloseButton != null)
+        {
+            _view.CloseButton.onClick.AddListener(_view.Close);
+        }
     }
 
     public void Dispose()
     {
         _view.OpenButton.onClick.RemoveAllListeners();
-        _view.CloseButton.onClick.RemoveAllListeners();
+        if (_view.BackgroundButton != null)
+        {
+            _view.BackgroundButton.onClick.RemoveAllListeners();
+        }
+
+        if (_view.CloseButton != null)
+        {
+            _view.CloseButton.onClick.RemoveAllListeners();
+        }
     }
 }
