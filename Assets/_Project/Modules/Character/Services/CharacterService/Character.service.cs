@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using UnityEngine;
 using System.Linq;
+using UnityEngine;
 
 public class CharacterService
 {
@@ -19,8 +19,18 @@ public class CharacterService
 
     public CharacterInstance CreateCharacter(CellModel startCell, string name, int prefabIndex, CharacterClass characterClass)
     {
+        if (startCell == null)
+        {
+            Debug.LogError("[CharacterService] Start cell is not available. Character will not be created.");
+            return null;
+        }
+
         CharacterInstance character = _factory.Create(name, prefabIndex, characterClass);
-        
+        if (character == null)
+        {
+            return null;
+        }
+
         character.Spawn(startCell);
 
         _characters.Add(character);

@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public class CharacterFactory
 {
     private readonly ConfigScriptableObject _config;
@@ -15,6 +17,25 @@ public class CharacterFactory
 
     public CharacterInstance Create(string name, int prefabIndex, CharacterClass characterClass)
     {
+        if (_prefabs == null || _prefabs.Length == 0)
+        {
+            Debug.LogError("[CharacterFactory] Character prefabs are not configured.");
+            return null;
+        }
+
+        if (prefabIndex < 0 || prefabIndex >= _prefabs.Length)
+        {
+            Debug.LogError($"[CharacterFactory] Character prefab index {prefabIndex} is out of range (0-{_prefabs.Length - 1}).");
+            return null;
+        }
+
+        CharacterView prefab = _prefabs[prefabIndex];
+        if (prefab == null)
+        {
+            Debug.LogError($"[CharacterFactory] Character prefab at index {prefabIndex} is not assigned.");
+            return null;
+        }
+
         CharacterModel model = new CharacterModel();
         model.InitializeInventory(30);
         characterClass.Apply(model);
@@ -27,7 +48,7 @@ public class CharacterFactory
             model.Inventory.AddItem(sword.Definition);
         }
 
-        CharacterInstance instance = new CharacterInstance(_config, model, _prefabs[prefabIndex], name, _eventBus);
+        CharacterInstance instance = new CharacterInstance(_config, model, prefab, name, _eventBus);
 
         return instance;
     }

@@ -36,8 +36,32 @@ public class CharacterInstance
 
     public void Spawn(CellModel cell)
     {
+        if (cell == null)
+        {
+            Debug.LogError("[CharacterInstance] Cannot spawn character because start cell is null.");
+            return;
+        }
+
+        if (Model == null)
+        {
+            Debug.LogError("[CharacterInstance] Cannot spawn character because model is missing.");
+            return;
+        }
+
+        if (_prefab == null)
+        {
+            Debug.LogError($"[CharacterInstance] Cannot spawn character '{Name}' because prefab is missing.");
+            return;
+        }
+
         Model.SetCell(cell);
         View = GameObject.Instantiate(_prefab);
+        if (View == null)
+        {
+            Debug.LogError($"[CharacterInstance] Failed to instantiate prefab for character '{Name}'.");
+            return;
+        }
+
         View.SetPosition(GetCoordinatesForCellView(cell.X, cell.Y));
     }
 
