@@ -1,6 +1,7 @@
 using System;
+using VContainer.Unity;
 
-public class FinishGameController
+public class FinishGameController: IStartable, IDisposable
 {
     private readonly IEventBus _eventBus;
     private readonly FinishGameView _view;

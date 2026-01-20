@@ -110,6 +110,11 @@ public class GameController : IPostInitializable, IDisposable, IStartable
 
     public void OnEndTurn(TurnEndedMessage msg)
     {
+        if (GameState == GameState.Finished || _players == null || _players.Count == 0)
+        {
+            return;
+        }
+        
         NextPlayer();
     }
 
