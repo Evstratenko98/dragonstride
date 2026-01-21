@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using VContainer;
@@ -11,12 +12,29 @@ public class UIScope : LifetimeScope
     
     protected override void Configure(IContainerBuilder builder)
     {
-        builder.RegisterComponent(gameScreenView);
-        builder.RegisterComponent(finishScreenView);
-        builder.RegisterComponent(screenView);
+        builder.RegisterComponent(EnsureComponent(gameScreenView, nameof(gameScreenView)));
+        builder.RegisterComponent(EnsureComponent(finishScreenView, nameof(finishScreenView)));
+        builder.RegisterComponent(EnsureComponent(screenView, nameof(screenView)));
         
         builder.RegisterEntryPoint<GameScreenController>();
         builder.RegisterEntryPoint<FinishScreenController>();
         builder.RegisterEntryPoint<UIScreenController>();
+    }
+
+    private T EnsureComponent<T>(T field, string fieldName) where T : Component
+    {
+        if (field != null)
+        {
+            return field;
+        }
+
+        var found = GetComponentInChildren<T>(true);
+        if (found != null)
+        {
+            return found;
+        }
+
+        throw new InvalidOperationException(
+            $"UIScope requires a {typeof(T).Name} reference for '{fieldName}', but none was found in children.");
     }
 }
