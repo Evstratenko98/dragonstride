@@ -17,8 +17,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 749e96a99eb8942259992b1993a1323e, type: 2}
   ChestDropTable:
   - Rarity: 0
-    Weight: 98
+    Weight: 100
   - Rarity: 1
-    Weight: 1
+    Weight: 0
   - Rarity: 2
-    Weight: 1
+    Weight: 0
