@@ -37,6 +37,7 @@ public class CharacterController : IPostInitializable, ITickable, IDisposable
     {   
         _characterService.CreateCharacter(startCell, "Arnoldo", 0, new SamuraiClass());
         _characterService.CreateCharacter(startCell, "Patrick", 1, new RunnerClass());
+        _characterService.CreateCharacter(startCell, "Jonh", 2, new RunnerClass());
 
         return _characterService.AllCharacters;
     }

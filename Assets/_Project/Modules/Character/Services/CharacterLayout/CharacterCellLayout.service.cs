@@ -29,7 +29,7 @@ public class CharacterCellLayoutService
             return;
         }
 
-        float radius = _config.CELL_SIZE * 0.25f;
+        float radius = _config.CELL_SIZE * 0.15f;
         float angleStep = Mathf.PI * 2f / occupants.Count;
 
         for (int i = 0; i < occupants.Count; i++)
