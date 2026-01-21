@@ -1,12 +1,13 @@
 using UnityEngine;
+using TMPro;
 using UnityEngine.UI;
 
 public class GameScreenView : MonoBehaviour
 {
     [SerializeField] private Button characaterButton;
-    [SerializeField] private Text currentPlayerText;
-    [SerializeField] private Text turnStateText;
-    [SerializeField] private Text stepsText;
+    [SerializeField] private TMP_Text currentPlayerText;
+    [SerializeField] private TMP_Text turnStateText;
+    [SerializeField] private TMP_Text stepsText;
 
     public Button CharacaterButton => characaterButton;
 
