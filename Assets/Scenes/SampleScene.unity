@@ -753,6 +753,7 @@ MonoBehaviour:
   characterPrefabs:
   - {fileID: 7429786598836075207, guid: 00ad913299d094678b8385ed0830ddee, type: 3}
   - {fileID: 1718596269872910320, guid: 892dc82cc6ab94df68e7aa7ebef4407e, type: 3}
+  - {fileID: 1718596269872910320, guid: cf1a0962abbead346986479ae8bfa6ff, type: 3}
 --- !u!4 &556131712
 Transform:
   m_ObjectHideFlags: 0

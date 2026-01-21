@@ -11,10 +11,12 @@ public class CharacterService
     //TODO: удалить, когда станет понятно, что работает отлично без этого метода
     public bool IsMoving => _characters.Any(c => c.IsMoving);
     private readonly CharacterFactory _factory;
+    private readonly CharacterCellLayoutService _layoutService;
 
-    public CharacterService(CharacterFactory factory)
+    public CharacterService(CharacterFactory factory, CharacterCellLayoutService layoutService)
     {
         _factory = factory;
+        _layoutService = layoutService;
     }
 
     public CharacterInstance CreateCharacter(CellModel startCell, string name, int prefabIndex, CharacterClass characterClass)
@@ -34,6 +36,7 @@ public class CharacterService
         character.Spawn(startCell);
 
         _characters.Add(character);
+        UpdateCellLayout(startCell);
         return character;
     }
 
@@ -48,6 +51,8 @@ public class CharacterService
         if (neighborCell == null) return;
 
         await characterInstance.MoveTo(neighborCell);
+        UpdateCellLayout(currentCell);
+        UpdateCellLayout(neighborCell);
     }
 
     public void RemoveAllCharacters()
@@ -58,5 +63,16 @@ public class CharacterService
         }
 
         _characters.Clear();
+    }
+
+    private void UpdateCellLayout(CellModel cell)
+    {
+        if (cell == null) return;
+
+        List<CharacterInstance> occupants = _characters
+            .Where(character => character?.Model?.CurrentCell == cell)
+            .ToList();
+
+        _layoutService.ApplyLayout(cell, occupants);
     }
 }

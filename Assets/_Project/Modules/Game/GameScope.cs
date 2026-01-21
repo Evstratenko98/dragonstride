@@ -38,6 +38,7 @@ public class GameScope : LifetimeScope
         builder.Register<CharacterInstance>(Lifetime.Transient);
         builder.Register<CharacterInput>(Lifetime.Singleton);
         builder.Register<CharacterFactory>(Lifetime.Singleton);
+        builder.Register<CharacterCellLayoutService>(Lifetime.Singleton);
         builder.Register<CharacterService>(Lifetime.Singleton);
 
         //ItemModule

@@ -12,4 +12,5 @@ public class ConfigScriptableObject : ScriptableObject
     [Header("Characters")]
     public float CHARACTER_SPEED = 2.5f;
     public float CHARACTER_HEIGHT = 1.1f;
+    public float CHARACTER_LAYOUT_SPEED = 12f;
 }
