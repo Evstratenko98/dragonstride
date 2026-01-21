@@ -25,14 +25,32 @@ public class LinkView : MonoBehaviour
         lr.endWidth = 0.15f;
         lr.material = defaultMaterial;
 
-        Vector3 p1 = start.position + Vector3.up * 0.05f;
-        Vector3 p2 = end.position + Vector3.up * 0.05f;
+        Vector3 p1 = GetEdgePoint(start, end.position) + Vector3.up * 0.05f;
+        Vector3 p2 = GetEdgePoint(end, start.position) + Vector3.up * 0.05f;
 
         lr.SetPosition(0, p1);
         lr.SetPosition(1, p2);
 
         return lr;
     }
+    
+    private static Vector3 GetEdgePoint(Transform from, Vector3 toward)
+    {
+        Collider collider = from.GetComponentInChildren<Collider>();
+        if (collider != null)
+            return collider.ClosestPoint(toward);
+
+        Collider2D collider2D = from.GetComponentInChildren<Collider2D>();
+        if (collider2D != null)
+            return collider2D.ClosestPoint(toward);
+
+        Renderer renderer = from.GetComponentInChildren<Renderer>();
+        if (renderer != null)
+            return renderer.bounds.ClosestPoint(toward);
+
+        return from.position;
+    }
+    
 
     public void ClearLinks()
     {
