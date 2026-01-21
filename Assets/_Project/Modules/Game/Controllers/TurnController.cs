@@ -9,6 +9,7 @@ public class TurnController : IPostInitializable, IDisposable
 
     private IDisposable _stepSubscription;
     private IDisposable _endTurnSubscription;
+    private IDisposable _diceButtonSubscription;
     public TurnState State { get; private set; }
 
     public int StepsAvailable { get; private set; }
@@ -26,12 +27,14 @@ public class TurnController : IPostInitializable, IDisposable
     {
         _stepSubscription      = _eventBus.Subscribe<CharacterMovedMessage>(OnCharacterMoved);
         _endTurnSubscription   = _eventBus.Subscribe<EndTurnKeyPressedMessage>(OnEndTurnKeyPressed);
+        _diceButtonSubscription = _eventBus.Subscribe<DiceButtonPressedMessage>(OnDiceButtonPressed);
     }
 
     public void Dispose()
     {
         _stepSubscription?.Dispose();
         _endTurnSubscription?.Dispose();
+        _diceButtonSubscription?.Dispose();
     }
     // ---------------- PUBLIC API ----------------
 
@@ -42,7 +45,6 @@ public class TurnController : IPostInitializable, IDisposable
         StepsRemaining = 0;
 
         SetState(TurnState.Start);
-        RollDice();
     }
 
     public void RollDice()
@@ -168,6 +170,17 @@ public class TurnController : IPostInitializable, IDisposable
 
             EndTurn();
         }
+    }
+
+    private void OnDiceButtonPressed(DiceButtonPressedMessage msg)
+    {
+        if (State != TurnState.Start)
+            return;
+
+        if (CurrentPlayer == null)
+            return;
+
+        RollDice();
     }
 
     // ---------------- STATE MACHINE HELPER ----------------
