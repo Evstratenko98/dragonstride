@@ -5,18 +5,18 @@ using VContainer.Unity;
 
 public class UIScope : LifetimeScope
 {
-    [SerializeField] private CharacterMenuView characterMenuView;
-    [SerializeField] private FinishGameView finishGameView;
+    [SerializeField] private GameScreenView gameScreenView;
+    [SerializeField] private FinishScreenView finishScreenView;
     [SerializeField] private UIScreenView screenView;
     
     protected override void Configure(IContainerBuilder builder)
     {
-        builder.RegisterComponent(characterMenuView);
-        builder.RegisterComponent(finishGameView);
+        builder.RegisterComponent(gameScreenView);
+        builder.RegisterComponent(finishScreenView);
         builder.RegisterComponent(screenView);
         
-        builder.RegisterEntryPoint<CharacterMenuController>();
-        builder.RegisterEntryPoint<FinishGameController>();
+        builder.RegisterEntryPoint<GameScreenController>();
+        builder.RegisterEntryPoint<FinishScreenController>();
         builder.RegisterEntryPoint<UIScreenController>();
     }
 }
