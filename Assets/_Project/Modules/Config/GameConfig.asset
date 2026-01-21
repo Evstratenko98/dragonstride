@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: GameConfig
   m_EditorClassIdentifier: Assembly-CSharp::ConfigScriptableObject
   CELL_SIZE: 10
-  FIELD_WIDTH: 3
-  FIELD_HEIGHT: 3
+  FIELD_WIDTH: 5
+  FIELD_HEIGHT: 5
   EXTRA_CONNECTION_CHANCE: 0.2
   CHARACTER_SPEED: 2.5
   CHARACTER_HEIGHT: 1.1
