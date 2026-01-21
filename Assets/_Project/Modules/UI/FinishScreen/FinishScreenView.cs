@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class FinishGameView : MonoBehaviour
+public class FinishScreenView : MonoBehaviour
 {
     [SerializeField] private Button playAgainButton;
 
