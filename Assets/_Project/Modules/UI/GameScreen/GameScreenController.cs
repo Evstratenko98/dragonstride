@@ -6,6 +6,7 @@ public class GameScreenController : IStartable, IDisposable
     private const string FallbackValue = "—";
     private readonly GameScreenView _view;
     private readonly IEventBus _eventBus;
+    private readonly TurnController _turnController;
     private IDisposable _turnStateSubscription;
     private IDisposable _diceRolledSubscription;
     private IDisposable _characterMovedSubscription;
@@ -15,9 +16,10 @@ public class GameScreenController : IStartable, IDisposable
     private int _stepsTotal;
     private int _stepsRemaining;
 
-    public GameScreenController(IEventBus eventBus, GameScreenView view)
+    public GameScreenController(IEventBus eventBus, TurnController turnController, GameScreenView view)
     {
         _eventBus = eventBus;
+        _turnController = turnController;
         _view = view;
     }
 
@@ -28,6 +30,7 @@ public class GameScreenController : IStartable, IDisposable
         _diceRolledSubscription = _eventBus.Subscribe<DiceRolledMessage>(OnDiceRolled);
         _characterMovedSubscription = _eventBus.Subscribe<CharacterMovedMessage>(OnCharacterMoved);
 
+        SyncFromTurnController();
         UpdatePlayerText();
         UpdateTurnStateText();
         UpdateStepsText();
@@ -114,5 +117,18 @@ public class GameScreenController : IStartable, IDisposable
     private void UpdateStepsText()
     {
         _view.SetSteps(_stepsRemaining, _stepsTotal);
+    }
+
+    private void SyncFromTurnController()
+    {
+        if (_turnController == null)
+        {
+            return;
+        }
+
+        _currentCharacter = _turnController.CurrentPlayer ?? _currentCharacter;
+        _currentTurnState = _turnController.State;
+        _stepsTotal = _turnController.StepsAvailable;
+        _stepsRemaining = _turnController.StepsRemaining;
     }
 }
