@@ -7,5 +7,8 @@ public class CellColorTheme : ScriptableObject
 {
     public Material startMaterial;
     public Material commonMaterial;
+    public Material lootMaterial;
+    public Material fightMaterial;
+    public Material teleportMaterial;
     public Material endMaterial;
 }

@@ -34,6 +34,15 @@ public class CellView : MonoBehaviour
             case CellModelType.Common:
                 _renderer.material = _theme.commonMaterial;
                 break;
+            case CellModelType.Loot:
+                _renderer.material = _theme.lootMaterial;
+                break;
+            case CellModelType.Fight:
+                _renderer.material = _theme.fightMaterial;
+                break;
+            case CellModelType.Teleport:
+                _renderer.material = _theme.teleportMaterial;
+                break;
             case CellModelType.End:
                 _renderer.material = _theme.endMaterial;
                 break;
