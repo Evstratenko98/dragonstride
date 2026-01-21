@@ -6,4 +6,10 @@ public class CharacterView : MonoBehaviour
     {
         transform.position = cellPos;
     }
+
+    public void SetPositionAndScale(Vector3 position, float scale)
+    {
+        transform.position = position;
+        transform.localScale = Vector3.one * scale;
+    }
 }

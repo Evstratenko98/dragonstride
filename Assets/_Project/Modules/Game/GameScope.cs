@@ -39,6 +39,7 @@ public class GameScope : LifetimeScope
         builder.Register<CharacterInput>(Lifetime.Singleton);
         builder.Register<CharacterFactory>(Lifetime.Singleton);
         builder.Register<CharacterService>(Lifetime.Singleton);
+        builder.Register<CharacterLayoutService>(Lifetime.Singleton);
 
         //ItemModule
         builder.Register<ItemService>(Lifetime.Singleton);
@@ -46,6 +47,7 @@ public class GameScope : LifetimeScope
         // Controllers
         builder.Register<FieldController>(Lifetime.Singleton);
         builder.RegisterEntryPoint<CharacterController>(Lifetime.Singleton).AsSelf();
+        builder.RegisterEntryPoint<CharacterLayoutController>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<TurnController>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<GameController>();
     }

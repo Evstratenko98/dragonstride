@@ -70,6 +70,7 @@ public class CharacterInstance
         if (IsMoving) return;
         IsMoving = true;
 
+        CellModel previousCell = Model.CurrentCell;
         Vector3 start = View.transform.position;
         Vector3 end = GetCoordinatesForCellView(nextTarget.X, nextTarget.Y);
 
@@ -86,7 +87,7 @@ public class CharacterInstance
         Model.SetCell(nextTarget);
         IsMoving = false;
 
-        _eventBus.Publish(new CharacterMovedMessage(this));
+        _eventBus.Publish(new CharacterMovedMessage(this, previousCell, nextTarget));
     }
 
     public void Destroy()

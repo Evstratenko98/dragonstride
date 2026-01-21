@@ -59,4 +59,16 @@ public class CharacterService
 
         _characters.Clear();
     }
+
+    public List<CharacterInstance> GetCharactersInCell(CellModel cell)
+    {
+        if (cell == null)
+        {
+            return new List<CharacterInstance>();
+        }
+
+        return _characters
+            .Where(character => character?.Model?.CurrentCell == cell)
+            .ToList();
+    }
 }
