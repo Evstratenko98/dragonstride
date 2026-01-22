@@ -90,7 +90,7 @@ public class GameScreenController : IPostInitializable, IDisposable
 
         UpdatePlayerText();
         UpdateStepsText();
-        _view.SetDiceButtonLabel(msg.Steps.ToString());
+        _view.SetDiceButtonLabel(_stepsRemaining.ToString());
         _view.SetDiceButtonInteractable(false);
     }
 

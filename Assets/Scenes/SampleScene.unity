@@ -152,8 +152,8 @@ MonoBehaviour:
     TypeName: AppScope
   autoRun: 1
   autoInjectGameObjects: []
-  gameScreenView: {fileID: 0}
-  finishScreenView: {fileID: 0}
+  gameScreenView: {fileID: 817312987}
+  finishScreenView: {fileID: 520381115}
   screenView: {fileID: 4000000002}
 --- !u!4 &17617026
 Transform:
@@ -1223,9 +1223,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameScreenView
   characaterButton: {fileID: 1754686118}
+  diceButton: {fileID: 1246011553}
   currentPlayerText: {fileID: 199446756}
   turnStateText: {fileID: 170073377}
   stepsText: {fileID: 1563712913}
+  diceButtonText: {fileID: 491090241}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
