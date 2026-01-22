@@ -23,6 +23,15 @@ public class FogOfWarView : MonoBehaviour
         if (fieldService == null)
             return;
 
+        if (_renderer == null)
+            _renderer = GetComponent<Renderer>();
+
+        if (_renderer == null)
+        {
+            Debug.LogWarning("[FogOfWarView] Renderer is missing.");
+            return;
+        }
+
         _width = fieldService.Width;
         _height = fieldService.Height;
 
