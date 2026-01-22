@@ -13,4 +13,5 @@ public class ConfigScriptableObject : ScriptableObject
     public float CHARACTER_SPEED = 2.5f;
     public float CHARACTER_HEIGHT = 1.1f;
     public float CHARACTER_LAYOUT_SPEED = 12f;
+    public int CHARACTER_VISION_RANGE = 2;
 }

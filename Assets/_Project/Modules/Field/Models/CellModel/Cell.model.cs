@@ -8,6 +8,7 @@ public class CellModel
     public int Y { get; }  // индексы!
 
     public CellModelType Type { get; set; } = CellModelType.Common;
+    public FogVisibilityState FogState { get; private set; } = FogVisibilityState.Unseen;
 
     private readonly List<CellModel> _neighbors = new();
     public IReadOnlyList<CellModel> Neighbors => _neighbors;
@@ -44,5 +45,10 @@ public class CellModel
     public void SetType(CellModelType type)
     {
         Type = type;
+    }
+
+    public void SetFogState(FogVisibilityState state)
+    {
+        FogState = state;
     }
 }
