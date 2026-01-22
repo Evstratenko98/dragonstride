@@ -1158,6 +1158,7 @@ MonoBehaviour:
   cellViewPrefab: {fileID: -8912371991172390247, guid: f258b482df9b54c8fa2cf722f448bd1a, type: 3}
   linkView: {fileID: 124630294}
   colorTheme: {fileID: 11400000, guid: 3c5a60189c3f24831bd9e36b141979ef, type: 2}
+  fogOfWarView: {fileID: 2121647807}
   characterPrefabs:
   - {fileID: 7429786598836075207, guid: 00ad913299d094678b8385ed0830ddee, type: 3}
   - {fileID: 1718596269872910320, guid: 892dc82cc6ab94df68e7aa7ebef4407e, type: 3}
@@ -1176,7 +1177,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 124630293}
-  - {fileID: 2121647803}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &817312985
@@ -2475,6 +2475,7 @@ GameObject:
   - component: {fileID: 2121647806}
   - component: {fileID: 2121647805}
   - component: {fileID: 2121647804}
+  - component: {fileID: 2121647807}
   m_Layer: 0
   m_Name: FogOfWar
   m_TagString: Untagged
@@ -2490,12 +2491,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2121647802}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 556131712}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!64 &2121647804
 MeshCollider:
@@ -2575,6 +2576,22 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2121647802}
   m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &2121647807
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2121647802}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff633d80bb984f569e6a828efe476416, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fogMaterial: {fileID: 0}
+  seenAlpha: 0.55
+  unseenAlpha: 1
+  heightOffset: 0.5
 --- !u!1 &3000000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -2710,3 +2727,4 @@ SceneRoots:
   - {fileID: 2099550018}
   - {fileID: 556131712}
   - {fileID: 17617026}
+  - {fileID: 2121647803}
