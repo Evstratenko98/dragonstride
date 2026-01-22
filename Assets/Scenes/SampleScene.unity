@@ -155,6 +155,7 @@ MonoBehaviour:
   gameScreenView: {fileID: 817312987}
   finishScreenView: {fileID: 520381115}
   screenView: {fileID: 4000000002}
+  characterScreenView: {fileID: 2100000014}
 --- !u!4 &17617026
 Transform:
   m_ObjectHideFlags: 0
@@ -471,13 +472,14 @@ GameObject:
   - component: {fileID: 298181013}
   - component: {fileID: 298181015}
   - component: {fileID: 298181014}
+  - component: {fileID: 2100000014}
   m_Layer: 0
   m_Name: CharacterScreen
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &298181013
 RectTransform:
   m_ObjectHideFlags: 0
@@ -536,6 +538,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 298181012}
   m_CullTransparentMesh: 1
+--- !u!114 &2100000014
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 298181012}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 818f910b90684db0b00d27e6f6b73e9c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  closeButton: {fileID: 2100000007}
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0

@@ -9,16 +9,19 @@ public class UIScope : LifetimeScope
     [SerializeField] private GameScreenView gameScreenView;
     [SerializeField] private FinishScreenView finishScreenView;
     [SerializeField] private UIScreenView screenView;
+    [SerializeField] private CharacterScreenView characterScreenView;
     
     protected override void Configure(IContainerBuilder builder)
     {
         builder.RegisterComponent(EnsureComponent(gameScreenView, nameof(gameScreenView)));
         builder.RegisterComponent(EnsureComponent(finishScreenView, nameof(finishScreenView)));
         builder.RegisterComponent(EnsureComponent(screenView, nameof(screenView)));
-        
+        builder.RegisterComponent(EnsureComponent(characterScreenView, nameof(characterScreenView)));
+
         builder.RegisterEntryPoint<GameScreenController>();
         builder.RegisterEntryPoint<FinishScreenController>();
         builder.RegisterEntryPoint<UIScreenController>();
+        builder.RegisterEntryPoint<CharacterScreenController>();
     }
 
     private T EnsureComponent<T>(T field, string fieldName) where T : Component
