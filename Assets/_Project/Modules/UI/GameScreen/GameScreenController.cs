@@ -28,6 +28,11 @@ public class GameScreenController : IPostInitializable, IDisposable
         _diceRolledSubscription = _eventBus.Subscribe<DiceRolledMessage>(OnDiceRolled);
         _characterMovedSubscription = _eventBus.Subscribe<CharacterMovedMessage>(OnCharacterMoved);
 
+        if (_view.CharacaterButton != null)
+        {
+            _view.CharacaterButton.onClick.AddListener(OnCharacterButtonClicked);
+        }
+
         if (_view.DiceButton != null)
         {
             _view.DiceButton.onClick.AddListener(OnDiceButtonClicked);
@@ -48,6 +53,11 @@ public class GameScreenController : IPostInitializable, IDisposable
         if (_view.DiceButton != null)
         {
             _view.DiceButton.onClick.RemoveListener(OnDiceButtonClicked);
+        }
+
+        if (_view.CharacaterButton != null)
+        {
+            _view.CharacaterButton.onClick.RemoveListener(OnCharacterButtonClicked);
         }
     }
 
@@ -151,5 +161,10 @@ public class GameScreenController : IPostInitializable, IDisposable
     private void OnDiceButtonClicked()
     {
         _eventBus.Publish(new DiceButtonPressedMessage());
+    }
+
+    private void OnCharacterButtonClicked()
+    {
+        _eventBus.Publish(new CharacterButtonPressedMessage());
     }
 }
