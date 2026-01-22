@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 
 public class CharacterFactory
@@ -45,7 +46,19 @@ public class CharacterFactory
         ItemModel sword = _itemService.CreateItem(startItem);
         if (sword != null)
         {
-            model.Inventory.AddItem(sword.Definition);
+            bool added = model.Inventory.AddItem(sword.Definition);
+            bool hasSword = added && model.Inventory.Slots.Any(slot => slot.Definition == sword.Definition && slot.Count > 0);
+            string swordName = !string.IsNullOrEmpty(sword.Definition.DisplayName)
+                ? sword.Definition.DisplayName
+                : sword.Definition.Id;
+            if (hasSword)
+            {
+                Debug.Log($"[CharacterFactory] Игрок \"{name}\" имеет предмет \"{swordName}\" в инвентаре.");
+            }
+            else
+            {
+                Debug.LogWarning($"[CharacterFactory] Игрок \"{name}\" не получил предмет \"{swordName}\" в инвентарь.");
+            }
         }
 
         CharacterInstance instance = new CharacterInstance(_config, model, prefab, name, _eventBus);
