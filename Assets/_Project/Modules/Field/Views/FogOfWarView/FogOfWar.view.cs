@@ -3,7 +3,7 @@ using UnityEngine;
 [RequireComponent(typeof(Renderer))]
 public class FogOfWarView : MonoBehaviour
 {
-    [SerializeField] private float heightOffset = 0.1f;
+    [SerializeField] private float heightOffset = 5f;
     [SerializeField] private Color32 unseenColor = new Color32(0, 0, 0, 255);
     [SerializeField] private Color32 seenColor = new Color32(0, 0, 0, 160);
     [SerializeField] private Color32 visibleColor = new Color32(0, 0, 0, 0);
@@ -64,12 +64,8 @@ public class FogOfWarView : MonoBehaviour
 
     private void UpdateTransform(float cellSize)
     {
-        transform.localPosition = new Vector3(
-            (_width - 1) * cellSize * 0.5f,
-            heightOffset,
-            (_height - 1) * cellSize * 0.5f);
-
-        transform.localScale = new Vector3(_width * cellSize, 1f, _height * cellSize);
+        transform.localPosition = new Vector3(0, heightOffset, 0);
+        transform.localScale = new Vector3(_width * cellSize + 10f, _height * cellSize + 10f, 1f);
     }
 
     private Color32 GetColor(FogVisibilityState state)
