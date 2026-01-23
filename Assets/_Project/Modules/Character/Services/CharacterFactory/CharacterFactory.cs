@@ -38,7 +38,7 @@ public class CharacterFactory
         }
 
         CharacterModel model = new CharacterModel();
-        model.InitializeInventory(30);
+        model.InitializeInventory(_config.INVENTORY_CAPACITY);
         characterClass.Apply(model);
         
         // 4. Создаём стартовый предмет

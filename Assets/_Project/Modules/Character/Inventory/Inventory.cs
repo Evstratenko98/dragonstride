@@ -61,6 +61,44 @@ public class Inventory
         slot.Clear();
         return true;
     }
+
+    public void SwapSlots(int fromIndex, int toIndex)
+    {
+        if (fromIndex == toIndex)
+        {
+            return;
+        }
+
+        if (fromIndex < 0 || fromIndex >= _slots.Count || toIndex < 0 || toIndex >= _slots.Count)
+        {
+            Debug.LogWarning($"[Inventory] Invalid slot swap {fromIndex} <-> {toIndex}.");
+            return;
+        }
+
+        var fromSlot = _slots[fromIndex];
+        var toSlot = _slots[toIndex];
+
+        var fromItem = fromSlot.Definition;
+        var fromCount = fromSlot.Count;
+
+        if (toSlot.IsEmpty)
+        {
+            fromSlot.Clear();
+        }
+        else
+        {
+            fromSlot.Set(toSlot.Definition, toSlot.Count);
+        }
+
+        if (fromItem == null)
+        {
+            toSlot.Clear();
+        }
+        else
+        {
+            toSlot.Set(fromItem, fromCount);
+        }
+    }
     
     // public bool HasFreeSlot() =>
     //     _slots.Any(slot => slot.IsEmpty);
