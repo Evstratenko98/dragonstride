@@ -152,6 +152,7 @@ MonoBehaviour:
     TypeName: AppScope
   autoRun: 1
   autoInjectGameObjects: []
+  config: {fileID: 11400000, guid: 20122fe02207a4238bdcec742babcd2b, type: 2}
   gameScreenView: {fileID: 817312987}
   finishScreenView: {fileID: 520381115}
   screenView: {fileID: 4000000002}
