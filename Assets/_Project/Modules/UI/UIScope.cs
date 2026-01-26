@@ -6,6 +6,7 @@ using VContainer.Unity;
 
 public class UIScope : LifetimeScope
 {
+    [SerializeField] private ConfigScriptableObject config;
     [SerializeField] private GameScreenView gameScreenView;
     [SerializeField] private FinishScreenView finishScreenView;
     [SerializeField] private UIScreenView screenView;
@@ -13,6 +14,12 @@ public class UIScope : LifetimeScope
     
     protected override void Configure(IContainerBuilder builder)
     {
+        if (config == null)
+        {
+            throw new InvalidOperationException($"{nameof(UIScope)} requires a {nameof(ConfigScriptableObject)} reference.");
+        }
+
+        builder.RegisterInstance(config);
         builder.RegisterComponent(EnsureComponent(gameScreenView, nameof(gameScreenView)));
         builder.RegisterComponent(EnsureComponent(finishScreenView, nameof(finishScreenView)));
         builder.RegisterComponent(EnsureComponent(screenView, nameof(screenView)));

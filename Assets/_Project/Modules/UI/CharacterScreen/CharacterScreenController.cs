@@ -4,12 +4,16 @@ using VContainer.Unity;
 public class CharacterScreenController : IStartable, IDisposable
 {
     private readonly IEventBus _eventBus;
+    private readonly ConfigScriptableObject _config;
     private readonly CharacterScreenView _view;
     private IDisposable _openSubscription;
+    private IDisposable _turnStateSubscription;
+    private CharacterInstance _currentCharacter;
 
-    public CharacterScreenController(IEventBus eventBus, CharacterScreenView view)
+    public CharacterScreenController(IEventBus eventBus, ConfigScriptableObject config, CharacterScreenView view)
     {
         _eventBus = eventBus;
+        _config = config;
         _view = view;
     }
 
@@ -17,6 +21,12 @@ public class CharacterScreenController : IStartable, IDisposable
     {
         _view.Hide();
         _openSubscription = _eventBus.Subscribe<CharacterButtonPressedMessage>(OnOpenRequested);
+        _turnStateSubscription = _eventBus.Subscribe<TurnStateChangedMessage>(OnTurnStateChanged);
+
+        if (_view.InventoryGridView != null)
+        {
+            _view.InventoryGridView.InitializeSlots(_config.INVENTORY_CAPACITY);
+        }
 
         if (_view.CloseButton != null)
         {
@@ -27,6 +37,7 @@ public class CharacterScreenController : IStartable, IDisposable
     public void Dispose()
     {
         _openSubscription?.Dispose();
+        _turnStateSubscription?.Dispose();
 
         if (_view.CloseButton != null)
         {
@@ -37,10 +48,26 @@ public class CharacterScreenController : IStartable, IDisposable
     private void OnOpenRequested(CharacterButtonPressedMessage message)
     {
         _view.Show();
+        _view.BindInventory(_currentCharacter?.Model?.Inventory);
     }
 
     private void OnCloseClicked()
     {
         _view.Hide();
+    }
+
+    private void OnTurnStateChanged(TurnStateChangedMessage message)
+    {
+        if (message.Character == null)
+        {
+            return;
+        }
+
+        _currentCharacter = message.Character;
+
+        if (_view.gameObject.activeSelf)
+        {
+            _view.BindInventory(_currentCharacter.Model.Inventory);
+        }
     }
 }
