@@ -19,4 +19,4 @@ public class CameraScope : LifetimeScope
         builder.Register<CameraService>(Lifetime.Singleton);
         builder.RegisterEntryPoint<CameraController>();
     }
-}
+} 
