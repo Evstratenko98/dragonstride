@@ -16,4 +16,8 @@ public class ConfigScriptableObject : ScriptableObject
 
     [Header("UI")]
     public int INVENTORY_CAPACITY = 30;
+
+    [Header("Camera")]
+    public float CAMERA_PAN_SPEED = 12f;
+    public float CAMERA_EDGE_THRESHOLD = 16f;
 }
