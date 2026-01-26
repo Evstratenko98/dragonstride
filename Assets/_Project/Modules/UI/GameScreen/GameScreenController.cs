@@ -4,7 +4,6 @@ using VContainer.Unity;
 public class GameScreenController : IPostInitializable, IDisposable
 {
     private const string FallbackValue = "—";
-    private const string RollDiceLabel = "бросить кубик";
     private readonly GameScreenView _view;
     private readonly IEventBus _eventBus;
     private IDisposable _turnStateSubscription;
@@ -32,16 +31,10 @@ public class GameScreenController : IPostInitializable, IDisposable
         {
             _view.CharacaterButton.onClick.AddListener(OnCharacterButtonClicked);
         }
-
-        if (_view.DiceButton != null)
-        {
-            _view.DiceButton.onClick.AddListener(OnDiceButtonClicked);
-        }
         
         UpdatePlayerText();
         UpdateTurnStateText();
         UpdateStepsText();
-        UpdateDiceButtonState();
     }
 
     public void Dispose()
@@ -49,11 +42,6 @@ public class GameScreenController : IPostInitializable, IDisposable
         _turnStateSubscription?.Dispose();
         _diceRolledSubscription?.Dispose();
         _characterMovedSubscription?.Dispose();
-
-        if (_view.DiceButton != null)
-        {
-            _view.DiceButton.onClick.RemoveListener(OnDiceButtonClicked);
-        }
 
         if (_view.CharacaterButton != null)
         {
@@ -71,7 +59,6 @@ public class GameScreenController : IPostInitializable, IDisposable
         _currentTurnState = msg.State;
         UpdatePlayerText();
         UpdateTurnStateText();
-        UpdateDiceButtonState();
 
         if (msg.State == TurnState.Start || msg.State == TurnState.End || msg.State == TurnState.None)
         {
@@ -100,8 +87,6 @@ public class GameScreenController : IPostInitializable, IDisposable
 
         UpdatePlayerText();
         UpdateStepsText();
-        _view.SetDiceButtonLabel(_stepsRemaining.ToString());
-        _view.SetDiceButtonInteractable(false);
     }
 
     private void OnCharacterMoved(CharacterMovedMessage msg)
@@ -137,30 +122,6 @@ public class GameScreenController : IPostInitializable, IDisposable
     private void UpdateStepsText()
     {
         _view.SetSteps(_stepsRemaining, _stepsTotal);
-    }
-
-    private void UpdateDiceButtonState()
-    {
-        if (_currentTurnState == TurnState.Start)
-        {
-            _view.SetDiceButtonLabel(RollDiceLabel);
-            _view.SetDiceButtonInteractable(true);
-            return;
-        }
-
-        if (_currentTurnState == TurnState.End || _currentTurnState == TurnState.None)
-        {
-            _view.SetDiceButtonLabel(RollDiceLabel);
-            _view.SetDiceButtonInteractable(false);
-            return;
-        }
-
-        _view.SetDiceButtonInteractable(false);
-    }
-
-    private void OnDiceButtonClicked()
-    {
-        _eventBus.Publish(new DiceButtonPressedMessage());
     }
 
     private void OnCharacterButtonClicked()
