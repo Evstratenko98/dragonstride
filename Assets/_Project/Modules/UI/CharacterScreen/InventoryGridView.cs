@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class InventoryGridView : MonoBehaviour
 {
@@ -51,6 +52,8 @@ public class InventoryGridView : MonoBehaviour
             slot.Initialize(this, i);
             _slots.Add(slot);
         }
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(gridRoot);
     }
 
     public void BindInventory(Inventory inventory)
