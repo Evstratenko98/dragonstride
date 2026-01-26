@@ -31,7 +31,12 @@ public class GameScreenController : IPostInitializable, IDisposable
         {
             _view.CharacaterButton.onClick.AddListener(OnCharacterButtonClicked);
         }
-        
+
+        if (_view.FollowPlayerToggle != null)
+        {
+            _view.FollowPlayerToggle.onValueChanged.AddListener(OnFollowPlayerToggleChanged);
+        }
+
         UpdatePlayerText();
         UpdateTurnStateText();
         UpdateStepsText();
@@ -46,6 +51,11 @@ public class GameScreenController : IPostInitializable, IDisposable
         if (_view.CharacaterButton != null)
         {
             _view.CharacaterButton.onClick.RemoveListener(OnCharacterButtonClicked);
+        }
+
+        if (_view.FollowPlayerToggle != null)
+        {
+            _view.FollowPlayerToggle.onValueChanged.RemoveListener(OnFollowPlayerToggleChanged);
         }
     }
 
@@ -127,5 +137,10 @@ public class GameScreenController : IPostInitializable, IDisposable
     private void OnCharacterButtonClicked()
     {
         _eventBus.Publish(new CharacterButtonPressedMessage());
+    }
+
+    private void OnFollowPlayerToggleChanged(bool isEnabled)
+    {
+        _eventBus.Publish(new CameraFollowToggledMessage(isEnabled));
     }
 }
