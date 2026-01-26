@@ -2285,6 +2285,7 @@ MonoBehaviour:
     TypeName: AppScope
   autoRun: 1
   autoInjectGameObjects: []
+  _config: {fileID: 11400000, guid: 20122fe02207a4238bdcec742babcd2b, type: 2}
 --- !u!1 &2100000001
 GameObject:
   m_ObjectHideFlags: 0
