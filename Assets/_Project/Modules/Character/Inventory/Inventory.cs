@@ -99,13 +99,4 @@ public class Inventory
             toSlot.Set(fromItem, fromCount);
         }
     }
-    
-    // public bool HasFreeSlot() =>
-    //     _slots.Any(slot => slot.IsEmpty);
-    //
-    // public int CountOf(ItemDefinition item)
-    // {
-    //     var slot = _slots.FirstOrDefault(s => s.Definition == item);
-    //     return slot?.Count ?? 0;
-    // }
 }
