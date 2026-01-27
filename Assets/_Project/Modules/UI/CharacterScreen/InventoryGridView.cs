@@ -12,8 +12,10 @@ public class InventoryGridView : MonoBehaviour
 
     private readonly List<InventorySlotView> _slots = new();
     private Inventory _inventory;
+    private EquipmentGridView _equipmentGridView;
     private int _dragIndex = -1;
     private bool _isDragging;
+    public bool IsDragging => _isDragging;
 
     private void Awake()
     {
@@ -100,6 +102,11 @@ public class InventoryGridView : MonoBehaviour
         }
     }
 
+    public void BindEquipmentGrid(EquipmentGridView equipmentGridView)
+    {
+        _equipmentGridView = equipmentGridView;
+    }
+
     public void Refresh()
     {
         if (_inventory == null)
@@ -152,7 +159,7 @@ public class InventoryGridView : MonoBehaviour
 
     public void HandleDrop(int targetIndex)
     {
-        if (!_isDragging || _inventory == null)
+        if (_inventory == null)
         {
             return;
         }
@@ -162,11 +169,35 @@ public class InventoryGridView : MonoBehaviour
             return;
         }
 
+        if (!_isDragging)
+        {
+            if (_equipmentGridView != null && _equipmentGridView.IsDragging)
+            {
+                _equipmentGridView.HandleDropToInventory(targetIndex);
+            }
+            return;
+        }
+
         _inventory.SwapSlots(_dragIndex, targetIndex);
         _dragIndex = -1;
         _isDragging = false;
         dragIcon?.Hide();
         Refresh();
+    }
+
+    public bool HandleDropToEquipment(CharacterEquipment equipment, int equipmentSlotIndex)
+    {
+        if (!_isDragging || _inventory == null || equipment == null)
+        {
+            return false;
+        }
+
+        bool equipped = equipment.EquipFromInventory(_inventory, _dragIndex, equipmentSlotIndex);
+        _dragIndex = -1;
+        _isDragging = false;
+        dragIcon?.Hide();
+        Refresh();
+        return equipped;
     }
 
     public void HandleEndDrag()
@@ -180,6 +211,20 @@ public class InventoryGridView : MonoBehaviour
         _isDragging = false;
         dragIcon?.Hide();
         Refresh();
+    }
+
+    public void HandleDropFromEquipment(CharacterEquipment equipment, int equipmentSlotIndex, int inventorySlotIndex)
+    {
+        if (_inventory == null || equipment == null)
+        {
+            return;
+        }
+
+        bool moved = equipment.UnequipToInventorySlot(_inventory, equipmentSlotIndex, inventorySlotIndex);
+        if (moved)
+        {
+            Refresh();
+        }
     }
 
     public void Clear()
