@@ -134,8 +134,8 @@ public class CameraController : ITickable, IPostInitializable, IDisposable
     {
         var cellSize = _config.CELL_SIZE;
         _minX = 0f;
-        _minZ = 0f;
+        _minZ = -(_config.FIELD_HEIGHT / 2);
         _maxX = Mathf.Max(0f, (_config.FIELD_WIDTH - 1) * cellSize);
-        _maxZ = Mathf.Max(0f, (_config.FIELD_HEIGHT - 1) * cellSize);
+        _maxZ = Mathf.Max(0f, (_config.FIELD_HEIGHT - 1) * (cellSize / 2));
     }
 }
