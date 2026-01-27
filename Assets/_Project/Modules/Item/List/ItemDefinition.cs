@@ -16,6 +16,15 @@ public class ItemDefinition : ScriptableObject
     public bool Stackable;      // Можно ли стакать (зелья - да, меч - нет)
     public int MaxStack = 1;    // Максимальный стак
 
+    [Header("Модификаторы характеристик")]
+    public int HealthModifier;
+    public int AttackModifier;
+    public int ArmorModifier;
+    public float DodgeModifier;
+    public int InitiativeModifier;
+    public int SpeedModifier;
+    public float LuckModifier;
+
     [Header("Предметы для будущего UI/3D")]
     public Sprite Icon;
     public GameObject WorldPrefab; // Моделька в мире (на потом)

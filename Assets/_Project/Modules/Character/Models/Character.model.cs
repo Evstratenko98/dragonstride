@@ -1,6 +1,7 @@
 public class CharacterModel
 {
     public Inventory Inventory { get; private set; }
+    public CharacterEquipment Equipment { get; private set; }
     // -----------------------------------
     //       ПОЛОЖЕНИЕ НА КАРТЕ
     // -----------------------------------
@@ -56,5 +57,10 @@ public class CharacterModel
     public void InitializeInventory(int capacity)
     {
         Inventory = new Inventory(capacity);
+    }
+
+    public void InitializeEquipment(int capacity = 2)
+    {
+        Equipment = new CharacterEquipment(this, capacity);
     }
 }
