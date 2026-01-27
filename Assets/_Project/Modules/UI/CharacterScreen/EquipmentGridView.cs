@@ -1,19 +1,16 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class InventoryGridView : MonoBehaviour
+public class EquipmentGridView : MonoBehaviour
 {
     [SerializeField] private RectTransform gridRoot;
-    [SerializeField] private InventorySlotView slotTemplate;
-    [SerializeField] private InventoryDragIconView dragIcon;
+    [SerializeField] private EquipmentSlotView slotTemplate;
     [SerializeField] private GridLayoutGroup gridLayout;
 
-    private readonly List<InventorySlotView> _slots = new();
-    private Inventory _inventory;
-    private int _dragIndex = -1;
-    private bool _isDragging;
+    private readonly List<EquipmentSlotView> _slots = new();
+    private CharacterEquipment _equipment;
+    private InventoryGridView _inventoryGridView;
 
     private void Awake()
     {
@@ -21,18 +18,18 @@ public class InventoryGridView : MonoBehaviour
         {
             slotTemplate.gameObject.SetActive(false);
         }
+    }
 
-        if (dragIcon != null)
-        {
-            dragIcon.Hide();
-        }
+    public void BindInventoryGrid(InventoryGridView inventoryGridView)
+    {
+        _inventoryGridView = inventoryGridView;
     }
 
     public void InitializeSlots(int capacity)
     {
         if (gridRoot == null || slotTemplate == null)
         {
-            Debug.LogError("[InventoryGridView] Grid root or slot template is not assigned.");
+            Debug.LogError("[EquipmentGridView] Grid root or slot template is not assigned.");
             return;
         }
 
@@ -82,14 +79,14 @@ public class InventoryGridView : MonoBehaviour
         LayoutRebuilder.ForceRebuildLayoutImmediate(gridRoot);
     }
 
-    public void BindInventory(Inventory inventory)
+    public void BindEquipment(CharacterEquipment equipment)
     {
-        _inventory = inventory;
-        if (_inventory != null)
+        _equipment = equipment;
+        if (_equipment != null)
         {
-            if (_slots.Count != _inventory.Capacity)
+            if (_slots.Count != _equipment.Capacity)
             {
-                InitializeSlots(_inventory.Capacity);
+                InitializeSlots(_equipment.Capacity);
             }
 
             Refresh();
@@ -102,7 +99,7 @@ public class InventoryGridView : MonoBehaviour
 
     public void Refresh()
     {
-        if (_inventory == null)
+        if (_equipment == null)
         {
             Clear();
             return;
@@ -111,90 +108,23 @@ public class InventoryGridView : MonoBehaviour
         for (int i = 0; i < _slots.Count; i++)
         {
             var slot = _slots[i];
-            var data = _inventory.Slots[i];
-            slot.SetData(data.Definition, data.Count);
+            var data = _equipment.Slots[i];
+            slot.SetData(data.Definition, data.IsEmpty ? 0 : 1);
         }
-    }
-
-    public void HandleBeginDrag(int index, PointerEventData eventData)
-    {
-        if (_inventory == null || index < 0 || index >= _inventory.Slots.Count)
-        {
-            return;
-        }
-
-        var slot = _inventory.Slots[index];
-        if (slot.IsEmpty)
-        {
-            return;
-        }
-
-        _dragIndex = index;
-        _isDragging = true;
-        if (dragIcon != null)
-        {
-            dragIcon.Show(slot.Definition.Icon);
-            dragIcon.UpdatePosition(eventData);
-        }
-
-        _slots[index].SetDragHidden(true);
-    }
-
-    public void HandleDrag(PointerEventData eventData)
-    {
-        if (!_isDragging)
-        {
-            return;
-        }
-
-        dragIcon?.UpdatePosition(eventData);
     }
 
     public void HandleDrop(int targetIndex)
     {
-        if (!_isDragging || _inventory == null)
+        if (_equipment == null || _inventoryGridView == null)
         {
             return;
         }
 
-        if (targetIndex < 0 || targetIndex >= _inventory.Slots.Count)
+        bool equipped = _inventoryGridView.HandleDropToEquipment(_equipment, targetIndex);
+        if (equipped)
         {
-            return;
+            Refresh();
         }
-
-        _inventory.SwapSlots(_dragIndex, targetIndex);
-        _dragIndex = -1;
-        _isDragging = false;
-        dragIcon?.Hide();
-        Refresh();
-    }
-
-    public bool HandleDropToEquipment(CharacterEquipment equipment, int equipmentSlotIndex)
-    {
-        if (!_isDragging || _inventory == null || equipment == null)
-        {
-            return false;
-        }
-
-        bool equipped = equipment.EquipFromInventory(_inventory, _dragIndex, equipmentSlotIndex);
-        _dragIndex = -1;
-        _isDragging = false;
-        dragIcon?.Hide();
-        Refresh();
-        return equipped;
-    }
-
-    public void HandleEndDrag()
-    {
-        if (!_isDragging)
-        {
-            return;
-        }
-
-        _dragIndex = -1;
-        _isDragging = false;
-        dragIcon?.Hide();
-        Refresh();
     }
 
     public void Clear()

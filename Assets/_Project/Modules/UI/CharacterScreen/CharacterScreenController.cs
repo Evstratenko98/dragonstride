@@ -28,6 +28,12 @@ public class CharacterScreenController : IPostInitializable, IDisposable
             _view.InventoryGridView.InitializeSlots(_config.INVENTORY_CAPACITY);
         }
 
+        if (_view.EquipmentGridView != null)
+        {
+            _view.EquipmentGridView.InitializeSlots(2);
+            _view.EquipmentGridView.BindInventoryGrid(_view.InventoryGridView);
+        }
+
         if (_view.CloseButton != null)
         {
             _view.CloseButton.onClick.AddListener(OnCloseClicked);
@@ -49,6 +55,7 @@ public class CharacterScreenController : IPostInitializable, IDisposable
     {
         _view.Show();
         _view.BindInventory(_currentCharacter?.Model?.Inventory);
+        _view.BindEquipment(_currentCharacter?.Model?.Equipment);
     }
 
     private void OnCloseClicked()
@@ -68,6 +75,7 @@ public class CharacterScreenController : IPostInitializable, IDisposable
         if (_view.gameObject.activeSelf)
         {
             _view.BindInventory(_currentCharacter.Model.Inventory);
+            _view.BindEquipment(_currentCharacter.Model.Equipment);
         }
     }
 }
