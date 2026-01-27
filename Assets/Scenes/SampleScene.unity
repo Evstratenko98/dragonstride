@@ -3910,6 +3910,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   gridRoot: {fileID: 2100000205}
   slotTemplate: {fileID: 2100000213}
+  dragIcon: {fileID: 2100000126}
   gridLayout: {fileID: 2100000208}
 --- !u!114 &2100000208
 MonoBehaviour:

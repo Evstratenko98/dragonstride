@@ -1,22 +1,32 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class EquipmentGridView : MonoBehaviour
 {
     [SerializeField] private RectTransform gridRoot;
     [SerializeField] private EquipmentSlotView slotTemplate;
+    [SerializeField] private InventoryDragIconView dragIcon;
     [SerializeField] private GridLayoutGroup gridLayout;
 
     private readonly List<EquipmentSlotView> _slots = new();
     private CharacterEquipment _equipment;
     private InventoryGridView _inventoryGridView;
+    private int _dragIndex = -1;
+    private bool _isDragging;
+    public bool IsDragging => _isDragging;
 
     private void Awake()
     {
         if (slotTemplate != null)
         {
             slotTemplate.gameObject.SetActive(false);
+        }
+
+        if (dragIcon != null)
+        {
+            dragIcon.Hide();
         }
     }
 
@@ -95,7 +105,22 @@ public class EquipmentGridView : MonoBehaviour
 
     public void HandleDrop(int targetIndex)
     {
-        if (_equipment == null || _inventoryGridView == null)
+        if (_equipment == null)
+        {
+            return;
+        }
+
+        if (_isDragging)
+        {
+            bool swapped = _equipment.SwapSlots(_dragIndex, targetIndex);
+            _dragIndex = -1;
+            _isDragging = false;
+            dragIcon?.Hide();
+            Refresh();
+            return;
+        }
+
+        if (_inventoryGridView == null)
         {
             return;
         }
@@ -105,6 +130,67 @@ public class EquipmentGridView : MonoBehaviour
         {
             Refresh();
         }
+    }
+
+    public void HandleBeginDrag(int index, PointerEventData eventData)
+    {
+        if (_equipment == null || index < 0 || index >= _equipment.Slots.Count)
+        {
+            return;
+        }
+
+        var slot = _equipment.Slots[index];
+        if (slot.IsEmpty)
+        {
+            return;
+        }
+
+        _dragIndex = index;
+        _isDragging = true;
+        if (dragIcon != null)
+        {
+            dragIcon.Show(slot.Definition.Icon);
+            dragIcon.UpdatePosition(eventData);
+        }
+
+        _slots[index].SetDragHidden(true);
+    }
+
+    public void HandleDrag(PointerEventData eventData)
+    {
+        if (!_isDragging)
+        {
+            return;
+        }
+
+        dragIcon?.UpdatePosition(eventData);
+    }
+
+    public void HandleEndDrag()
+    {
+        if (!_isDragging)
+        {
+            return;
+        }
+
+        _dragIndex = -1;
+        _isDragging = false;
+        dragIcon?.Hide();
+        Refresh();
+    }
+
+    public void HandleDropToInventory(int inventorySlotIndex)
+    {
+        if (_equipment == null || _inventoryGridView == null || !_isDragging)
+        {
+            return;
+        }
+
+        _inventoryGridView.HandleDropFromEquipment(_equipment, _dragIndex, inventorySlotIndex);
+        _dragIndex = -1;
+        _isDragging = false;
+        dragIcon?.Hide();
+        Refresh();
     }
 
     public void Clear()

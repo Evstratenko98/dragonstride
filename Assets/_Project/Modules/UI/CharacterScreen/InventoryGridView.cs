@@ -12,8 +12,10 @@ public class InventoryGridView : MonoBehaviour
 
     private readonly List<InventorySlotView> _slots = new();
     private Inventory _inventory;
+    private EquipmentGridView _equipmentGridView;
     private int _dragIndex = -1;
     private bool _isDragging;
+    public bool IsDragging => _isDragging;
 
     private void Awake()
     {
@@ -100,6 +102,11 @@ public class InventoryGridView : MonoBehaviour
         }
     }
 
+    public void BindEquipmentGrid(EquipmentGridView equipmentGridView)
+    {
+        _equipmentGridView = equipmentGridView;
+    }
+
     public void Refresh()
     {
         if (_inventory == null)
@@ -152,13 +159,22 @@ public class InventoryGridView : MonoBehaviour
 
     public void HandleDrop(int targetIndex)
     {
-        if (!_isDragging || _inventory == null)
+        if (_inventory == null)
         {
             return;
         }
 
         if (targetIndex < 0 || targetIndex >= _inventory.Slots.Count)
         {
+            return;
+        }
+
+        if (!_isDragging)
+        {
+            if (_equipmentGridView != null && _equipmentGridView.IsDragging)
+            {
+                _equipmentGridView.HandleDropToInventory(targetIndex);
+            }
             return;
         }
 
@@ -195,6 +211,20 @@ public class InventoryGridView : MonoBehaviour
         _isDragging = false;
         dragIcon?.Hide();
         Refresh();
+    }
+
+    public void HandleDropFromEquipment(CharacterEquipment equipment, int equipmentSlotIndex, int inventorySlotIndex)
+    {
+        if (_inventory == null || equipment == null)
+        {
+            return;
+        }
+
+        bool moved = equipment.UnequipToInventorySlot(_inventory, equipmentSlotIndex, inventorySlotIndex);
+        if (moved)
+        {
+            Refresh();
+        }
     }
 
     public void Clear()

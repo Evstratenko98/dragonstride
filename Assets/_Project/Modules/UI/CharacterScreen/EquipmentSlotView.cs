@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class EquipmentSlotView : MonoBehaviour, IDropHandler
+public class EquipmentSlotView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler
 {
     [SerializeField] private Image iconImage;
     [SerializeField] private TMP_Text countLabel;
@@ -33,6 +33,39 @@ public class EquipmentSlotView : MonoBehaviour, IDropHandler
             countLabel.text = _hasItem && count > 1 ? count.ToString() : string.Empty;
             countLabel.enabled = _hasItem && count > 1;
         }
+    }
+
+    public void SetDragHidden(bool hidden)
+    {
+        if (!_hasItem)
+        {
+            return;
+        }
+
+        if (iconImage != null)
+        {
+            iconImage.enabled = !hidden && iconImage.sprite != null;
+        }
+
+        if (countLabel != null)
+        {
+            countLabel.enabled = !hidden && !string.IsNullOrEmpty(countLabel.text);
+        }
+    }
+
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        _grid?.HandleBeginDrag(_index, eventData);
+    }
+
+    public void OnDrag(PointerEventData eventData)
+    {
+        _grid?.HandleDrag(eventData);
+    }
+
+    public void OnEndDrag(PointerEventData eventData)
+    {
+        _grid?.HandleEndDrag();
     }
 
     public void OnDrop(PointerEventData eventData)

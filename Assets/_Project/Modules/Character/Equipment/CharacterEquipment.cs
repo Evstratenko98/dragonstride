@@ -98,6 +98,73 @@ public class CharacterEquipment
         return EquipFromInventory(inventory, inventorySlotIndex, freeSlotIndex);
     }
 
+    public bool SwapSlots(int fromIndex, int toIndex)
+    {
+        if (!IsValidEquipmentSlot(fromIndex) || !IsValidEquipmentSlot(toIndex))
+        {
+            Debug.LogWarning($"[CharacterEquipment] Invalid equipment swap {fromIndex} <-> {toIndex}.");
+            return false;
+        }
+
+        if (fromIndex == toIndex)
+        {
+            return true;
+        }
+
+        var fromSlot = _slots[fromIndex];
+        var toSlot = _slots[toIndex];
+        var fromItem = fromSlot.Definition;
+        var toItem = toSlot.Definition;
+
+        fromSlot.Set(toItem);
+        toSlot.Set(fromItem);
+        return true;
+    }
+
+    public bool UnequipToInventorySlot(Inventory inventory, int equipmentSlotIndex, int inventorySlotIndex)
+    {
+        if (!IsValidEquipmentSlot(equipmentSlotIndex))
+        {
+            Debug.LogWarning($"[CharacterEquipment] Invalid unequip slot={equipmentSlotIndex}.");
+            return false;
+        }
+
+        if (!IsValidInventorySlot(inventory, inventorySlotIndex))
+        {
+            Debug.LogWarning($"[CharacterEquipment] Invalid inventory slot={inventorySlotIndex}.");
+            return false;
+        }
+
+        var equipmentSlot = _slots[equipmentSlotIndex];
+        if (equipmentSlot.IsEmpty)
+        {
+            Debug.LogWarning("[CharacterEquipment] Equipment slot is empty.");
+            return false;
+        }
+
+        var inventorySlot = inventory.Slots[inventorySlotIndex];
+        var item = equipmentSlot.Definition;
+
+        if (!inventorySlot.IsEmpty && inventorySlot.Definition != item)
+        {
+            Debug.LogWarning("[CharacterEquipment] Inventory slot is already occupied.");
+            return false;
+        }
+
+        if (inventorySlot.IsEmpty)
+        {
+            inventorySlot.Set(item, 1);
+        }
+        else
+        {
+            inventorySlot.Add(1);
+        }
+
+        equipmentSlot.Clear();
+        ApplyItemModifiers(item, -1);
+        return true;
+    }
+
     private bool IsValidInventorySlot(Inventory inventory, int index)
     {
         return inventory != null && index >= 0 && index < inventory.Slots.Count;

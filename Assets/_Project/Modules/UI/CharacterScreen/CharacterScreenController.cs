@@ -34,6 +34,11 @@ public class CharacterScreenController : IPostInitializable, IDisposable
             _view.EquipmentGridView.BindInventoryGrid(_view.InventoryGridView);
         }
 
+        if (_view.InventoryGridView != null)
+        {
+            _view.InventoryGridView.BindEquipmentGrid(_view.EquipmentGridView);
+        }
+
         if (_view.CloseButton != null)
         {
             _view.CloseButton.onClick.AddListener(OnCloseClicked);
