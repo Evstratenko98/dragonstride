@@ -1,7 +1,7 @@
 using System;
 using VContainer.Unity;
 
-public class CharacterScreenController : IStartable, IDisposable
+public class CharacterScreenController : IPostInitializable, IDisposable
 {
     private readonly IEventBus _eventBus;
     private readonly ConfigScriptableObject _config;
@@ -17,7 +17,7 @@ public class CharacterScreenController : IStartable, IDisposable
         _view = view;
     }
 
-    public void Start()
+    public void PostInitialize()
     {
         _view.Hide();
         _openSubscription = _eventBus.Subscribe<CharacterButtonPressedMessage>(OnOpenRequested);
