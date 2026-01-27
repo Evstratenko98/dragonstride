@@ -1,5 +1,6 @@
 public enum ItemType
 {
     Consumable, // Расходник
-    Equipment   // Снаряжение
+    Equipment,   // Снаряжение
+    Weapon, // Оружие
 }

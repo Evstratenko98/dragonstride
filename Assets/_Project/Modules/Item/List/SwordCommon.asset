@@ -15,7 +15,7 @@ MonoBehaviour:
   Id: sword_common
   DisplayName: "\u041C\u0435\u0447"
   Description: "\u041F\u0440\u043E\u0441\u0442\u043E\u0439 \u043C\u0435\u0447"
-  Type: 1
+  Type: 2
   Rarity: 0
   Stackable: 0
   MaxStack: 1
