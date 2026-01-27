@@ -19,5 +19,12 @@ MonoBehaviour:
   Rarity: 0
   Stackable: 0
   MaxStack: 1
+  HealthModifier: 0
+  AttackModifier: 5
+  ArmorModifier: 0
+  DodgeModifier: 0
+  InitiativeModifier: 0
+  SpeedModifier: 0
+  LuckModifier: 0
   Icon: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
   WorldPrefab: {fileID: 0}
