@@ -142,6 +142,6 @@ public class GameScreenController : IPostInitializable, IDisposable
 
     private void OnFollowToggleChanged(bool isEnabled)
     {
-        _eventBus.Publish(new CameraFollowToggledMessage(isEnabled));
+        _eventBus.Publish(new CameraFollowToggled(isEnabled));
     }
 }

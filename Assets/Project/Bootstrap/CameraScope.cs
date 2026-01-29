@@ -13,10 +13,10 @@ public class CameraScope : LifetimeScope
         {
             throw new InvalidOperationException($"{nameof(CameraScope)} requires a {nameof(ConfigScriptableObject)} reference.");
         }
-
-        builder.RegisterInstance(Camera.main);
+        
         builder.RegisterInstance(_config);
-        builder.Register<CameraService>(Lifetime.Singleton);
-        builder.RegisterEntryPoint<CameraController>();
+        builder.RegisterInstance(Camera.main);
+        builder.Register<CameraFocusState>(Lifetime.Singleton);
+        builder.RegisterEntryPoint<CameraFollowDriver>();
     }
 } 
