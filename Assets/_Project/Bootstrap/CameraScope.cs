@@ -16,7 +16,7 @@ public class CameraScope : LifetimeScope
 
         builder.RegisterInstance(Camera.main);
         builder.RegisterInstance(_config);
-        builder.Register<CameraService>(Lifetime.Singleton);
-        builder.RegisterEntryPoint<CameraController>();
+        builder.Register<CameraFocusState>(Lifetime.Singleton);
+        builder.RegisterEntryPoint<CameraFollowDriver>();
     }
-} 
+}

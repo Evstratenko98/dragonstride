@@ -1,4 +1,4 @@
-public class CameraService
+public class CameraFocusState
 {
     public CharacterInstance CurrentTarget { get; private set; }
     public bool FollowEnabled { get; private set; } = true;

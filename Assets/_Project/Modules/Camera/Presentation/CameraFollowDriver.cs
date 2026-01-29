@@ -3,9 +3,9 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
-public class CameraController : ITickable, IPostInitializable, IDisposable
+public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
 {
-    private readonly CameraService _cameraService;
+    private readonly CameraFocusState _focusState;
     private readonly Camera _camera;
     private readonly IEventBus _eventBus;
     private readonly ConfigScriptableObject _config;
@@ -20,9 +20,9 @@ public class CameraController : ITickable, IPostInitializable, IDisposable
     private float _minZ;
     private float _maxZ;
 
-    public CameraController(CameraService cameraService, Camera camera, IEventBus eventBus, ConfigScriptableObject config)
+    public CameraFollowDriver(CameraFocusState focusState, Camera camera, IEventBus eventBus, ConfigScriptableObject config)
     {
-        _cameraService = cameraService;
+        _focusState = focusState;
         _camera = camera;
         _eventBus = eventBus;
         _config = config;
@@ -32,7 +32,7 @@ public class CameraController : ITickable, IPostInitializable, IDisposable
     {
         _subscription = _eventBus.Subscribe<TurnStateChangedMessage>(FocusCameraForCharacter);
         _gameStateSub = _eventBus.Subscribe<GameStateChangedMessage>(OnStateGame);
-        _followToggleSub = _eventBus.Subscribe<CameraFollowToggledMessage>(OnFollowToggled);
+        _followToggleSub = _eventBus.Subscribe<CameraFollowToggled>(OnFollowToggled);
 
         UpdateFieldBounds();
     }
@@ -40,14 +40,14 @@ public class CameraController : ITickable, IPostInitializable, IDisposable
     private void FocusCameraForCharacter(TurnStateChangedMessage msg)
     {
         if(msg.State == TurnState.Start)
-            _cameraService.SetTarget(msg.Character);
+            _focusState.SetTarget(msg.Character);
     }
 
     public void Tick()
     {
-        if (_cameraService.FollowEnabled)
+        if (_focusState.FollowEnabled)
         {
-            var target = _cameraService.CurrentTarget;
+            var target = _focusState.CurrentTarget;
             if (target == null)
             {
                 return;
@@ -77,13 +77,13 @@ public class CameraController : ITickable, IPostInitializable, IDisposable
     {
         if(msg.State == GameState.Finished)
         {
-            _cameraService.SetTarget(null);
+            _focusState.SetTarget(null);
         }
     }
 
-    private void OnFollowToggled(CameraFollowToggledMessage msg)
+    private void OnFollowToggled(CameraFollowToggled msg)
     {
-        _cameraService.SetFollowEnabled(msg.IsEnabled);
+        _focusState.SetFollowEnabled(msg.IsEnabled);
     }
 
     private void HandleEdgePanning()
