@@ -10,7 +10,7 @@ public class CharacterCellLayoutService
         _config = config;
     }
 
-    public void ApplyLayout(CellModel cell, IReadOnlyList<CharacterInstance> occupants)
+    public void ApplyLayout(Cell cell, IReadOnlyList<CharacterInstance> occupants)
     {
         if (cell == null || occupants == null || occupants.Count == 0)
         {

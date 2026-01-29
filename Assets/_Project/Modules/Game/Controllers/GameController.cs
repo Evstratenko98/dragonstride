@@ -12,7 +12,7 @@ public class GameController : IPostInitializable, IDisposable, IStartable
     private IDisposable _resetButtonSub;
 
     // Controllers
-    private FieldController _fieldController;
+    private FieldPresenter _fieldPresenter;
     private CharacterController _characterController;
     private TurnController _turnController;
 
@@ -31,12 +31,12 @@ public class GameController : IPostInitializable, IDisposable, IStartable
     public GameController(
         IEventBus eventBus, 
         TurnController turnController,
-        FieldController fieldController,
+        FieldPresenter fieldPresenter,
         CharacterController characterController    
     )
     {
         _eventBus = eventBus;
-        _fieldController = fieldController;
+        _fieldPresenter = fieldPresenter;
         _characterController = characterController;
         _turnController = turnController;
     }
@@ -71,8 +71,8 @@ public class GameController : IPostInitializable, IDisposable, IStartable
         Debug.Log("[GameController] Игра загружается...");
         SetGameState(GameState.Loading);
 
-        _fieldController.CreateField();
-        CellModel startCell = _fieldController.StartCellModel;
+        _fieldPresenter.CreateField();
+        Cell startCell = _fieldPresenter.StartCell;
 
         _players = _characterController.SpawnCharacters(startCell);
 
@@ -147,7 +147,7 @@ public class GameController : IPostInitializable, IDisposable, IStartable
     {
         GameState = GameState.Finished;
         _characterController.Reset();
-        _fieldController.Reset();
+        _fieldPresenter.Reset();
     }
 
     private void SetGameState(GameState newState)

@@ -80,7 +80,7 @@ public class TurnController : IPostInitializable, IDisposable
             return;
         }
 
-        if (CurrentPlayer.Model.CurrentCell.Type == CellModelType.End)
+        if (CurrentPlayer.Model.CurrentCell.Type == CellType.End)
         {
             Debug.Log($"[TurnController] Игрок {CurrentPlayer.Name} достиг финиша и победил!");
             _eventBus.Publish(new GameStateChangedMessage(GameState.Finished));

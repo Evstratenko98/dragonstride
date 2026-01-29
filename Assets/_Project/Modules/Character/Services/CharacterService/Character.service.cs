@@ -19,7 +19,7 @@ public class CharacterService
         _layoutService = layoutService;
     }
 
-    public CharacterInstance CreateCharacter(CellModel startCell, string name, int prefabIndex, CharacterClass characterClass)
+    public CharacterInstance CreateCharacter(Cell startCell, string name, int prefabIndex, CharacterClass characterClass)
     {
         if (startCell == null)
         {
@@ -44,10 +44,10 @@ public class CharacterService
     {  
         if(characterInstance == null || characterInstance.Model == null) return;
 
-        CellModel currentCell = characterInstance.Model.CurrentCell;
+        Cell currentCell = characterInstance.Model.CurrentCell;
         if (currentCell == null) return;
 
-        CellModel neighborCell = currentCell.GetNeighbor(dir);
+        Cell neighborCell = currentCell.GetNeighbor(dir.x, dir.y);
         if (neighborCell == null) return;
 
         await characterInstance.MoveTo(neighborCell);
@@ -65,7 +65,7 @@ public class CharacterService
         _characters.Clear();
     }
 
-    private void UpdateCellLayout(CellModel cell)
+    private void UpdateCellLayout(Cell cell)
     {
         if (cell == null) return;
 
