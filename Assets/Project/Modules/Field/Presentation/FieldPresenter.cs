@@ -1,36 +1,33 @@
-using System;
 using System.Collections.Generic;
-using UnityEngine;
-using VContainer;
-using VContainer.Unity;
 using System.Linq;
+using UnityEngine;
 
-public class FieldController
+public class FieldPresenter
 {
     private readonly ConfigScriptableObject _config;
-    private readonly FieldService _fieldService;
-    private readonly MazeGenerator _mazeGenerator;
+    private readonly FieldMap _fieldMap;
+    private readonly GenerateFieldUseCase _generateFieldUseCase;
 
     private readonly CellView _cellPrefab;
     private readonly LinkView _linkView;
     private readonly CellColorTheme _theme;
 
     private readonly Transform _root;
-    private readonly Dictionary<CellModel, CellView> _views = new();
+    private readonly Dictionary<Cell, CellView> _views = new();
 
-    public CellModel StartCellModel => _fieldService.GetCellsByType(CellModelType.Start).FirstOrDefault();
+    public Cell StartCell => _fieldMap.GetCellsByType(CellType.Start).FirstOrDefault();
 
-    public FieldController(
+    public FieldPresenter(
         ConfigScriptableObject config,
-        FieldService fieldService,
-        MazeGenerator mazeGenerator,
+        FieldMap fieldMap,
+        GenerateFieldUseCase generateFieldUseCase,
         CellView cellPrefab,
         LinkView linkView,
         CellColorTheme theme)
     {
         _config = config;
-        _fieldService = fieldService;
-        _mazeGenerator = mazeGenerator;
+        _fieldMap = fieldMap;
+        _generateFieldUseCase = generateFieldUseCase;
 
         _cellPrefab = cellPrefab;
         _linkView = linkView;
@@ -38,22 +35,20 @@ public class FieldController
 
         _root = ((MonoBehaviour)linkView).transform;
     }
-    
+
     public void CreateField()
     {
-        _fieldService.Initialize(_config.FIELD_WIDTH, _config.FIELD_HEIGHT);
-        _mazeGenerator.Generate(_fieldService, _config.EXTRA_CONNECTION_CHANCE);
+        _generateFieldUseCase.Execute(_config.FIELD_WIDTH, _config.FIELD_HEIGHT, _config.EXTRA_CONNECTION_CHANCE);
         BuildCells();
         BuildLinks();
     }
 
     private void BuildCells()
     {
-        foreach (var cell in _fieldService.GetAllCells())
+        foreach (var cell in _fieldMap.GetAllCells())
         {
-            var view = GameObject.Instantiate(_cellPrefab, _root);
+            var view = Object.Instantiate(_cellPrefab, _root);
 
-            // передаём зависимости вручную
             view.Construct(_theme);
             view.Bind(cell);
 
@@ -65,7 +60,7 @@ public class FieldController
 
     private void BuildLinks()
     {
-        foreach (var link in _fieldService.GetAllLinks())
+        foreach (var link in _fieldMap.GetAllLinks())
         {
             var a = _views[link.A];
             var b = _views[link.B];
@@ -76,13 +71,16 @@ public class FieldController
 
     public void Reset()
     {
-        // удалить все клетки
         foreach (var view in _views.Values)
-            if (view != null) {
-                GameObject.Destroy(view.gameObject);
+        {
+            if (view != null)
+            {
+                Object.Destroy(view.gameObject);
             }
+        }
+
         _views.Clear();
         _linkView.ClearLinks();
-        _fieldService.Clear();
+        _fieldMap.Clear();
     }
 }

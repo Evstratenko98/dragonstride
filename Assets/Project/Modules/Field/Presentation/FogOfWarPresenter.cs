@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using VContainer.Unity;
 
-public class FogOfWarController : IPostInitializable, IDisposable
+public class FogOfWarPresenter : IPostInitializable, IDisposable
 {
     private const int VisionRadius = 2;
 
     private readonly IEventBus _eventBus;
-    private readonly FieldService _fieldService;
+    private readonly FieldMap _fieldMap;
     private readonly CharacterService _characterService;
     private readonly ConfigScriptableObject _config;
     private readonly FogOfWarView _view;
@@ -15,15 +15,15 @@ public class FogOfWarController : IPostInitializable, IDisposable
     private IDisposable _moveSubscription;
     private IDisposable _gameStateSubscription;
 
-    public FogOfWarController(
+    public FogOfWarPresenter(
         IEventBus eventBus,
-        FieldService fieldService,
+        FieldMap fieldMap,
         CharacterService characterService,
         ConfigScriptableObject config,
         FogOfWarView view)
     {
         _eventBus = eventBus;
-        _fieldService = fieldService;
+        _fieldMap = fieldMap;
         _characterService = characterService;
         _config = config;
         _view = view;
@@ -56,15 +56,15 @@ public class FogOfWarController : IPostInitializable, IDisposable
 
     private void InitializeFog()
     {
-        if (_fieldService.Grid == null)
+        if (_fieldMap.Grid == null)
             return;
 
-        foreach (var cell in _fieldService.GetAllCells())
+        foreach (var cell in _fieldMap.GetAllCells())
         {
-            cell.SetVisibility(CellVisibilityState.Unseen);
+            cell.SetVisibility(CellVisibility.Unseen);
         }
 
-        _view.Build(_fieldService, _config.CELL_SIZE);
+        _view.Build(_fieldMap, _config.CELL_SIZE);
         UpdateVisibility();
     }
 
@@ -75,10 +75,10 @@ public class FogOfWarController : IPostInitializable, IDisposable
 
     private void UpdateVisibility()
     {
-        if (_fieldService.Grid == null)
+        if (_fieldMap.Grid == null)
             return;
 
-        var currentlyVisible = new HashSet<CellModel>();
+        var currentlyVisible = new HashSet<Cell>();
 
         foreach (var character in _characterService.AllCharacters)
         {
@@ -92,28 +92,28 @@ public class FogOfWarController : IPostInitializable, IDisposable
             }
         }
 
-        foreach (var cell in _fieldService.GetAllCells())
+        foreach (var cell in _fieldMap.GetAllCells())
         {
             if (currentlyVisible.Contains(cell))
             {
-                cell.SetVisibility(CellVisibilityState.Visible);
+                cell.SetVisibility(CellVisibility.Visible);
             }
-            else if (cell.VisibilityState == CellVisibilityState.Visible)
+            else if (cell.Visibility == CellVisibility.Visible)
             {
-                cell.SetVisibility(CellVisibilityState.Seen);
+                cell.SetVisibility(CellVisibility.Seen);
             }
 
             _view.ApplyVisibility(cell);
         }
     }
 
-    private IEnumerable<CellModel> CollectVisibleCells(CellModel origin, int radius)
+    private IEnumerable<Cell> CollectVisibleCells(Cell origin, int radius)
     {
-        var result = new HashSet<CellModel>();
+        var result = new HashSet<Cell>();
         if (origin == null || radius < 0)
             return result;
 
-        var queue = new Queue<(CellModel cell, int depth)>();
+        var queue = new Queue<(Cell cell, int depth)>();
         queue.Enqueue((origin, 0));
         result.Add(origin);
 

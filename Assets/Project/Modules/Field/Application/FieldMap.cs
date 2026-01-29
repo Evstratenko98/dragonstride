@@ -1,47 +1,42 @@
 using System.Collections.Generic;
 
-public class FieldService
+public class FieldMap
 {
+    private readonly System.Random _random = new System.Random();
+
     public int Width { get; private set; }
     public int Height { get; private set; }
 
-    public CellModel[,] Grid { get; private set; }
+    public Cell[,] Grid { get; private set; }
 
-    private readonly List<LinkModel> _links = new List<LinkModel>();
+    private readonly List<Link> _links = new List<Link>();
 
-    // -----------------------------------
-    //        ИНИЦИАЛИЗАЦИЯ ПОЛЯ
-    // -----------------------------------
     public void Initialize(int width, int height)
     {
         Width = width;
         Height = height;
 
-        Grid = new CellModel[Width, Height];
+        Grid = new Cell[Width, Height];
         _links.Clear();
 
         for (int x = 0; x < Width; x++)
         {
             for (int y = 0; y < Height; y++)
             {
-                Grid[x, y] = new CellModel(x, y);
+                Grid[x, y] = new Cell(x, y);
             }
         }
 
-        // Назначение типов
         InitializeTypes();
     }
 
-    // -----------------------------------
-    //         ДОСТУП К КЛЕТКАМ
-    // -----------------------------------
     public bool IsInside(int x, int y)
     {
         return x >= 0 && x < Width &&
                y >= 0 && y < Height;
     }
 
-    public CellModel GetCell(int x, int y)
+    public Cell GetCell(int x, int y)
     {
         if (!IsInside(x, y))
             return null;
@@ -49,7 +44,7 @@ public class FieldService
         return Grid[x, y];
     }
 
-    public IEnumerable<CellModel> GetAllCells()
+    public IEnumerable<Cell> GetAllCells()
     {
         if (Grid == null)
             yield break;
@@ -63,7 +58,7 @@ public class FieldService
         }
     }
 
-    public IEnumerable<CellModel> GetCellsByType(CellModelType type)
+    public IEnumerable<Cell> GetCellsByType(CellType type)
     {
         foreach (var cell in GetAllCells())
         {
@@ -72,28 +67,21 @@ public class FieldService
         }
     }
 
-    // -----------------------------------
-    //          РАБОТА С ТИПАМИ
-    // -----------------------------------
     public void InitializeTypes()
     {
-        CellModel startCell = this.GetCell(Width / 2, Height / 2);
-        startCell.Type = CellModelType.Start;
+        var startCell = GetCell(Width / 2, Height / 2);
+        startCell?.SetType(CellType.Start);
 
-        CellModel finishCell = GetRandomFinishCell();
-        finishCell.Type = CellModelType.End;
+        var finishCell = GetRandomFinishCell();
+        finishCell?.SetType(CellType.End);
     }
 
-
-    // -----------------------------------
-    //          РАБОТА СО СВЯЗЯМИ
-    // -----------------------------------
-    public IEnumerable<LinkModel> GetAllLinks()
+    public IEnumerable<Link> GetAllLinks()
     {
         return _links;
     }
 
-    public bool LinkExists(CellModel a, CellModel b)
+    public bool LinkExists(Cell a, Cell b)
     {
         if (a == null || b == null || a == b)
             return false;
@@ -107,7 +95,7 @@ public class FieldService
         return false;
     }
 
-    public LinkModel CreateLink(CellModel a, CellModel b)
+    public Link CreateLink(Cell a, Cell b)
     {
         if (a == null || b == null || a == b)
             return null;
@@ -115,9 +103,8 @@ public class FieldService
         if (LinkExists(a, b))
             return null;
 
-        LinkModel link = new LinkModel(a, b);
+        var link = new Link(a, b);
 
-        // Обновляем модельные связи соседей
         a.AddNeighbor(b);
         b.AddNeighbor(a);
 
@@ -125,9 +112,17 @@ public class FieldService
         return link;
     }
 
-    private CellModel GetRandomFinishCell()
+    public void Clear()
     {
-        List<CellModel> candidates = new List<CellModel>();
+        Grid = null;
+        _links.Clear();
+        Width = 0;
+        Height = 0;
+    }
+
+    private Cell GetRandomFinishCell()
+    {
+        var candidates = new List<Cell>();
 
         foreach (var cell in GetAllCells())
         {
@@ -144,7 +139,6 @@ public class FieldService
                 continue;
             }
 
-            // Проверяем соседей
             bool neighborOnEdge =
                 (IsInside(x - 1, y) && IsEdge(x - 1, y)) ||
                 (IsInside(x + 1, y) && IsEdge(x + 1, y)) ||
@@ -156,22 +150,14 @@ public class FieldService
         }
 
         if (candidates.Count == 0)
-            return GetCell(Width - 1, Height - 1); // fallback
+            return GetCell(Width - 1, Height - 1);
 
-        return candidates[UnityEngine.Random.Range(0, candidates.Count)];
+        return candidates[_random.Next(0, candidates.Count)];
     }
 
     private bool IsEdge(int x, int y)
     {
         return x == 0 || x == Width - 1 ||
             y == 0 || y == Height - 1;
-    }
-
-    public void Clear()
-    {
-        Grid = null;
-        _links.Clear();
-        Width = 0;
-        Height = 0;
     }
 }

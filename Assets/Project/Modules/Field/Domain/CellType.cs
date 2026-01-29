@@ -1,5 +1,4 @@
-
-public enum CellModelType
+public enum CellType
 {
     Start,
     Common,

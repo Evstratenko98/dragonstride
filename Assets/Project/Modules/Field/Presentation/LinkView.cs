@@ -1,21 +1,21 @@
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class LinkView : MonoBehaviour
 {
     [SerializeField] private Material defaultMaterial;
 
-    private readonly List<(LinkModel model, LineRenderer lr)> _visualLinks = new();
+    private readonly List<(Link model, LineRenderer lr)> _visualLinks = new();
 
-    public void CreateVisualLink(LinkModel linkModel, CellView aView, CellView bView)
+    public void CreateVisualLink(Link linkModel, CellView aView, CellView bView)
     {
         LineRenderer lr = CreateLineRenderer(aView.transform, bView.transform);
-        _visualLinks.Add(((LinkModel)linkModel, lr));
+        _visualLinks.Add((linkModel, lr));
     }
 
     private LineRenderer CreateLineRenderer(Transform start, Transform end)
     {
-        GameObject lineObj = new GameObject("Link");
+        var lineObj = new GameObject("Link");
         lineObj.transform.SetParent(transform);
 
         var lr = lineObj.AddComponent<LineRenderer>();
@@ -33,7 +33,7 @@ public class LinkView : MonoBehaviour
 
         return lr;
     }
-    
+
     private static Vector3 GetEdgePoint(Transform from, Vector3 toward)
     {
         Collider collider = from.GetComponentInChildren<Collider>();
@@ -50,7 +50,6 @@ public class LinkView : MonoBehaviour
 
         return from.position;
     }
-    
 
     public void ClearLinks()
     {

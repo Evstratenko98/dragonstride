@@ -5,7 +5,7 @@ public class CellView : MonoBehaviour
 {
     private Renderer _renderer;
     private IDisposable _subscription;
-    private CellModel _model;
+    private Cell _model;
     private CellColorTheme _theme;
 
     private void Awake()
@@ -18,32 +18,32 @@ public class CellView : MonoBehaviour
         _theme = theme;
     }
 
-    public void Bind(CellModel model)
+    public void Bind(Cell model)
     {
         _model = model;
         UpdateMaterial(model.Type);
     }
 
-    private void UpdateMaterial(CellModelType type)
+    private void UpdateMaterial(CellType type)
     {
         switch (type)
         {
-            case CellModelType.Start:
+            case CellType.Start:
                 _renderer.material = _theme.startMaterial;
                 break;
-            case CellModelType.Common:
+            case CellType.Common:
                 _renderer.material = _theme.commonMaterial;
                 break;
-            case CellModelType.Loot:
+            case CellType.Loot:
                 _renderer.material = _theme.lootMaterial;
                 break;
-            case CellModelType.Fight:
+            case CellType.Fight:
                 _renderer.material = _theme.fightMaterial;
                 break;
-            case CellModelType.Teleport:
+            case CellType.Teleport:
                 _renderer.material = _theme.teleportMaterial;
                 break;
-            case CellModelType.End:
+            case CellType.End:
                 _renderer.material = _theme.endMaterial;
                 break;
         }

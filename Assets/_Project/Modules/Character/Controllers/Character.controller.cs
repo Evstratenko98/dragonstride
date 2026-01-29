@@ -33,7 +33,7 @@ public class CharacterController : IPostInitializable, ITickable, IDisposable
         _turnStateSubscription = _eventBus.Subscribe<TurnStateChangedMessage>(OnTurnStateChanged);
     }
 
-    public IReadOnlyList<CharacterInstance> SpawnCharacters(CellModel startCell)
+    public IReadOnlyList<CharacterInstance> SpawnCharacters(Cell startCell)
     {   
         _characterService.CreateCharacter(startCell, "Arnoldo", 0, new SamuraiClass());
         _characterService.CreateCharacter(startCell, "Patrick", 1, new RunnerClass());

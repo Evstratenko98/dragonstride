@@ -8,7 +8,7 @@ public class FogOfWarView : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float unseenAlpha = 1f;
     [SerializeField] private float heightOffset = 0.5f;
 
-    private readonly Dictionary<CellModel, Renderer> _tiles = new();
+    private readonly Dictionary<Cell, Renderer> _tiles = new();
     private MaterialPropertyBlock _propertyBlock;
 
     private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
@@ -37,14 +37,14 @@ public class FogOfWarView : MonoBehaviour
         }
     }
 
-    public void Build(FieldService fieldService, float cellSize)
+    public void Build(FieldMap fieldMap, float cellSize)
     {
         Clear();
 
-        if (fieldService == null || fogMaterial == null)
+        if (fieldMap == null || fogMaterial == null)
             return;
 
-        foreach (var cell in fieldService.GetAllCells())
+        foreach (var cell in fieldMap.GetAllCells())
         {
             var tile = GameObject.CreatePrimitive(PrimitiveType.Quad);
             tile.name = $"Fog_{cell.X}_{cell.Y}";
@@ -75,21 +75,21 @@ public class FogOfWarView : MonoBehaviour
         _tiles.Clear();
     }
 
-    public void ApplyVisibility(CellModel cell)
+    public void ApplyVisibility(Cell cell)
     {
         if (cell == null || !_tiles.TryGetValue(cell, out var renderer))
             return;
 
-        switch (cell.VisibilityState)
+        switch (cell.Visibility)
         {
-            case CellVisibilityState.Visible:
+            case CellVisibility.Visible:
                 renderer.enabled = false;
                 break;
-            case CellVisibilityState.Seen:
+            case CellVisibility.Seen:
                 renderer.enabled = true;
                 SetTileAlpha(renderer, seenAlpha);
                 break;
-            case CellVisibilityState.Unseen:
+            case CellVisibility.Unseen:
                 renderer.enabled = true;
                 SetTileAlpha(renderer, unseenAlpha);
                 break;
