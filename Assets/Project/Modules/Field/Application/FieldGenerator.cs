@@ -3,16 +3,11 @@ using System.Collections.Generic;
 
 public sealed class FieldGenerator
 {
-    private readonly Random _random;
+    private readonly System.Random _random;
 
-    public FieldGenerator()
+    public FieldGenerator(System.Random random = null)
     {
-        _random = new Random();
-    }
-
-    public FieldGenerator(Random random)
-    {
-        _random = random ?? throw new ArgumentNullException(nameof(random));
+        _random = random ?? new System.Random();
     }
 
     public FieldGrid Create(int width, int height, float extraConnectionChance)
