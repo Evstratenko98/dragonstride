@@ -24,6 +24,6 @@ public class FinishScreenController: IStartable, IDisposable
 
     private void OnFinishClicked()
     {
-        _eventBus.Publish(new ResetButtonPressedMessage());
+        _eventBus.Publish(new ResetRequested());
     }
 }

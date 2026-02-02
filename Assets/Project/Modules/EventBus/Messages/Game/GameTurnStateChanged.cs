@@ -1,9 +1,9 @@
-public readonly struct GameTurnStateChangedMessage
+public readonly struct GameTurnStateChanged
 {
     public CharacterInstance Character { get; }
     public GameTurnState State { get; }
 
-    public GameTurnStateChangedMessage(CharacterInstance character, GameTurnState state)
+    public GameTurnStateChanged(CharacterInstance character, GameTurnState state)
     {
         Character = character;
         State = state;

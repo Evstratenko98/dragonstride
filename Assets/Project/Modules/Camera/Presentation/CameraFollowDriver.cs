@@ -30,14 +30,14 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
 
     public void PostInitialize()
     {
-        _subscription = _eventBus.Subscribe<TurnStateChangedMessage>(FocusCameraForCharacter);
-        _gameStateSub = _eventBus.Subscribe<GameStateChangedMessage>(OnStateGame);
+        _subscription = _eventBus.Subscribe<TurnPhaseChanged>(FocusCameraForCharacter);
+        _gameStateSub = _eventBus.Subscribe<GameStateChanged>(OnStateGame);
         _followToggleSub = _eventBus.Subscribe<CameraFollowToggled>(OnFollowToggled);
 
         UpdateFieldBounds();
     }
 
-    private void FocusCameraForCharacter(TurnStateChangedMessage msg)
+    private void FocusCameraForCharacter(TurnPhaseChanged msg)
     {
         if(msg.State == TurnState.Start)
             _cameraFocusState.SetTarget(msg.Character);
@@ -73,7 +73,7 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
         _followToggleSub?.Dispose();
     }
 
-    private void OnStateGame(GameStateChangedMessage msg)
+    private void OnStateGame(GameStateChanged msg)
     {
         if(msg.State == GameState.Finished)
         {

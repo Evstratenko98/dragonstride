@@ -32,7 +32,7 @@ public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
     public void PostInitialize()
     {
         _moveSubscription = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
-        _gameStateSubscription = _eventBus.Subscribe<GameStateChangedMessage>(OnGameStateChanged);
+        _gameStateSubscription = _eventBus.Subscribe<GameStateChanged>(OnGameStateChanged);
     }
 
     public void Dispose()
@@ -41,7 +41,7 @@ public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
         _gameStateSubscription?.Dispose();
     }
 
-    private void OnGameStateChanged(GameStateChangedMessage message)
+    private void OnGameStateChanged(GameStateChanged message)
     {
         if (message.State == GameState.Playing)
         {

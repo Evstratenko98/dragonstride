@@ -25,7 +25,7 @@ public class TurnController : IPostInitializable, IDisposable
     public void PostInitialize()
     {
         _stepSubscription      = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
-        _endTurnSubscription   = _eventBus.Subscribe<EndTurnKeyPressedMessage>(OnEndTurnKeyPressed);
+        _endTurnSubscription   = _eventBus.Subscribe<EndTurnRequested>(OnEndTurnKeyPressed);
     }
 
     public void Dispose()
@@ -55,7 +55,7 @@ public class TurnController : IPostInitializable, IDisposable
 
         Debug.Log($"[TurnController] Игроку {CurrentPlayer.Name} выпало {StepsAvailable} шагов!");
 
-        _eventBus.Publish(new DiceRolledMessage(CurrentPlayer, StepsAvailable));
+        _eventBus.Publish(new DiceRolled(CurrentPlayer, StepsAvailable));
 
         StartMovement();
     }
@@ -83,7 +83,7 @@ public class TurnController : IPostInitializable, IDisposable
         if (CurrentPlayer.Model.CurrentCell.Type == CellType.End)
         {
             Debug.Log($"[TurnController] Игрок {CurrentPlayer.Name} достиг финиша и победил!");
-            _eventBus.Publish(new GameStateChangedMessage(GameState.Finished));
+            _eventBus.Publish(new GameStateChanged(GameState.Finished));
 
             return;
         }
@@ -127,7 +127,7 @@ public class TurnController : IPostInitializable, IDisposable
         StepsRemaining = 0;
 
         SetState(TurnState.End);
-        _eventBus.Publish(new TurnEndedMessage());
+        _eventBus.Publish(new TurnEnded());
     }
 
     // ---------------- EVENT HANDLERS ----------------
@@ -143,7 +143,7 @@ public class TurnController : IPostInitializable, IDisposable
         RegisterStep();
     }
 
-    private void OnEndTurnKeyPressed(EndTurnKeyPressedMessage msg)
+    private void OnEndTurnKeyPressed(EndTurnRequested msg)
     {
         if (!_allowEndTurn)
         {
@@ -177,7 +177,7 @@ public class TurnController : IPostInitializable, IDisposable
     {
         State = newState;
         
-        _eventBus.Publish(new TurnStateChangedMessage(CurrentPlayer, newState));
+        _eventBus.Publish(new TurnPhaseChanged(CurrentPlayer, newState));
         Debug.Log($"[TurnController] Состояние хода игрока {CurrentPlayer?.Name}: {newState}");       
     }
 }

@@ -30,10 +30,10 @@ public class CharacterInputReader : IDisposable
     }
     public void StartListening()
     {
-        _gameStateSub = _eventBus.Subscribe<GameStateChangedMessage>(OnStateGame);
+        _gameStateSub = _eventBus.Subscribe<GameStateChanged>(OnStateGame);
     }
 
-    private void OnStateGame(GameStateChangedMessage msg)
+    private void OnStateGame(GameStateChanged msg)
     {
         _gameState = msg.State;
         Debug.Log(_gameState);
@@ -60,7 +60,7 @@ public class CharacterInputReader : IDisposable
     {
         if (ctx.performed)
         {
-            _eventBus.Publish(new EndTurnKeyPressedMessage());
+            _eventBus.Publish(new EndTurnRequested());
         }
     }
 

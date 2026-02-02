@@ -16,7 +16,7 @@ public class UIScreenController : IStartable, IDisposable
     public void Start()
     {
         _view.ShowGameScreen();
-        _gameStateSub = _eventBus.Subscribe<GameStateChangedMessage>(OnStateGame);
+        _gameStateSub = _eventBus.Subscribe<GameStateChanged>(OnStateGame);
     }
 
     public void Dispose()
@@ -24,7 +24,7 @@ public class UIScreenController : IStartable, IDisposable
         _gameStateSub?.Dispose();
     }
 
-    private void OnStateGame(GameStateChangedMessage msg)
+    private void OnStateGame(GameStateChanged msg)
     {
         switch (msg.State)
         {
