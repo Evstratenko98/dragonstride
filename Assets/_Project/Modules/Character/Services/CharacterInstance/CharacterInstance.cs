@@ -10,6 +10,7 @@ public class CharacterInstance
     public string Name { get; private set; }
 
     private readonly IEventBus _eventBus;
+    private readonly FieldRootService _fieldRootService;
 
     private CharacterView _prefab;
 
@@ -18,12 +19,14 @@ public class CharacterInstance
         CharacterModel model,
         CharacterView prefab,
         string name,
-        IEventBus eventBus
+        IEventBus eventBus,
+        FieldRootService fieldRootService
     )
     {
         _config = config;
         _prefab = prefab;
         _eventBus = eventBus;
+        _fieldRootService = fieldRootService;
 
         Model = model;
         Name = name;
@@ -55,7 +58,10 @@ public class CharacterInstance
         }
 
         Model.SetCell(cell);
-        View = GameObject.Instantiate(_prefab);
+        Transform parent = _fieldRootService?.EnsureRoot();
+        View = parent == null
+            ? GameObject.Instantiate(_prefab)
+            : GameObject.Instantiate(_prefab, parent);
         if (View == null)
         {
             Debug.LogError($"[CharacterInstance] Failed to instantiate prefab for character '{Name}'.");

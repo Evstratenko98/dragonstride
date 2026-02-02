@@ -31,6 +31,7 @@ public class GameScope : LifetimeScope
         builder.RegisterComponent(fogOfWarView);
         builder.Register<CellModel>(Lifetime.Transient);
         builder.Register<LinkModel>(Lifetime.Transient);
+        builder.Register<FieldRootService>(Lifetime.Singleton);
         builder.Register<FieldService>(Lifetime.Singleton);
         builder.Register<MazeGenerator>(Lifetime.Singleton);
 
