@@ -8,7 +8,7 @@ public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
 
     private readonly IEventBus _eventBus;
     private readonly FieldState _fieldState;
-    private readonly CharacterService _characterService;
+    private readonly CharacterRoster _characterRoster;
     private readonly ConfigScriptableObject _config;
     private readonly FogOfWarView _view;
 
@@ -18,20 +18,20 @@ public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
     public FogOfWarPresenter(
         IEventBus eventBus,
         FieldState fieldState,
-        CharacterService characterService,
+        CharacterRoster characterRoster,
         ConfigScriptableObject config,
         FieldViewFactory viewFactory)
     {
         _eventBus = eventBus;
         _fieldState = fieldState;
-        _characterService = characterService;
+        _characterRoster = characterRoster;
         _config = config;
         _view = viewFactory.FogOfWarView;
     }
 
     public void PostInitialize()
     {
-        _moveSubscription = _eventBus.Subscribe<CharacterMovedMessage>(OnCharacterMoved);
+        _moveSubscription = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
         _gameStateSubscription = _eventBus.Subscribe<GameStateChangedMessage>(OnGameStateChanged);
     }
 
@@ -71,7 +71,7 @@ public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
         UpdateVisibility();
     }
 
-    private void OnCharacterMoved(CharacterMovedMessage message)
+    private void OnCharacterMoved(CharacterMoved message)
     {
         UpdateVisibility();
     }
@@ -86,7 +86,7 @@ public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
 
         var currentlyVisible = new HashSet<Cell>();
 
-        foreach (var character in _characterService.AllCharacters)
+        foreach (var character in _characterRoster.AllCharacters)
         {
             var currentCell = character?.Model?.CurrentCell;
             if (currentCell == null)

@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CharacterCellLayoutService
+public class CharacterLayout
 {
     private readonly ConfigScriptableObject _config;
 
-    public CharacterCellLayoutService(ConfigScriptableObject config)
+    public CharacterLayout(ConfigScriptableObject config)
     {
         _config = config;
     }

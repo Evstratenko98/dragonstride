@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 
 public class Inventory
 {
@@ -40,7 +39,6 @@ public class Inventory
             return true;
         }
 
-        Debug.Log("Inventory full!");
         return false;
     }
 
@@ -71,7 +69,6 @@ public class Inventory
 
         if (fromIndex < 0 || fromIndex >= _slots.Count || toIndex < 0 || toIndex >= _slots.Count)
         {
-            Debug.LogWarning($"[Inventory] Invalid slot swap {fromIndex} <-> {toIndex}.");
             return;
         }
 

@@ -36,12 +36,12 @@ public class GameScope : LifetimeScope
 
         //CharacterModule
         builder.RegisterInstance(characterPrefabs).As<CharacterView[]>();
-        builder.Register<CharacterModel>(Lifetime.Transient);
+        builder.Register<Character>(Lifetime.Transient);
         builder.Register<CharacterInstance>(Lifetime.Transient);
-        builder.Register<CharacterInput>(Lifetime.Singleton);
+        builder.Register<CharacterInputReader>(Lifetime.Singleton);
         builder.Register<CharacterFactory>(Lifetime.Singleton);
-        builder.Register<CharacterCellLayoutService>(Lifetime.Singleton);
-        builder.Register<CharacterService>(Lifetime.Singleton);
+        builder.Register<CharacterLayout>(Lifetime.Singleton);
+        builder.Register<CharacterRoster>(Lifetime.Singleton);
 
         //ItemModule
         builder.Register<ItemService>(Lifetime.Singleton);
@@ -49,7 +49,7 @@ public class GameScope : LifetimeScope
         // Controllers
         builder.Register<FieldPresenter>(Lifetime.Singleton);
         builder.RegisterEntryPoint<FogOfWarPresenter>(Lifetime.Singleton).AsSelf();
-        builder.RegisterEntryPoint<CharacterController>(Lifetime.Singleton).AsSelf();
+        builder.RegisterEntryPoint<CharacterMovementDriver>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<TurnController>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<GameController>();
     }

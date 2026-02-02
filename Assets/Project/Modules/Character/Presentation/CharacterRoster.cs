@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class CharacterService
+public class CharacterRoster
 {
     private List<CharacterInstance> _characters = new List<CharacterInstance>();
     public IReadOnlyList<CharacterInstance> AllCharacters => _characters;
@@ -11,9 +11,9 @@ public class CharacterService
     //TODO: удалить, когда станет понятно, что работает отлично без этого метода
     public bool IsMoving => _characters.Any(c => c.IsMoving);
     private readonly CharacterFactory _factory;
-    private readonly CharacterCellLayoutService _layoutService;
+    private readonly CharacterLayout _layoutService;
 
-    public CharacterService(CharacterFactory factory, CharacterCellLayoutService layoutService)
+    public CharacterRoster(CharacterFactory factory, CharacterLayout layoutService)
     {
         _factory = factory;
         _layoutService = layoutService;
@@ -23,7 +23,7 @@ public class CharacterService
     {
         if (startCell == null)
         {
-            Debug.LogError("[CharacterService] Start cell is not available. Character will not be created.");
+            Debug.LogError("[CharacterRoster] Start cell is not available. Character will not be created.");
             return null;
         }
 

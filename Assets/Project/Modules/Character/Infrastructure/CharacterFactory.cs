@@ -44,7 +44,7 @@ public class CharacterFactory
             return null;
         }
 
-        CharacterModel model = new CharacterModel();
+        Character model = new Character();
         model.InitializeInventory(_config.INVENTORY_CAPACITY);
         model.InitializeEquipment();
         characterClass.Apply(model);

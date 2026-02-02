@@ -4,7 +4,7 @@ using UnityEngine;
 public class CharacterInstance
 {
     private readonly ConfigScriptableObject _config;
-    public CharacterModel Model { get; private set; }
+    public Character Model { get; private set; }
     public CharacterView View { get; private set; }
     public bool IsMoving { get; private set; }
     public string Name { get; private set; }
@@ -16,7 +16,7 @@ public class CharacterInstance
 
     public CharacterInstance(
         ConfigScriptableObject config,
-        CharacterModel model,
+        Character model,
         CharacterView prefab,
         string name,
         IEventBus eventBus,
@@ -92,7 +92,7 @@ public class CharacterInstance
         Model.SetCell(nextTarget);
         IsMoving = false;
 
-        _eventBus.Publish(new CharacterMovedMessage(this));
+        _eventBus.Publish(new CharacterMoved(this));
     }
 
     public void Destroy()

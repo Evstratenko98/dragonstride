@@ -1,4 +1,4 @@
-public class CharacterModel
+public class Character
 {
     public Inventory Inventory { get; private set; }
     public CharacterEquipment Equipment { get; private set; }

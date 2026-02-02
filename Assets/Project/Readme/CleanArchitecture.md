@@ -71,7 +71,7 @@ Core — это общее “ядро”, не принадлежащее ни 
 Имя файла = **роль + предметная область**. Используем глаголы/роль, а не архитектурные слова.
 
 Примеры:
-- ❌ `CharacterService`
+- ❌ `CharacterRoster`
 - ✅ `CharacterFactory`, `CharacterMovement`, `CharacterLifecycle`
 
 ### Domain — что есть (сущности и правила)

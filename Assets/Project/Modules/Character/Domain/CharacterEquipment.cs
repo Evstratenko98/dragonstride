@@ -1,15 +1,14 @@
 using System.Collections.Generic;
-using UnityEngine;
 
 public class CharacterEquipment
 {
     private readonly List<EquipmentSlot> _slots;
-    private readonly CharacterModel _model;
+    private readonly Character _model;
 
     public int Capacity { get; }
     public IReadOnlyList<EquipmentSlot> Slots => _slots;
 
-    public CharacterEquipment(CharacterModel model, int capacity = 2)
+    public CharacterEquipment(Character model, int capacity = 2)
     {
         _model = model;
         Capacity = capacity;
@@ -23,34 +22,29 @@ public class CharacterEquipment
     {
         if (!IsValidInventorySlot(inventory, inventorySlotIndex) || !IsValidEquipmentSlot(equipmentSlotIndex))
         {
-            Debug.LogWarning($"[CharacterEquipment] Invalid equip attempt inv={inventorySlotIndex} slot={equipmentSlotIndex}.");
             return false;
         }
 
         var inventorySlot = inventory.Slots[inventorySlotIndex];
         if (inventorySlot.IsEmpty)
         {
-            Debug.LogWarning("[CharacterEquipment] Inventory slot is empty.");
             return false;
         }
 
         var item = inventorySlot.Definition;
         if (item.Type != ItemType.Weapon)
         {
-            Debug.LogWarning("[CharacterEquipment] Only weapons can be equipped.");
             return false;
         }
 
         var equipmentSlot = _slots[equipmentSlotIndex];
         if (!equipmentSlot.IsEmpty)
         {
-            Debug.LogWarning("[CharacterEquipment] Equipment slot is already occupied.");
             return false;
         }
 
         if (!inventory.RemoveOne(item))
         {
-            Debug.LogWarning("[CharacterEquipment] Failed to remove item from inventory.");
             return false;
         }
 
@@ -63,21 +57,18 @@ public class CharacterEquipment
     {
         if (!IsValidEquipmentSlot(equipmentSlotIndex))
         {
-            Debug.LogWarning($"[CharacterEquipment] Invalid unequip slot={equipmentSlotIndex}.");
             return false;
         }
 
         var equipmentSlot = _slots[equipmentSlotIndex];
         if (equipmentSlot.IsEmpty)
         {
-            Debug.LogWarning("[CharacterEquipment] Equipment slot is empty.");
             return false;
         }
 
         var item = equipmentSlot.Definition;
         if (!inventory.AddItem(item))
         {
-            Debug.LogWarning("[CharacterEquipment] Failed to add item back to inventory.");
             return false;
         }
 
@@ -91,7 +82,6 @@ public class CharacterEquipment
         var freeSlotIndex = _slots.FindIndex(slot => slot.IsEmpty);
         if (freeSlotIndex < 0)
         {
-            Debug.LogWarning("[CharacterEquipment] No free equipment slots.");
             return false;
         }
 
@@ -102,7 +92,6 @@ public class CharacterEquipment
     {
         if (!IsValidEquipmentSlot(fromIndex) || !IsValidEquipmentSlot(toIndex))
         {
-            Debug.LogWarning($"[CharacterEquipment] Invalid equipment swap {fromIndex} <-> {toIndex}.");
             return false;
         }
 
@@ -125,20 +114,17 @@ public class CharacterEquipment
     {
         if (!IsValidEquipmentSlot(equipmentSlotIndex))
         {
-            Debug.LogWarning($"[CharacterEquipment] Invalid unequip slot={equipmentSlotIndex}.");
             return false;
         }
 
         if (!IsValidInventorySlot(inventory, inventorySlotIndex))
         {
-            Debug.LogWarning($"[CharacterEquipment] Invalid inventory slot={inventorySlotIndex}.");
             return false;
         }
 
         var equipmentSlot = _slots[equipmentSlotIndex];
         if (equipmentSlot.IsEmpty)
         {
-            Debug.LogWarning("[CharacterEquipment] Equipment slot is empty.");
             return false;
         }
 
@@ -147,7 +133,6 @@ public class CharacterEquipment
 
         if (!inventorySlot.IsEmpty && inventorySlot.Definition != item)
         {
-            Debug.LogWarning("[CharacterEquipment] Inventory slot is already occupied.");
             return false;
         }
 
