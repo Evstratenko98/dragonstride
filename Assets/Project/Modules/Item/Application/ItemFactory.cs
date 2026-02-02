@@ -1,42 +1,44 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using UnityEngine;
-using Random = UnityEngine.Random;
 
-public class ItemService
+public class ItemFactory
 {
     private readonly ItemConfig _config;
+    private readonly Random _random;
 
     // Отслеживаем созданные уникальные предметы
     private readonly HashSet<string> _spawnedUniqueIds = new();
 
-    public ItemService(ItemConfig config)
+    public ItemFactory(ItemConfig config)
     {
         _config = config;
+        _random = new Random();
     }
 
     // ------------------------------------------------------------
     // 1. СОЗДАНИЕ ПРЕДМЕТА
     // ------------------------------------------------------------
-    public ItemModel CreateItem(string id)
+    public Item CreateItem(string id)
     {
         var def = _config.AllItems.FirstOrDefault(i => i.Id == id);
 
         if (def == null)
         {
-            Debug.LogError($"[ItemService] Нет предмета с Id={id}");
+            Debug.WriteLine($"[ItemFactory] Нет предмета с Id={id}");
             return null;
         }
 
         // Если предмет уникальный, но уже существует
         if (def.Rarity == ItemRarity.Unique && _spawnedUniqueIds.Contains(def.Id))
         {
-            Debug.LogWarning($"[ItemService] Уникальный предмет {def.Id} уже существует. Создаю редкий предмет вместо него.");
+            Debug.WriteLine($"[ItemFactory] Уникальный предмет {def.Id} уже существует. Создаю редкий предмет вместо него.");
 
             return CreateRandomItemByRarity(ItemRarity.Rare);
         }
 
-        var model = new ItemModel(def);
+        var model = new Item(def);
 
         if (def.Rarity == ItemRarity.Unique)
             _spawnedUniqueIds.Add(def.Id);
@@ -47,7 +49,7 @@ public class ItemService
     // ------------------------------------------------------------
     // 2. СОЗДАНИЕ ЛУТА ИЗ СУНДУКА
     // ------------------------------------------------------------
-    public ItemModel CreateRandomChestLoot()
+    public Item CreateRandomChestLoot()
     {
         var rarity = RollRarity();
         return CreateRandomItemByRarity(rarity);
@@ -56,7 +58,7 @@ public class ItemService
     // ------------------------------------------------------------
     // 3. СОЗДАНИЕ СЛУЧАЙНОГО ПРЕДМЕТА ПО РЕДКОСТИ
     // ------------------------------------------------------------
-    private ItemModel CreateRandomItemByRarity(ItemRarity rarity)
+    private Item CreateRandomItemByRarity(ItemRarity rarity)
     {
         var items = _config.AllItems
             .Where(i => i.Rarity == rarity)
@@ -65,18 +67,18 @@ public class ItemService
 
         if (items.Count == 0)
         {
-            Debug.LogWarning($"[ItemService] Не нашел доступных предметов редкости {rarity}. Пытаюсь создать Common.");
+            Debug.WriteLine($"[ItemFactory] Не нашел доступных предметов редкости {rarity}. Пытаюсь создать Common.");
             return CreateRandomItemByRarity(ItemRarity.Common);
         }
 
-        var def = items[Random.Range(0, items.Count)];
+        var def = items[_random.Next(items.Count)];
         return CreateItem(def.Id);
     }
 
     // ------------------------------------------------------------
     // 4. УДАЛЕНИЕ ПРЕДМЕТА ИЗ ИГРЫ
     // ------------------------------------------------------------
-    public void DeleteItem(ItemModel item)
+    public void DeleteItem(Item item)
     {
         if (item == null || item.Definition == null)
             return;
@@ -96,7 +98,7 @@ public class ItemService
     private ItemRarity RollRarity()
     {
         float totalWeight = _config.ChestDropTable.Sum(r => r.Weight);
-        float roll = Random.value * totalWeight;
+        float roll = (float)(_random.NextDouble() * totalWeight);
         float current = 0f;
 
         foreach (var entry in _config.ChestDropTable)

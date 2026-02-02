@@ -44,7 +44,7 @@ public class GameScope : LifetimeScope
         builder.Register<CharacterRoster>(Lifetime.Singleton);
 
         //ItemModule
-        builder.Register<ItemService>(Lifetime.Singleton);
+        builder.Register<ItemFactory>(Lifetime.Singleton);
 
         // Controllers
         builder.Register<FieldPresenter>(Lifetime.Singleton);

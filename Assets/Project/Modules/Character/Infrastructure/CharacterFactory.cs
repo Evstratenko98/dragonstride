@@ -6,20 +6,20 @@ public class CharacterFactory
     private readonly ConfigScriptableObject _config;
     private readonly IEventBus _eventBus;
     private readonly CharacterView[] _prefabs;
-    private readonly ItemService _itemService;
+    private readonly ItemFactory _itemFactory;
     private readonly FieldRoot _fieldRootService;
 
     public CharacterFactory(
         ConfigScriptableObject config,
         IEventBus eventBus,
         CharacterView[] prefabs,
-        ItemService itemService,
+        ItemFactory itemFactory,
         FieldRoot fieldRootService)
     {
         _config = config;
         _eventBus = eventBus;
         _prefabs = prefabs;
-        _itemService = itemService;
+        _itemFactory = itemFactory;
         _fieldRootService = fieldRootService;
     }
 
@@ -50,7 +50,7 @@ public class CharacterFactory
         characterClass.Apply(model);
         
         string startItem = "sword_common";
-        ItemModel sword = _itemService.CreateItem(startItem);
+        Item sword = _itemFactory.CreateItem(startItem);
         if (sword != null)
         {
             bool added = model.Inventory.AddItem(sword.Definition);
