@@ -14,6 +14,8 @@ public class FieldController
     private readonly CellView _cellPrefab;
     private readonly LinkView _linkView;
     private readonly CellColorTheme _theme;
+    private readonly FieldRootService _fieldRootService;
+    private readonly FieldViewService _fieldViewService;
 
     private readonly Transform _root;
     private readonly Dictionary<CellModel, CellView> _views = new();
@@ -25,18 +27,22 @@ public class FieldController
         FieldService fieldService,
         MazeGenerator mazeGenerator,
         CellView cellPrefab,
-        LinkView linkView,
-        CellColorTheme theme)
+        CellColorTheme theme,
+        FieldRootService fieldRootService,
+        FieldViewService fieldViewService)
     {
         _config = config;
         _fieldService = fieldService;
         _mazeGenerator = mazeGenerator;
 
         _cellPrefab = cellPrefab;
-        _linkView = linkView;
         _theme = theme;
+        _fieldRootService = fieldRootService;
+        _fieldViewService = fieldViewService;
 
-        _root = ((MonoBehaviour)linkView).transform;
+        _root = _fieldRootService.EnsureRoot();
+        _linkView = _fieldViewService.LinkView;
+        _ = _fieldViewService.FogOfWarView;
     }
     
     public void CreateField()

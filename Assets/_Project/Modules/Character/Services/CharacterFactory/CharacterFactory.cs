@@ -7,13 +7,20 @@ public class CharacterFactory
     private readonly IEventBus _eventBus;
     private readonly CharacterView[] _prefabs;
     private readonly ItemService _itemService;
+    private readonly FieldRootService _fieldRootService;
 
-    public CharacterFactory(ConfigScriptableObject config, IEventBus eventBus, CharacterView[] prefabs, ItemService itemService)
+    public CharacterFactory(
+        ConfigScriptableObject config,
+        IEventBus eventBus,
+        CharacterView[] prefabs,
+        ItemService itemService,
+        FieldRootService fieldRootService)
     {
         _config = config;
         _eventBus = eventBus;
         _prefabs = prefabs;
         _itemService = itemService;
+        _fieldRootService = fieldRootService;
     }
 
     public CharacterInstance Create(string name, int prefabIndex, CharacterClass characterClass)
@@ -62,7 +69,7 @@ public class CharacterFactory
             }
         }
 
-        CharacterInstance instance = new CharacterInstance(_config, model, prefab, name, _eventBus);
+        CharacterInstance instance = new CharacterInstance(_config, model, prefab, name, _eventBus, _fieldRootService);
 
         return instance;
     }
