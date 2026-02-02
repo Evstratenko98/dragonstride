@@ -5,41 +5,41 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
-public class CharacterController : IPostInitializable, ITickable, IDisposable
+public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposable
 {
-    private readonly CharacterService _characterService;
+    private readonly CharacterRoster _characterRoster;
     private readonly IEventBus _eventBus;
-    private readonly CharacterInput _input;
+    private readonly CharacterInputReader _input;
 
     private IDisposable _turnStateSubscription;
 
     private CharacterInstance _currentCharacter;
     private TurnState _currentTurnState = TurnState.None;
 
-    public CharacterController(
-        CharacterService characterService,
+    public CharacterMovementDriver(
+        CharacterRoster characterRoster,
         IEventBus eventBus,
-        CharacterInput input
+        CharacterInputReader input
     )
     {
-        _characterService = characterService;
+        _characterRoster = characterRoster;
         _eventBus = eventBus;
         _input = input;
     }
 
     public void PostInitialize()
     {
-        // Логика стадий игрового хода
         _turnStateSubscription = _eventBus.Subscribe<TurnStateChangedMessage>(OnTurnStateChanged);
+        _input.StartListening();
     }
 
     public IReadOnlyList<CharacterInstance> SpawnCharacters(Cell startCell)
     {   
-        _characterService.CreateCharacter(startCell, "Arnoldo", 0, new SamuraiClass());
-        _characterService.CreateCharacter(startCell, "Patrick", 1, new RunnerClass());
-        _characterService.CreateCharacter(startCell, "Jonh", 2, new RunnerClass());
+        _characterRoster.CreateCharacter(startCell, "Arnoldo", 0, new SamuraiClass());
+        _characterRoster.CreateCharacter(startCell, "Patrick", 1, new RunnerClass());
+        _characterRoster.CreateCharacter(startCell, "Jonh", 2, new RunnerClass());
 
-        return _characterService.AllCharacters;
+        return _characterRoster.AllCharacters;
     }
 
     private void OnTurnStateChanged(TurnStateChangedMessage msg)
@@ -53,31 +53,26 @@ public class CharacterController : IPostInitializable, ITickable, IDisposable
         _turnStateSubscription?.Dispose();
     }
 
-    // -----------------------------
-    //        TICK (WASD)
-    // -----------------------------
     public async void Tick()
     {
-        // Никого нет — никто не двигается
         if (_currentCharacter == null)
             return;
 
-        // ВАЖНО: движение только в фазе Movement
         if (_currentTurnState != TurnState.Movement)
             return;
 
         Vector2Int dir = _input.Dir;
-        if (_characterService.IsMoving || dir == Vector2Int.zero)
+        if (_characterRoster.IsMoving || dir == Vector2Int.zero)
             return;
 
         
-        await _characterService.TryMove(_currentCharacter, dir);
+        await _characterRoster.TryMove(_currentCharacter, dir);
     }
 
     public void Reset()
     {
         _currentCharacter = null;
         _currentTurnState = TurnState.None;
-        _characterService.RemoveAllCharacters();
+        _characterRoster.RemoveAllCharacters();
     }
 }

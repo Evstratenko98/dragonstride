@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 
 public class Inventory
 {
@@ -21,7 +20,6 @@ public class Inventory
     
     public bool AddItem(ItemDefinition item, int count = 1)
     {
-        // 1. Если предмет стакается — ищем подходящий слот
         if (item.Stackable)
         {
             var stackSlot = _slots.FirstOrDefault(s => s.Definition == item);
@@ -32,7 +30,6 @@ public class Inventory
             }
         }
 
-        // 2. Ищем пустой слот
         var emptySlot = _slots.FirstOrDefault(s => s.IsEmpty);
         if (emptySlot != null)
         {
@@ -40,7 +37,6 @@ public class Inventory
             return true;
         }
 
-        Debug.Log("Inventory full!");
         return false;
     }
 
@@ -71,7 +67,6 @@ public class Inventory
 
         if (fromIndex < 0 || fromIndex >= _slots.Count || toIndex < 0 || toIndex >= _slots.Count)
         {
-            Debug.LogWarning($"[Inventory] Invalid slot swap {fromIndex} <-> {toIndex}.");
             return;
         }
 

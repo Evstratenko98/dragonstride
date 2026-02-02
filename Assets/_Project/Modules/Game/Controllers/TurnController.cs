@@ -24,7 +24,7 @@ public class TurnController : IPostInitializable, IDisposable
 
     public void PostInitialize()
     {
-        _stepSubscription      = _eventBus.Subscribe<CharacterMovedMessage>(OnCharacterMoved);
+        _stepSubscription      = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
         _endTurnSubscription   = _eventBus.Subscribe<EndTurnKeyPressedMessage>(OnEndTurnKeyPressed);
     }
 
@@ -132,7 +132,7 @@ public class TurnController : IPostInitializable, IDisposable
 
     // ---------------- EVENT HANDLERS ----------------
 
-    private void OnCharacterMoved(CharacterMovedMessage msg)
+    private void OnCharacterMoved(CharacterMoved msg)
     {
         if (State != TurnState.Movement)
             return;

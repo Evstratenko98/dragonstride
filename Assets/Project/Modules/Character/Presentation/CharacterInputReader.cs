@@ -2,7 +2,7 @@ using System;
 using UnityEngine.InputSystem;
 using UnityEngine;
 
-public class CharacterInput : IDisposable
+public class CharacterInputReader : IDisposable
 {
     private readonly IEventBus _eventBus;
     private readonly InputSystem _actions;
@@ -16,7 +16,7 @@ public class CharacterInput : IDisposable
 
     private GameState _gameState = GameState.Init;
 
-    public CharacterInput(IEventBus eventBus)
+    public CharacterInputReader(IEventBus eventBus)
     {
         _eventBus = eventBus;
 
@@ -28,7 +28,7 @@ public class CharacterInput : IDisposable
 
         _actions.Character.Enable();
     }
-    public void Awake()
+    public void StartListening()
     {
         _gameStateSub = _eventBus.Subscribe<GameStateChangedMessage>(OnStateGame);
     }
@@ -58,8 +58,6 @@ public class CharacterInput : IDisposable
 
     private void OnEndTurn(InputAction.CallbackContext ctx)
     {
-        // TODO: научить ловить сообщения
-        // if (ctx.performed && _gameState == GameState.Playing)
         if (ctx.performed)
         {
             _eventBus.Publish(new EndTurnKeyPressedMessage());

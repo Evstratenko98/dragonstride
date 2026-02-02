@@ -44,12 +44,11 @@ public class CharacterFactory
             return null;
         }
 
-        CharacterModel model = new CharacterModel();
+        Character model = new Character();
         model.InitializeInventory(_config.INVENTORY_CAPACITY);
         model.InitializeEquipment();
         characterClass.Apply(model);
         
-        // 4. Создаём стартовый предмет
         string startItem = "sword_common";
         ItemModel sword = _itemService.CreateItem(startItem);
         if (sword != null)

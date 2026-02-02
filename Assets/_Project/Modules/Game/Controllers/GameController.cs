@@ -13,7 +13,7 @@ public class GameController : IPostInitializable, IDisposable, IStartable
 
     // Controllers
     private FieldPresenter _fieldController;
-    private CharacterController _characterController;
+    private CharacterMovementDriver _characterController;
     private TurnController _turnController;
 
     private IReadOnlyList<CharacterInstance> _players;
@@ -32,7 +32,7 @@ public class GameController : IPostInitializable, IDisposable, IStartable
         IEventBus eventBus, 
         TurnController turnController,
         FieldPresenter fieldController,
-        CharacterController characterController    
+        CharacterMovementDriver characterController    
     )
     {
         _eventBus = eventBus;
