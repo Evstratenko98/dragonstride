@@ -1,22 +1,20 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
-public class GameController : IPostInitializable, IDisposable, IStartable
+public class GameFlow : IPostInitializable, IDisposable, IStartable
 {
     private readonly IEventBus _eventBus;
     private IDisposable _turnEndSub;
     private IDisposable _gameStateSub;
     private IDisposable _resetButtonSub;
 
-    // Controllers
-    private FieldPresenter _fieldController;
-    private CharacterMovementDriver _characterController;
-    private TurnController _turnController;
+    private readonly FieldPresenter _fieldPresenter;
+    private readonly CharacterMovementDriver _characterDriver;
+    private readonly TurnFlow _turnFlow;
 
-    private IReadOnlyList<CharacterInstance> _players;
+    private IReadOnlyList<CharacterInstance> _players = Array.Empty<CharacterInstance>();
     private int _currentPlayerIndex = -1;
 
     public GameState GameState { get; private set; } = GameState.Init;
@@ -28,29 +26,23 @@ public class GameController : IPostInitializable, IDisposable, IStartable
         ? null
         : _players[_currentPlayerIndex];
 
-    public GameController(
-        IEventBus eventBus, 
-        TurnController turnController,
-        FieldPresenter fieldController,
-        CharacterMovementDriver characterController    
+    public GameFlow(
+        IEventBus eventBus,
+        TurnFlow turnFlow,
+        FieldPresenter fieldPresenter,
+        CharacterMovementDriver characterDriver
     )
     {
         _eventBus = eventBus;
-        _fieldController = fieldController;
-        _characterController = characterController;
-        _turnController = turnController;
+        _fieldPresenter = fieldPresenter;
+        _characterDriver = characterDriver;
+        _turnFlow = turnFlow;
     }
 
-    // ==========================================================
-    // INIT
-    // ==========================================================
     public void PostInitialize()
     {
-        // стадии игрового хода
         _turnEndSub = _eventBus.Subscribe<TurnEnded>(OnEndTurn);
-        // стадии игры
         _gameStateSub = _eventBus.Subscribe<GameStateChanged>(OnStateGame);
-        // нажатие кнопки рестарта
         _resetButtonSub = _eventBus.Subscribe<ResetRequested>(OnStartGame);
     }
 
@@ -68,33 +60,26 @@ public class GameController : IPostInitializable, IDisposable, IStartable
 
     public void Start()
     {
-        Debug.Log("[GameController] Игра загружается...");
         SetGameState(GameState.Loading);
 
-        _fieldController.CreateField();
-        Cell startCell = _fieldController.StartCell;
+        _fieldPresenter.CreateField();
+        Cell startCell = _fieldPresenter.StartCell;
 
-        _players = _characterController.SpawnCharacters(startCell);
+        _players = _characterDriver.SpawnCharacters(startCell);
 
         StartGame();
     }
 
     public void StartGame()
     {
-        Debug.Log("[GameController] Игра начинается!");
         SetGameState(GameState.Playing);
 
         StartTurnCycle();
     }
 
-    // ==========================================================
-    // TURN CYCLE
-    // ==========================================================
     public void StartTurnCycle()
     {
-        //TODO: Тут будет обработка нового глобального хода
         GameTurnState = GameTurnState.BeginTurn;
-        // начинаем с первого игрока
         _currentPlayerIndex = 0;
 
         StartTurn();
@@ -103,9 +88,8 @@ public class GameController : IPostInitializable, IDisposable, IStartable
     private void StartTurn()
     {
         GameTurnState = GameTurnState.CharacterTurns;
-        Debug.Log($"[GameController] Ход игрока: {CurrentPlayer.Name}");
 
-       _turnController.StartTurn(CurrentPlayer);
+        _turnFlow.StartTurn(CurrentPlayer);
     }
 
     public void OnEndTurn(TurnEnded msg)
@@ -118,17 +102,13 @@ public class GameController : IPostInitializable, IDisposable, IStartable
         NextPlayer();
     }
 
-    // ==========================================================
-    // NEXT PLAYER / NEXT ROUND
-    // ==========================================================
     public void NextPlayer()
     {
         _currentPlayerIndex++;
 
         if (_currentPlayerIndex >= _players.Count)
         {
-            Debug.Log("[GameController] Все игроки походили — новый раунд");
-            StartTurnCycle();   // начало нового раунда
+            StartTurnCycle();
             return;
         }
 
@@ -146,8 +126,8 @@ public class GameController : IPostInitializable, IDisposable, IStartable
     private void FinishGame()
     {
         GameState = GameState.Finished;
-        _characterController.Reset();
-        _fieldController.Reset();
+        _characterDriver.Reset();
+        _fieldPresenter.Reset();
     }
 
     private void SetGameState(GameState newState)

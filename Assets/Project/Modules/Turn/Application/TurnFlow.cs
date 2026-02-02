@@ -1,11 +1,11 @@
 using System;
-using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
-public class TurnController : IPostInitializable, IDisposable
+public class TurnFlow : IPostInitializable, IDisposable
 {
     private readonly IEventBus _eventBus;
+    private readonly IRandomSource _randomSource;
 
     private IDisposable _stepSubscription;
     private IDisposable _endTurnSubscription;
@@ -17,9 +17,10 @@ public class TurnController : IPostInitializable, IDisposable
     public CharacterInstance CurrentPlayer { get; private set; }
     private bool _allowEndTurn = false;
 
-    public TurnController(IEventBus eventBus)
+    public TurnFlow(IEventBus eventBus, IRandomSource randomSource)
     {
         _eventBus = eventBus;
+        _randomSource = randomSource;
     }
 
     public void PostInitialize()
@@ -33,7 +34,6 @@ public class TurnController : IPostInitializable, IDisposable
         _stepSubscription?.Dispose();
         _endTurnSubscription?.Dispose();
     }
-    // ---------------- PUBLIC API ----------------
 
     public void StartTurn(CharacterInstance character)
     {
@@ -50,10 +50,8 @@ public class TurnController : IPostInitializable, IDisposable
     {
         SetState(TurnState.RollDice);
 
-        StepsAvailable = UnityEngine.Random.Range(1, 7);
+        StepsAvailable = _randomSource.Range(1, 7);
         StepsRemaining = StepsAvailable;
-
-        Debug.Log($"[TurnController] Игроку {CurrentPlayer.Name} выпало {StepsAvailable} шагов!");
 
         _eventBus.Publish(new DiceRolled(CurrentPlayer, StepsAvailable));
 
@@ -76,24 +74,20 @@ public class TurnController : IPostInitializable, IDisposable
 
         if (StepsRemaining <= 0)
         {
-            Debug.Log($"[TurnController] У игрока {CurrentPlayer.Name} больше нет шагов, движение заблокировано");
             return;
         }
 
         if (CurrentPlayer.Model.CurrentCell.Type == CellType.End)
         {
-            Debug.Log($"[TurnController] Игрок {CurrentPlayer.Name} достиг финиша и победил!");
             _eventBus.Publish(new GameStateChanged(GameState.Finished));
 
             return;
         }
 
         StepsRemaining--;
-        Debug.Log($"[TurnController] Игрок {CurrentPlayer.Name} сделал шаг. Осталось шагов: {StepsRemaining}");
 
         if (StepsRemaining <= 0)
         {
-            Debug.Log($"[TurnController] Игрок {CurrentPlayer.Name} израсходовал все шаги. Переход к взаимодействиям.");
             StartInteractions();
         }
     }
@@ -105,8 +99,6 @@ public class TurnController : IPostInitializable, IDisposable
 
         SetState(TurnState.InteractionCells);
 
-        // TODO: логика взаимодействия с клетками
-
         StartPlayerInteractions();
     }
 
@@ -116,8 +108,6 @@ public class TurnController : IPostInitializable, IDisposable
             return;
 
         SetState(TurnState.InteractionPlayers);
-
-        Debug.Log($"[TurnController] {CurrentPlayer.Name} нажмите пробел для завершения хода");
     }
 
     public void EndTurn()
@@ -129,8 +119,6 @@ public class TurnController : IPostInitializable, IDisposable
         SetState(TurnState.End);
         _eventBus.Publish(new TurnEnded());
     }
-
-    // ---------------- EVENT HANDLERS ----------------
 
     private void OnCharacterMoved(CharacterMoved msg)
     {
@@ -158,11 +146,8 @@ public class TurnController : IPostInitializable, IDisposable
             State == TurnState.InteractionCells ||
             State == TurnState.InteractionPlayers)
         {
-            Debug.Log($"[TurnController] Игрок {CurrentPlayer.Name} нажал пробел для завершения хода");
-
             if (State == TurnState.Movement && StepsRemaining > 0)
             {
-                Debug.Log($"[TurnController] Игрок {CurrentPlayer.Name} завершает движение досрочно. Остаток шагов: {StepsRemaining} → 0");
                 StepsRemaining = 0;
                 StartInteractions();
             }
@@ -171,13 +156,10 @@ public class TurnController : IPostInitializable, IDisposable
         }
     }
 
-    // ---------------- STATE MACHINE HELPER ----------------
-
     private void SetState(TurnState newState)
     {
         State = newState;
-        
+
         _eventBus.Publish(new TurnPhaseChanged(CurrentPlayer, newState));
-        Debug.Log($"[TurnController] Состояние хода игрока {CurrentPlayer?.Name}: {newState}");       
     }
 }
