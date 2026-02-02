@@ -12,7 +12,7 @@ public class GameController : IPostInitializable, IDisposable, IStartable
     private IDisposable _resetButtonSub;
 
     // Controllers
-    private FieldController _fieldController;
+    private FieldPresenter _fieldController;
     private CharacterController _characterController;
     private TurnController _turnController;
 
@@ -31,7 +31,7 @@ public class GameController : IPostInitializable, IDisposable, IStartable
     public GameController(
         IEventBus eventBus, 
         TurnController turnController,
-        FieldController fieldController,
+        FieldPresenter fieldController,
         CharacterController characterController    
     )
     {
@@ -72,7 +72,7 @@ public class GameController : IPostInitializable, IDisposable, IStartable
         SetGameState(GameState.Loading);
 
         _fieldController.CreateField();
-        CellModel startCell = _fieldController.StartCellModel;
+        Cell startCell = _fieldController.StartCell;
 
         _players = _characterController.SpawnCharacters(startCell);
 

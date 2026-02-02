@@ -7,14 +7,14 @@ public class CharacterFactory
     private readonly IEventBus _eventBus;
     private readonly CharacterView[] _prefabs;
     private readonly ItemService _itemService;
-    private readonly FieldRootService _fieldRootService;
+    private readonly FieldRoot _fieldRootService;
 
     public CharacterFactory(
         ConfigScriptableObject config,
         IEventBus eventBus,
         CharacterView[] prefabs,
         ItemService itemService,
-        FieldRootService fieldRootService)
+        FieldRoot fieldRootService)
     {
         _config = config;
         _eventBus = eventBus;

@@ -29,12 +29,10 @@ public class GameScope : LifetimeScope
         builder.RegisterComponent(cellViewPrefab);
         builder.RegisterInstance(linkViewPrefab);
         builder.RegisterInstance(fogOfWarViewPrefab);
-        builder.Register<CellModel>(Lifetime.Transient);
-        builder.Register<LinkModel>(Lifetime.Transient);
-        builder.Register<FieldRootService>(Lifetime.Singleton);
-        builder.Register<FieldViewService>(Lifetime.Singleton);
-        builder.Register<FieldService>(Lifetime.Singleton);
-        builder.Register<MazeGenerator>(Lifetime.Singleton);
+        builder.Register<FieldRoot>(Lifetime.Singleton);
+        builder.Register<FieldViewFactory>(Lifetime.Singleton);
+        builder.Register<FieldState>(Lifetime.Singleton);
+        builder.Register<FieldGenerator>(Lifetime.Singleton);
 
         //CharacterModule
         builder.RegisterInstance(characterPrefabs).As<CharacterView[]>();
@@ -49,8 +47,8 @@ public class GameScope : LifetimeScope
         builder.Register<ItemService>(Lifetime.Singleton);
 
         // Controllers
-        builder.Register<FieldController>(Lifetime.Singleton);
-        builder.RegisterEntryPoint<FogOfWarController>(Lifetime.Singleton).AsSelf();
+        builder.Register<FieldPresenter>(Lifetime.Singleton);
+        builder.RegisterEntryPoint<FogOfWarPresenter>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<CharacterController>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<TurnController>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<GameController>();

@@ -10,7 +10,7 @@ public class CharacterInstance
     public string Name { get; private set; }
 
     private readonly IEventBus _eventBus;
-    private readonly FieldRootService _fieldRootService;
+    private readonly FieldRoot _fieldRootService;
 
     private CharacterView _prefab;
 
@@ -20,7 +20,7 @@ public class CharacterInstance
         CharacterView prefab,
         string name,
         IEventBus eventBus,
-        FieldRootService fieldRootService
+        FieldRoot fieldRootService
     )
     {
         _config = config;
@@ -37,7 +37,7 @@ public class CharacterInstance
         return new Vector3(x * _config.CELL_SIZE, _config.CHARACTER_HEIGHT, y * _config.CELL_SIZE);
     }
 
-    public void Spawn(CellModel cell)
+    public void Spawn(Cell cell)
     {
         if (cell == null)
         {
@@ -71,7 +71,7 @@ public class CharacterInstance
         View.SetPosition(GetCoordinatesForCellView(cell.X, cell.Y));
     }
 
-    public async Task MoveTo(CellModel nextTarget)
+    public async Task MoveTo(Cell nextTarget)
     {
         if (IsMoving) return;
         IsMoving = true;
