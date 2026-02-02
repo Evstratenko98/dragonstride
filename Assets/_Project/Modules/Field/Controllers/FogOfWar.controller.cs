@@ -20,13 +20,13 @@ public class FogOfWarController : IPostInitializable, IDisposable
         FieldService fieldService,
         CharacterService characterService,
         ConfigScriptableObject config,
-        FogOfWarView view)
+        FieldViewService fieldViewService)
     {
         _eventBus = eventBus;
         _fieldService = fieldService;
         _characterService = characterService;
         _config = config;
-        _view = view;
+        _view = fieldViewService.FogOfWarView;
     }
 
     public void PostInitialize()

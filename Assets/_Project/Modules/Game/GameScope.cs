@@ -11,9 +11,9 @@ public class GameScope : LifetimeScope
 
     //FieldModule
     [SerializeField] private CellView cellViewPrefab;
-    [SerializeField] private LinkView linkView;
+    [SerializeField] private LinkView linkViewPrefab;
     [SerializeField] private CellColorTheme colorTheme;
-    [SerializeField] private FogOfWarView fogOfWarView;
+    [SerializeField] private FogOfWarView fogOfWarViewPrefab;
 
     //CharacterModule
     [SerializeField] private CharacterView[] characterPrefabs;
@@ -27,11 +27,12 @@ public class GameScope : LifetimeScope
         //FieldModule
         builder.RegisterInstance(colorTheme);
         builder.RegisterComponent(cellViewPrefab);
-        builder.RegisterComponent(linkView);
-        builder.RegisterComponent(fogOfWarView);
+        builder.RegisterInstance(linkViewPrefab);
+        builder.RegisterInstance(fogOfWarViewPrefab);
         builder.Register<CellModel>(Lifetime.Transient);
         builder.Register<LinkModel>(Lifetime.Transient);
         builder.Register<FieldRootService>(Lifetime.Singleton);
+        builder.Register<FieldViewService>(Lifetime.Singleton);
         builder.Register<FieldService>(Lifetime.Singleton);
         builder.Register<MazeGenerator>(Lifetime.Singleton);
 
