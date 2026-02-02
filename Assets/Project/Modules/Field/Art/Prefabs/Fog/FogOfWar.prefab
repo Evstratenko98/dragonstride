@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 6649602657369616083}
   - component: {fileID: 7214104194800541699}
   - component: {fileID: 1367837153070811358}
-  - component: {fileID: 5361215137216430196}
+  - component: {fileID: 7480226212857014919}
   m_Layer: 0
   m_Name: FogOfWar
   m_TagString: Untagged
@@ -113,7 +113,7 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
---- !u!114 &5361215137216430196
+--- !u!114 &7480226212857014919
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -122,10 +122,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 1773895490443266987}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ff633d80bb984f569e6a828efe476416, type: 3}
+  m_Script: {fileID: 11500000, guid: 600dd884e7a141d08a0f8636d4aa30d7, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
-  fogMaterial: {fileID: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::FogOfWarView
+  fogMaterial: {fileID: 2100000, guid: 84f80960728dc404d88cf2e685d13a8c, type: 2}
   seenAlpha: 0.55
   unseenAlpha: 1
   heightOffset: 0.5
