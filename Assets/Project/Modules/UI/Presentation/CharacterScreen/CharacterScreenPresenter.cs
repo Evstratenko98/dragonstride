@@ -1,7 +1,7 @@
 using System;
 using VContainer.Unity;
 
-public class CharacterScreenController : IPostInitializable, IDisposable
+public class CharacterScreenPresenter : IPostInitializable, IDisposable
 {
     private readonly IEventBus _eventBus;
     private readonly ConfigScriptableObject _config;
@@ -10,7 +10,7 @@ public class CharacterScreenController : IPostInitializable, IDisposable
     private IDisposable _turnStateSubscription;
     private CharacterInstance _currentCharacter;
 
-    public CharacterScreenController(IEventBus eventBus, ConfigScriptableObject config, CharacterScreenView view)
+    public CharacterScreenPresenter(IEventBus eventBus, ConfigScriptableObject config, CharacterScreenView view)
     {
         _eventBus = eventBus;
         _config = config;

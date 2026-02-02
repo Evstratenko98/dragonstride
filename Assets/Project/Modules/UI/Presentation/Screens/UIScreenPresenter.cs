@@ -1,13 +1,13 @@
 using System;
 using VContainer.Unity;
 
-public class UIScreenController : IStartable, IDisposable
+public class UIScreenPresenter : IStartable, IDisposable
 {
     private readonly IEventBus _eventBus;
     private readonly UIScreenView _view;
     private IDisposable _gameStateSub;
 
-    public UIScreenController(IEventBus eventBus, UIScreenView view)
+    public UIScreenPresenter(IEventBus eventBus, UIScreenView view)
     {
         _eventBus = eventBus;
         _view = view;

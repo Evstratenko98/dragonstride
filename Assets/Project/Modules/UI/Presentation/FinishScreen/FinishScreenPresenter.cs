@@ -1,12 +1,12 @@
 using System;
 using VContainer.Unity;
 
-public class FinishScreenController: IStartable, IDisposable
+public class FinishScreenPresenter : IStartable, IDisposable
 {
     private readonly IEventBus _eventBus;
     private readonly FinishScreenView _view;
     
-    public FinishScreenController(IEventBus eventBus, FinishScreenView view)
+    public FinishScreenPresenter(IEventBus eventBus, FinishScreenView view)
     {
         _eventBus = eventBus;
         _view = view;
