@@ -20,7 +20,6 @@ public class Inventory
     
     public bool AddItem(ItemDefinition item, int count = 1)
     {
-        // 1. Если предмет стакается — ищем подходящий слот
         if (item.Stackable)
         {
             var stackSlot = _slots.FirstOrDefault(s => s.Definition == item);
@@ -31,7 +30,6 @@ public class Inventory
             }
         }
 
-        // 2. Ищем пустой слот
         var emptySlot = _slots.FirstOrDefault(s => s.IsEmpty);
         if (emptySlot != null)
         {

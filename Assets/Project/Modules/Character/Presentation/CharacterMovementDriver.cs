@@ -29,7 +29,6 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
 
     public void PostInitialize()
     {
-        // Логика стадий игрового хода
         _turnStateSubscription = _eventBus.Subscribe<TurnStateChangedMessage>(OnTurnStateChanged);
         _input.StartListening();
     }
@@ -54,16 +53,11 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         _turnStateSubscription?.Dispose();
     }
 
-    // -----------------------------
-    //        TICK (WASD)
-    // -----------------------------
     public async void Tick()
     {
-        // Никого нет — никто не двигается
         if (_currentCharacter == null)
             return;
 
-        // ВАЖНО: движение только в фазе Movement
         if (_currentTurnState != TurnState.Movement)
             return;
 

@@ -97,14 +97,12 @@ public class CharacterInstance
 
     public void Destroy()
     {
-        // Удаляем визуальную часть
         if (View != null)
         {
             UnityEngine.Object.Destroy(View.gameObject);
             View = null;
         }
 
-        // Чистим модель
         Model = null;
     }
 }

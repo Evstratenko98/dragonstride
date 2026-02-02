@@ -8,7 +8,6 @@ public class CharacterRoster
     private List<CharacterInstance> _characters = new List<CharacterInstance>();
     public IReadOnlyList<CharacterInstance> AllCharacters => _characters;
 
-    //TODO: удалить, когда станет понятно, что работает отлично без этого метода
     public bool IsMoving => _characters.Any(c => c.IsMoving);
     private readonly CharacterFactory _factory;
     private readonly CharacterLayout _layoutService;

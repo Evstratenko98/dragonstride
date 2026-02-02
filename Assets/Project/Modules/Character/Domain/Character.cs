@@ -2,9 +2,6 @@ public class Character
 {
     public Inventory Inventory { get; private set; }
     public CharacterEquipment Equipment { get; private set; }
-    // -----------------------------------
-    //       ПОЛОЖЕНИЕ НА КАРТЕ
-    // -----------------------------------
     public Cell CurrentCell { get; private set; }
 
     public void SetCell(Cell cell)
@@ -12,26 +9,15 @@ public class Character
         CurrentCell = cell;
     }
 
-    // -----------------------------------
-    //       ХАРАКТЕРИСТИКИ ПЕРСОНАЖА
-    // -----------------------------------
-
-    // БАЗОВЫЕ СТАТЫ
     public int Health { get; private set; } = 100;
     public int Attack { get; private set; } = 10;
     public int Armor { get; private set; } = 5;
 
-    // ПРОЦЕНТНЫЕ СТАТЫ (0–100)
-    public float DodgeChance { get; private set; } = 0.10f; // 10%
+    public float DodgeChance { get; private set; } = 0.10f;
     public int Initiative { get; private set; } = 0;
 
-    // ПАРАМЕТРЫ ДВИЖЕНИЯ / РИСКА
     public int Speed { get; private set; } = 0;
-    public float Luck { get; private set; } = 0.10f; // 10%
-
-    // -----------------------------------
-    //             МОДИФИКАТОРЫ
-    // -----------------------------------
+    public float Luck { get; private set; } = 0.10f;
 
     public void AddHealth(int value) => Health += value;
     public void AddAttack(int value) => Attack += value;
@@ -43,7 +29,6 @@ public class Character
     public void AddSpeed(int value) => Speed += value;
     public void AddLuck(float value) => Luck += value;
 
-    // Сеттеры для прямого изменения (если нужно)
     public void SetHealth(int value) => Health = value;
     public void SetAttack(int value) => Attack = value;
     public void SetArmor(int value) => Armor = value;

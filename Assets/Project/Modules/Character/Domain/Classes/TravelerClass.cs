@@ -4,6 +4,5 @@ public class TravelerClass : CharacterClass
 
     public override void Apply(Character model)
     {
-        // ничего не меняется
     }
 }

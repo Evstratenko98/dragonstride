@@ -58,8 +58,6 @@ public class CharacterInputReader : IDisposable
 
     private void OnEndTurn(InputAction.CallbackContext ctx)
     {
-        // TODO: научить ловить сообщения
-        // if (ctx.performed && _gameState == GameState.Playing)
         if (ctx.performed)
         {
             _eventBus.Publish(new EndTurnKeyPressedMessage());
