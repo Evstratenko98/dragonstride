@@ -1,11 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Project.Modules.Field.Application;
-using Project.Modules.Field.Domain;
-using Project.Modules.Field.Infrastructure;
 using VContainer.Unity;
-
-namespace Project.Modules.Field.Presentation;
 
 public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
 {

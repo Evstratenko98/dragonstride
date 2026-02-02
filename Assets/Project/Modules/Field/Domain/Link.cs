@@ -1,5 +1,3 @@
-namespace Project.Modules.Field.Domain;
-
 public sealed class Link
 {
     public Cell A { get; }

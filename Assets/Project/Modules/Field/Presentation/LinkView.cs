@@ -1,8 +1,5 @@
 using System.Collections.Generic;
-using Project.Modules.Field.Domain;
 using UnityEngine;
-
-namespace Project.Modules.Field.Presentation;
 
 public class LinkView : MonoBehaviour
 {

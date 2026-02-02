@@ -1,7 +1,5 @@
 using UnityEngine;
 
-namespace Project.Modules.Field.Infrastructure;
-
 public sealed class FieldRoot
 {
     public Transform Root { get; private set; }

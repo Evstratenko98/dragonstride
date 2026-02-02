@@ -1,7 +1,4 @@
-using Project.Modules.Field.Presentation;
 using UnityEngine;
-
-namespace Project.Modules.Field.Infrastructure;
 
 public sealed class FieldViewFactory
 {

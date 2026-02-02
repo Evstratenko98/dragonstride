@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Project.Modules.Field.Domain;
-
-namespace Project.Modules.Field.Application;
 
 public sealed class FieldGenerator
 {

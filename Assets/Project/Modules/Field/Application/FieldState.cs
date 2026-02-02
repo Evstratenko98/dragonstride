@@ -1,7 +1,4 @@
 using System.Linq;
-using Project.Modules.Field.Domain;
-
-namespace Project.Modules.Field.Application;
 
 public sealed class FieldState
 {

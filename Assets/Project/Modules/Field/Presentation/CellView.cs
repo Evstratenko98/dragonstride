@@ -1,7 +1,4 @@
-using Project.Modules.Field.Domain;
 using UnityEngine;
-
-namespace Project.Modules.Field.Presentation;
 
 public class CellView : MonoBehaviour
 {

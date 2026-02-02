@@ -1,5 +1,3 @@
-namespace Project.Modules.Field.Domain;
-
 public enum CellType
 {
     Start,

@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 
-namespace Project.Modules.Field.Domain;
-
 public sealed class FieldGrid
 {
     private readonly List<Link> _links = new();
