@@ -1,8 +1,8 @@
-public class ItemModel
+public class Item
 {
     public ItemDefinition Definition { get; }
     
-    public ItemModel(ItemDefinition definition)
+    public Item(ItemDefinition definition)
     {
         Definition = definition;
     }
