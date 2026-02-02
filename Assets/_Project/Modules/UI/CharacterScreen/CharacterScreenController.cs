@@ -20,8 +20,8 @@ public class CharacterScreenController : IPostInitializable, IDisposable
     public void PostInitialize()
     {
         _view.Hide();
-        _openSubscription = _eventBus.Subscribe<CharacterButtonPressedMessage>(OnOpenRequested);
-        _turnStateSubscription = _eventBus.Subscribe<TurnStateChangedMessage>(OnTurnStateChanged);
+        _openSubscription = _eventBus.Subscribe<CharacterScreenRequested>(OnOpenRequested);
+        _turnStateSubscription = _eventBus.Subscribe<TurnPhaseChanged>(OnTurnStateChanged);
 
         if (_view.InventoryGridView != null)
         {
@@ -56,7 +56,7 @@ public class CharacterScreenController : IPostInitializable, IDisposable
         }
     }
 
-    private void OnOpenRequested(CharacterButtonPressedMessage message)
+    private void OnOpenRequested(CharacterScreenRequested message)
     {
         _view.Show();
         _view.BindInventory(_currentCharacter?.Model?.Inventory);
@@ -68,7 +68,7 @@ public class CharacterScreenController : IPostInitializable, IDisposable
         _view.Hide();
     }
 
-    private void OnTurnStateChanged(TurnStateChangedMessage message)
+    private void OnTurnStateChanged(TurnPhaseChanged message)
     {
         if (message.Character == null)
         {

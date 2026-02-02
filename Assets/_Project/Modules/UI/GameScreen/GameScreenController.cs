@@ -23,8 +23,8 @@ public class GameScreenController : IPostInitializable, IDisposable
 
     public void PostInitialize()
     {
-        _turnStateSubscription = _eventBus.Subscribe<TurnStateChangedMessage>(OnTurnStateChanged);
-        _diceRolledSubscription = _eventBus.Subscribe<DiceRolledMessage>(OnDiceRolled);
+        _turnStateSubscription = _eventBus.Subscribe<TurnPhaseChanged>(OnTurnStateChanged);
+        _diceRolledSubscription = _eventBus.Subscribe<DiceRolled>(OnDiceRolled);
         _characterMovedSubscription = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
 
         if (_view.CharacaterButton != null)
@@ -60,7 +60,7 @@ public class GameScreenController : IPostInitializable, IDisposable
         }
     }
 
-    private void OnTurnStateChanged(TurnStateChangedMessage msg)
+    private void OnTurnStateChanged(TurnPhaseChanged msg)
     {
         if (msg.Character != null)
         {
@@ -85,7 +85,7 @@ public class GameScreenController : IPostInitializable, IDisposable
         UpdateStepsText();
     }
 
-    private void OnDiceRolled(DiceRolledMessage msg)
+    private void OnDiceRolled(DiceRolled msg)
     {
         if (_currentCharacter != null && msg.Character != _currentCharacter)
         {
@@ -137,7 +137,7 @@ public class GameScreenController : IPostInitializable, IDisposable
 
     private void OnCharacterButtonClicked()
     {
-        _eventBus.Publish(new CharacterButtonPressedMessage());
+        _eventBus.Publish(new CharacterScreenRequested());
     }
 
     private void OnFollowToggleChanged(bool isEnabled)

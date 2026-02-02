@@ -1,9 +1,9 @@
-public readonly struct TurnStateChangedMessage
+public readonly struct TurnPhaseChanged
 {
     public CharacterInstance Character { get; }
     public TurnState State { get; }
 
-    public TurnStateChangedMessage(CharacterInstance character, TurnState state)
+    public TurnPhaseChanged(CharacterInstance character, TurnState state)
     {
         Character = character;
         State = state;

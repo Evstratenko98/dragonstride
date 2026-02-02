@@ -29,7 +29,7 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
 
     public void PostInitialize()
     {
-        _turnStateSubscription = _eventBus.Subscribe<TurnStateChangedMessage>(OnTurnStateChanged);
+        _turnStateSubscription = _eventBus.Subscribe<TurnPhaseChanged>(OnTurnStateChanged);
         _input.StartListening();
     }
 
@@ -42,7 +42,7 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         return _characterRoster.AllCharacters;
     }
 
-    private void OnTurnStateChanged(TurnStateChangedMessage msg)
+    private void OnTurnStateChanged(TurnPhaseChanged msg)
     {
         _currentCharacter = msg.Character;
         _currentTurnState = msg.State;

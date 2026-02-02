@@ -47,11 +47,11 @@ public class GameController : IPostInitializable, IDisposable, IStartable
     public void PostInitialize()
     {
         // стадии игрового хода
-        _turnEndSub = _eventBus.Subscribe<TurnEndedMessage>(OnEndTurn);
+        _turnEndSub = _eventBus.Subscribe<TurnEnded>(OnEndTurn);
         // стадии игры
-        _gameStateSub = _eventBus.Subscribe<GameStateChangedMessage>(OnStateGame);
+        _gameStateSub = _eventBus.Subscribe<GameStateChanged>(OnStateGame);
         // нажатие кнопки рестарта
-        _resetButtonSub = _eventBus.Subscribe<ResetButtonPressedMessage>(OnStartGame);
+        _resetButtonSub = _eventBus.Subscribe<ResetRequested>(OnStartGame);
     }
 
     public void Dispose()
@@ -61,7 +61,7 @@ public class GameController : IPostInitializable, IDisposable, IStartable
         _resetButtonSub?.Dispose();
     }
 
-    public void OnStartGame(ResetButtonPressedMessage msg)
+    public void OnStartGame(ResetRequested msg)
     {
         Start();
     }
@@ -108,7 +108,7 @@ public class GameController : IPostInitializable, IDisposable, IStartable
        _turnController.StartTurn(CurrentPlayer);
     }
 
-    public void OnEndTurn(TurnEndedMessage msg)
+    public void OnEndTurn(TurnEnded msg)
     {
         if (GameState == GameState.Finished || _players == null || _players.Count == 0)
         {
@@ -135,7 +135,7 @@ public class GameController : IPostInitializable, IDisposable, IStartable
         StartTurn();
     }
 
-    private void OnStateGame(GameStateChangedMessage msg)
+    private void OnStateGame(GameStateChanged msg)
     {
         if(msg.State == GameState.Finished)
         {
@@ -154,6 +154,6 @@ public class GameController : IPostInitializable, IDisposable, IStartable
     {
         GameState = newState;
         
-        _eventBus.Publish(new GameStateChangedMessage(newState));
+        _eventBus.Publish(new GameStateChanged(newState));
     }
 }
