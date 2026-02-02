@@ -25,10 +25,10 @@ public class UIScope : LifetimeScope
         builder.RegisterComponent(EnsureComponent(screenView, nameof(screenView)));
         builder.RegisterComponent(EnsureComponent(characterScreenView, nameof(characterScreenView)));
 
-        builder.RegisterEntryPoint<GameScreenController>();
-        builder.RegisterEntryPoint<FinishScreenController>();
-        builder.RegisterEntryPoint<UIScreenController>();
-        builder.RegisterEntryPoint<CharacterScreenController>();
+        builder.RegisterEntryPoint<GameScreenPresenter>();
+        builder.RegisterEntryPoint<FinishScreenPresenter>();
+        builder.RegisterEntryPoint<UIScreenPresenter>();
+        builder.RegisterEntryPoint<CharacterScreenPresenter>();
     }
 
     private T EnsureComponent<T>(T field, string fieldName) where T : Component

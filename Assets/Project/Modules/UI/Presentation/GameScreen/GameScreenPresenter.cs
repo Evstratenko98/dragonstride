@@ -1,7 +1,7 @@
 using System;
 using VContainer.Unity;
 
-public class GameScreenController : IPostInitializable, IDisposable
+public class GameScreenPresenter : IPostInitializable, IDisposable
 {
     private const string FallbackValue = "—";
     private readonly GameScreenView _view;
@@ -15,7 +15,7 @@ public class GameScreenController : IPostInitializable, IDisposable
     private int _stepsTotal;
     private int _stepsRemaining;
 
-    public GameScreenController(IEventBus eventBus, GameScreenView view)
+    public GameScreenPresenter(IEventBus eventBus, GameScreenView view)
     {
         _eventBus = eventBus;
         _view = view;
