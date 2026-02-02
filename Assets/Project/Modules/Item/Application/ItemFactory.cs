@@ -8,7 +8,6 @@ public class ItemFactory
     private readonly ItemConfig _config;
     private readonly Random _random;
 
-    // Отслеживаем созданные уникальные предметы
     private readonly HashSet<string> _spawnedUniqueIds = new();
 
     public ItemFactory(ItemConfig config)
@@ -17,9 +16,6 @@ public class ItemFactory
         _random = new Random();
     }
 
-    // ------------------------------------------------------------
-    // 1. СОЗДАНИЕ ПРЕДМЕТА
-    // ------------------------------------------------------------
     public Item CreateItem(string id)
     {
         var def = _config.AllItems.FirstOrDefault(i => i.Id == id);
@@ -30,7 +26,6 @@ public class ItemFactory
             return null;
         }
 
-        // Если предмет уникальный, но уже существует
         if (def.Rarity == ItemRarity.Unique && _spawnedUniqueIds.Contains(def.Id))
         {
             Debug.WriteLine($"[ItemFactory] Уникальный предмет {def.Id} уже существует. Создаю редкий предмет вместо него.");
@@ -46,18 +41,12 @@ public class ItemFactory
         return model;
     }
 
-    // ------------------------------------------------------------
-    // 2. СОЗДАНИЕ ЛУТА ИЗ СУНДУКА
-    // ------------------------------------------------------------
     public Item CreateRandomChestLoot()
     {
         var rarity = RollRarity();
         return CreateRandomItemByRarity(rarity);
     }
 
-    // ------------------------------------------------------------
-    // 3. СОЗДАНИЕ СЛУЧАЙНОГО ПРЕДМЕТА ПО РЕДКОСТИ
-    // ------------------------------------------------------------
     private Item CreateRandomItemByRarity(ItemRarity rarity)
     {
         var items = _config.AllItems
@@ -75,9 +64,6 @@ public class ItemFactory
         return CreateItem(def.Id);
     }
 
-    // ------------------------------------------------------------
-    // 4. УДАЛЕНИЕ ПРЕДМЕТА ИЗ ИГРЫ
-    // ------------------------------------------------------------
     public void DeleteItem(Item item)
     {
         if (item == null || item.Definition == null)
@@ -85,14 +71,10 @@ public class ItemFactory
 
         if (item.Definition.Rarity == ItemRarity.Unique)
         {
-            // возвращаем возможность вновь создать этот предмет
             _spawnedUniqueIds.Remove(item.Definition.Id);
         }
     }
 
-    // ------------------------------------------------------------
-    // ДОПОЛНИТЕЛЬНЫЕ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
-    // ------------------------------------------------------------
     public bool IsUniqueSpawned(string id) => _spawnedUniqueIds.Contains(id);
 
     private ItemRarity RollRarity()

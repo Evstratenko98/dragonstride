@@ -15,5 +15,5 @@ public class ItemConfig : ScriptableObject
 public class RarityDropSettings
 {
     public ItemRarity Rarity;
-    public float Weight; // относительный вес (например: Common=80, Rare=15, Unique=5)
+    public float Weight;
 }

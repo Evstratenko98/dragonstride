@@ -4,8 +4,8 @@ using UnityEngine;
 public class ItemDefinition : ScriptableObject
 {
     [Header("Базовая информация")]
-    public string Id;           // Уникальный ID (например "potion_heal_small")
-    public string DisplayName;  // Имя для UI
+    public string Id;
+    public string DisplayName;
     [TextArea] public string Description;
 
     [Header("Тип и редкость")]
@@ -13,8 +13,8 @@ public class ItemDefinition : ScriptableObject
     public ItemRarity Rarity;
 
     [Header("Настройки предмета")]
-    public bool Stackable;      // Можно ли стакать (зелья - да, меч - нет)
-    public int MaxStack = 1;    // Максимальный стак
+    public bool Stackable;
+    public int MaxStack = 1;
 
     [Header("Модификаторы характеристик")]
     public int HealthModifier;
@@ -27,5 +27,5 @@ public class ItemDefinition : ScriptableObject
 
     [Header("Предметы для будущего UI/3D")]
     public Sprite Icon;
-    public GameObject WorldPrefab; // Моделька в мире (на потом)
+    public GameObject WorldPrefab;
 }

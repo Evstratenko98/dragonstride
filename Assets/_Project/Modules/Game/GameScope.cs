@@ -4,27 +4,22 @@ using VContainer.Unity;
 
 public class GameScope : LifetimeScope
 {   
-    //Config
     [Header("Configs")]
     [SerializeField] private ConfigScriptableObject _config;
     [SerializeField] private ItemConfig _itemConfig;
 
-    //FieldModule
     [SerializeField] private CellView cellViewPrefab;
     [SerializeField] private LinkView linkViewPrefab;
     [SerializeField] private CellColorTheme colorTheme;
     [SerializeField] private FogOfWarView fogOfWarViewPrefab;
 
-    //CharacterModule
     [SerializeField] private CharacterView[] characterPrefabs;
 
     protected override void Configure(IContainerBuilder builder)
     {
-        //Config
         builder.RegisterInstance(_config);
         builder.RegisterInstance(_itemConfig);
         
-        //FieldModule
         builder.RegisterInstance(colorTheme);
         builder.RegisterComponent(cellViewPrefab);
         builder.RegisterInstance(linkViewPrefab);
@@ -34,7 +29,6 @@ public class GameScope : LifetimeScope
         builder.Register<FieldState>(Lifetime.Singleton);
         builder.Register<FieldGenerator>(Lifetime.Singleton);
 
-        //CharacterModule
         builder.RegisterInstance(characterPrefabs).As<CharacterView[]>();
         builder.Register<Character>(Lifetime.Transient);
         builder.Register<CharacterInstance>(Lifetime.Transient);
@@ -43,10 +37,8 @@ public class GameScope : LifetimeScope
         builder.Register<CharacterLayout>(Lifetime.Singleton);
         builder.Register<CharacterRoster>(Lifetime.Singleton);
 
-        //ItemModule
         builder.Register<ItemFactory>(Lifetime.Singleton);
 
-        // Controllers
         builder.Register<FieldPresenter>(Lifetime.Singleton);
         builder.RegisterEntryPoint<FogOfWarPresenter>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<CharacterMovementDriver>(Lifetime.Singleton).AsSelf();
