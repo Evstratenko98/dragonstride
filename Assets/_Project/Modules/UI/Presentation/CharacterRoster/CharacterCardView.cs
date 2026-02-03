@@ -3,7 +3,6 @@ using UnityEngine.UI;
 
 public class CharacterCardView : MonoBehaviour
 {
-    [SerializeField] private Image portraitImage;
     [SerializeField] private Text infoText;
 
     public void SetCharacter(CharacterInstance character)
@@ -15,7 +14,7 @@ public class CharacterCardView : MonoBehaviour
 
         var model = character.Model;
         infoText.text =
-            $"Имя: {character.Name}\n" +
+            $"Имя: {model.Name}\n" +
             $"Здоровье: {model.Health}\n" +
             $"Атака: {model.Attack}\n" +
             $"Защита: {model.Armor}\n" +
@@ -23,15 +22,5 @@ public class CharacterCardView : MonoBehaviour
             $"Инициатива: {model.Initiative}\n" +
             $"Скорость: {model.Speed}\n" +
             $"Удача: {model.Luck:P0}";
-    }
-
-    public void SetPortrait(Sprite sprite)
-    {
-        if (portraitImage == null)
-        {
-            return;
-        }
-
-        portraitImage.sprite = sprite;
     }
 }
