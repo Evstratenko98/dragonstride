@@ -64,6 +64,19 @@ public sealed class FieldPresenter
         _fieldState.Clear();
     }
 
+    public void RefreshCell(Cell cell)
+    {
+        if (cell == null)
+        {
+            return;
+        }
+
+        if (_views.TryGetValue(cell, out var view) && view != null)
+        {
+            view.Refresh();
+        }
+    }
+
     private void BuildCells(FieldGrid field)
     {
         foreach (var cell in field.GetAllCells())
