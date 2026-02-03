@@ -61,6 +61,7 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
 
         if (msg.State == TurnState.InteractionCell)
         {
+            HandleCellInteraction(msg.Character);
             _movementBlocked = true;
             _stepsRemaining = 0;
         }
@@ -127,5 +128,37 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         }
 
         _stepsRemaining--;
+    }
+
+    private void HandleCellInteraction(CharacterInstance character)
+    {
+        if (character == null)
+        {
+            return;
+        }
+
+        var currentCell = character.Model.CurrentCell;
+        if (currentCell == null)
+        {
+            return;
+        }
+
+        if (currentCell.Type == CellType.Common)
+        {
+            return;
+        }
+
+        switch (currentCell.Type)
+        {
+            case CellType.Start:
+            case CellType.Loot:
+            case CellType.Fight:
+            case CellType.Teleport:
+            case CellType.End:
+                // TODO: implement interaction logic for non-common cell types.
+                break;
+            default:
+                return;
+        }
     }
 }
