@@ -17,6 +17,7 @@ public sealed class FieldGenerator
         AddExtraConnections(field, extraConnectionChance);
         EnsureFullConnectivity(field);
         AssignStartAndEnd(field);
+        AssignLootCells(field);
         return field;
     }
 
@@ -27,6 +28,28 @@ public sealed class FieldGenerator
 
         var finishCell = GetRandomFinishCell(field);
         finishCell?.SetType(CellType.End);
+    }
+
+    private void AssignLootCells(FieldGrid field)
+    {
+        const float lootChance = 0.25f;
+        var candidates = new List<Cell>();
+
+        foreach (var cell in field.GetAllCells())
+        {
+            if (cell.Type == CellType.Common)
+            {
+                candidates.Add(cell);
+            }
+        }
+
+        int lootCount = (int)Math.Round(candidates.Count * lootChance, MidpointRounding.AwayFromZero);
+        for (int i = 0; i < lootCount && candidates.Count > 0; i++)
+        {
+            int index = _random.Next(candidates.Count);
+            candidates[index].SetType(CellType.Loot);
+            candidates.RemoveAt(index);
+        }
     }
 
     private Cell GetRandomFinishCell(FieldGrid field)
