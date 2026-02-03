@@ -44,6 +44,7 @@ public class TurnFlow : IPostInitializable, IDisposable
     {
         ResetTurn();
         CurrentPlayer = character;
+        PublishInteractAvailability(true);
 
         RollDice();
     }
@@ -175,6 +176,7 @@ public class TurnFlow : IPostInitializable, IDisposable
         _hasInteractedCell = true;
         SetState(TurnState.InteractionCell);
         SetState(TurnState.ActionSelection);
+        PublishInteractAvailability(false);
         return true;
     }
 
@@ -192,7 +194,7 @@ public class TurnFlow : IPostInitializable, IDisposable
 
     private bool CanMove()
     {
-        return StepsRemaining > 0 && !_hasInteractedCell;
+        return StepsRemaining > 0;
     }
 
     private bool IsActionPhase()
@@ -212,6 +214,7 @@ public class TurnFlow : IPostInitializable, IDisposable
         _allowEndTurn = false;
         _hasAttacked = false;
         _hasInteractedCell = false;
+        PublishInteractAvailability(false);
     }
 
     private void SetState(TurnState newState)
@@ -219,5 +222,10 @@ public class TurnFlow : IPostInitializable, IDisposable
         State = newState;
 
         _eventBus.Publish(new TurnPhaseChanged(CurrentPlayer, newState));
+    }
+
+    private void PublishInteractAvailability(bool isAvailable)
+    {
+        _eventBus.Publish(new InteractCellAvailabilityChanged(isAvailable));
     }
 }

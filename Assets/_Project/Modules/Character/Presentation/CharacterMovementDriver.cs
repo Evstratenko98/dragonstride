@@ -10,6 +10,7 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
     private readonly IEventBus _eventBus;
     private readonly CharacterInputReader _input;
     private readonly ItemFactory _itemFactory;
+    private readonly FieldPresenter _fieldPresenter;
 
     private IDisposable _turnStateSubscription;
     private IDisposable _diceRolledSubscription;
@@ -24,13 +25,15 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         CharacterRoster characterRoster,
         IEventBus eventBus,
         CharacterInputReader input,
-        ItemFactory itemFactory
+        ItemFactory itemFactory,
+        FieldPresenter fieldPresenter
     )
     {
         _characterRoster = characterRoster;
         _eventBus = eventBus;
         _input = input;
         _itemFactory = itemFactory;
+        _fieldPresenter = fieldPresenter;
     }
 
     public void PostInitialize()
@@ -64,8 +67,6 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         if (msg.State == TurnState.InteractionCell)
         {
             HandleCellInteraction(msg.Character);
-            _movementBlocked = true;
-            _stepsRemaining = 0;
         }
     }
 
@@ -155,8 +156,9 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
             case CellType.Start:
                 break;
             case CellType.Loot:
-                var loot = new List<ItemDefinition>(2);
-                for (int i = 0; i < 2; i++)
+                int lootCount = UnityEngine.Random.Range(1, 4);
+                var loot = new List<ItemDefinition>(lootCount);
+                for (int i = 0; i < lootCount; i++)
                 {
                     var item = _itemFactory.CreateRandomChestLoot();
                     if (item?.Definition != null)
@@ -178,5 +180,8 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
             default:
                 return;
         }
+
+        currentCell.SetType(CellType.Common);
+        _fieldPresenter.RefreshCell(currentCell);
     }
 }

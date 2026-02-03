@@ -22,6 +22,16 @@ public class CellView : MonoBehaviour
         UpdateMaterial(model.Type);
     }
 
+    public void Refresh()
+    {
+        if (_model == null)
+        {
+            return;
+        }
+
+        UpdateMaterial(_model.Type);
+    }
+
     private void UpdateMaterial(CellType type)
     {
         if (_renderer == null || _theme == null)

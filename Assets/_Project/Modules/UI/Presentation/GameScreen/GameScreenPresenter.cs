@@ -10,6 +10,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
     private IDisposable _diceRolledSubscription;
     private IDisposable _characterMovedSubscription;
     private IDisposable _attackAvailabilitySubscription;
+    private IDisposable _interactAvailabilitySubscription;
 
     private CharacterInstance _currentCharacter;
     private TurnState _currentTurnState = TurnState.None;
@@ -30,6 +31,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _diceRolledSubscription = _eventBus.Subscribe<DiceRolled>(OnDiceRolled);
         _characterMovedSubscription = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
         _attackAvailabilitySubscription = _eventBus.Subscribe<AttackAvailabilityChanged>(OnAttackAvailabilityChanged);
+        _interactAvailabilitySubscription = _eventBus.Subscribe<InteractCellAvailabilityChanged>(OnInteractCellAvailabilityChanged);
 
         if (_view.CharacaterButton != null)
         {
@@ -56,6 +58,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         UpdateTurnStateText();
         UpdateStepsText();
         SetAttackButtonInteractable(false);
+        SetInteractButtonInteractable(false);
     }
 
     public void Dispose()
@@ -64,6 +67,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _diceRolledSubscription?.Dispose();
         _characterMovedSubscription?.Dispose();
         _attackAvailabilitySubscription?.Dispose();
+        _interactAvailabilitySubscription?.Dispose();
 
         if (_view.CharacaterButton != null)
         {
@@ -100,11 +104,6 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         if (msg.State == TurnState.End || msg.State == TurnState.None)
         {
             _stepsTotal = 0;
-            _stepsRemaining = 0;
-        }
-
-        if (msg.State == TurnState.InteractionCell)
-        {
             _stepsRemaining = 0;
         }
 
@@ -186,6 +185,11 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         SetAttackButtonInteractable(msg.IsAvailable);
     }
 
+    private void OnInteractCellAvailabilityChanged(InteractCellAvailabilityChanged msg)
+    {
+        SetInteractButtonInteractable(msg.IsAvailable);
+    }
+
     private void SetAttackButtonInteractable(bool isInteractable)
     {
         if (_view.AttackButton == null)
@@ -194,5 +198,15 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         }
 
         _view.AttackButton.interactable = isInteractable;
+    }
+
+    private void SetInteractButtonInteractable(bool isInteractable)
+    {
+        if (_view.InteractCellButton == null)
+        {
+            return;
+        }
+
+        _view.InteractCellButton.interactable = isInteractable;
     }
 }
