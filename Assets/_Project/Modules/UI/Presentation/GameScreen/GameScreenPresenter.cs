@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using VContainer.Unity;
 
 public class GameScreenPresenter : IPostInitializable, IDisposable
@@ -7,11 +6,10 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
     private const string FallbackValue = "—";
     private readonly GameScreenView _view;
     private readonly IEventBus _eventBus;
-    private readonly TurnFlow _turnFlow;
-    private readonly CharacterRoster _characterRoster;
     private IDisposable _turnStateSubscription;
     private IDisposable _diceRolledSubscription;
     private IDisposable _characterMovedSubscription;
+    private IDisposable _attackAvailabilitySubscription;
 
     private CharacterInstance _currentCharacter;
     private TurnState _currentTurnState = TurnState.None;
@@ -20,13 +18,9 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     public GameScreenPresenter(
         IEventBus eventBus,
-        TurnFlow turnFlow,
-        CharacterRoster characterRoster,
         GameScreenView view)
     {
         _eventBus = eventBus;
-        _turnFlow = turnFlow;
-        _characterRoster = characterRoster;
         _view = view;
     }
 
@@ -35,6 +29,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _turnStateSubscription = _eventBus.Subscribe<TurnPhaseChanged>(OnTurnStateChanged);
         _diceRolledSubscription = _eventBus.Subscribe<DiceRolled>(OnDiceRolled);
         _characterMovedSubscription = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
+        _attackAvailabilitySubscription = _eventBus.Subscribe<AttackAvailabilityChanged>(OnAttackAvailabilityChanged);
 
         if (_view.CharacaterButton != null)
         {
@@ -60,7 +55,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         UpdatePlayerText();
         UpdateTurnStateText();
         UpdateStepsText();
-        UpdateAttackButtonState();
+        SetAttackButtonInteractable(false);
     }
 
     public void Dispose()
@@ -68,6 +63,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _turnStateSubscription?.Dispose();
         _diceRolledSubscription?.Dispose();
         _characterMovedSubscription?.Dispose();
+        _attackAvailabilitySubscription?.Dispose();
 
         if (_view.CharacaterButton != null)
         {
@@ -113,7 +109,6 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         }
 
         UpdateStepsText();
-        UpdateAttackButtonState();
     }
 
     private void OnDiceRolled(DiceRolled msg)
@@ -129,7 +124,6 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
         UpdatePlayerText();
         UpdateStepsText();
-        UpdateAttackButtonState();
     }
 
     private void OnCharacterMoved(CharacterMoved msg)
@@ -146,7 +140,6 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
         _stepsRemaining--;
         UpdateStepsText();
-        UpdateAttackButtonState();
     }
 
     private void UpdatePlayerText()
@@ -175,7 +168,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     private void OnInteractCellClicked()
     {
-        _turnFlow.TryInteractWithCell();
+        _eventBus.Publish(new InteractWithCellRequested());
     }
 
     private void OnEndTurnClicked()
@@ -188,32 +181,18 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _eventBus.Publish(new CameraFollowToggled(isEnabled));
     }
 
-    private void UpdateAttackButtonState()
+    private void OnAttackAvailabilityChanged(AttackAvailabilityChanged msg)
+    {
+        SetAttackButtonInteractable(msg.IsAvailable);
+    }
+
+    private void SetAttackButtonInteractable(bool isInteractable)
     {
         if (_view.AttackButton == null)
         {
             return;
         }
 
-        if (_currentCharacter?.Model?.CurrentCell == null)
-        {
-            _view.AttackButton.interactable = false;
-            return;
-        }
-
-        var currentCell = _currentCharacter.Model.CurrentCell;
-        if (currentCell.Type == CellType.Start)
-        {
-            _view.AttackButton.interactable = false;
-            return;
-        }
-
-        bool hasTarget = _characterRoster.AllCharacters
-            .Any(character =>
-                character != null &&
-                character != _currentCharacter &&
-                character.Model?.CurrentCell == currentCell);
-
-        _view.AttackButton.interactable = hasTarget;
+        _view.AttackButton.interactable = isInteractable;
     }
 }
