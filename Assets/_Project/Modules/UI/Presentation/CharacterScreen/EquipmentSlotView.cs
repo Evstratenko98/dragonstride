@@ -3,14 +3,32 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class EquipmentSlotView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler
+public class EquipmentSlotView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler, IPointerEnterHandler, IPointerExitHandler
 {
     [SerializeField] private Image iconImage;
     [SerializeField] private TMP_Text countLabel;
+    [SerializeField] private Image backgroundImage;
+    [SerializeField] private Color validDropColor = new(0.2f, 0.85f, 0.3f, 0.8f);
+    [SerializeField] private Color invalidDropColor = new(0.9f, 0.2f, 0.2f, 0.8f);
 
     private EquipmentGridView _grid;
     private int _index;
     private bool _hasItem;
+    private Color _defaultBackgroundColor;
+    private bool _isPreviewActive;
+
+    private void Awake()
+    {
+        if (backgroundImage == null)
+        {
+            backgroundImage = GetComponent<Image>();
+        }
+
+        if (backgroundImage != null)
+        {
+            _defaultBackgroundColor = backgroundImage.color;
+        }
+    }
 
     public void Initialize(EquipmentGridView grid, int index)
     {
@@ -71,5 +89,37 @@ public class EquipmentSlotView : MonoBehaviour, IBeginDragHandler, IDragHandler,
     public void OnDrop(PointerEventData eventData)
     {
         _grid?.HandleDrop(_index);
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        _grid?.HandlePointerEnter(_index);
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        ClearDropPreview();
+    }
+
+    public void ShowDropPreview(bool isValid)
+    {
+        if (backgroundImage == null)
+        {
+            return;
+        }
+
+        backgroundImage.color = isValid ? validDropColor : invalidDropColor;
+        _isPreviewActive = true;
+    }
+
+    public void ClearDropPreview()
+    {
+        if (backgroundImage == null || !_isPreviewActive)
+        {
+            return;
+        }
+
+        backgroundImage.color = _defaultBackgroundColor;
+        _isPreviewActive = false;
     }
 }
