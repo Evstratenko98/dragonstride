@@ -12,9 +12,13 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
     private readonly CharacterInputReader _input;
 
     private IDisposable _turnStateSubscription;
+    private IDisposable _diceRolledSubscription;
+    private IDisposable _characterMovedSubscription;
 
     private CharacterInstance _currentCharacter;
     private TurnState _currentTurnState = TurnState.None;
+    private int _stepsRemaining = 0;
+    private bool _movementBlocked = false;
 
     public CharacterMovementDriver(
         CharacterRoster characterRoster,
@@ -30,6 +34,8 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
     public void PostInitialize()
     {
         _turnStateSubscription = _eventBus.Subscribe<TurnPhaseChanged>(OnTurnStateChanged);
+        _diceRolledSubscription = _eventBus.Subscribe<DiceRolled>(OnDiceRolled);
+        _characterMovedSubscription = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
         _input.StartListening();
     }
 
@@ -46,11 +52,25 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
     {
         _currentCharacter = msg.Character;
         _currentTurnState = msg.State;
+
+        if (msg.State == TurnState.RollDice || msg.State == TurnState.End || msg.State == TurnState.None)
+        {
+            _stepsRemaining = 0;
+            _movementBlocked = false;
+        }
+
+        if (msg.State == TurnState.InteractionCell)
+        {
+            _movementBlocked = true;
+            _stepsRemaining = 0;
+        }
     }
 
     public void Dispose()
     {
         _turnStateSubscription?.Dispose();
+        _diceRolledSubscription?.Dispose();
+        _characterMovedSubscription?.Dispose();
     }
 
     public async void Tick()
@@ -58,8 +78,13 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         if (_currentCharacter == null)
             return;
 
-        if (_currentTurnState != TurnState.Movement)
+        if (_currentTurnState != TurnState.ActionSelection && _currentTurnState != TurnState.Movement)
             return;
+
+        if (_movementBlocked || _stepsRemaining <= 0)
+        {
+            return;
+        }
 
         Vector2Int dir = _input.Dir;
         if (_characterRoster.IsMoving || dir == Vector2Int.zero)
@@ -73,6 +98,34 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
     {
         _currentCharacter = null;
         _currentTurnState = TurnState.None;
+        _stepsRemaining = 0;
+        _movementBlocked = false;
         _characterRoster.RemoveAllCharacters();
+    }
+
+    private void OnDiceRolled(DiceRolled msg)
+    {
+        if (msg.Character != _currentCharacter)
+        {
+            return;
+        }
+
+        _stepsRemaining = msg.Steps;
+        _movementBlocked = false;
+    }
+
+    private void OnCharacterMoved(CharacterMoved msg)
+    {
+        if (msg.Character != _currentCharacter)
+        {
+            return;
+        }
+
+        if (_stepsRemaining <= 0)
+        {
+            return;
+        }
+
+        _stepsRemaining--;
     }
 }
