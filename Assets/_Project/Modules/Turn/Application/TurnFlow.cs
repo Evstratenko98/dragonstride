@@ -9,6 +9,7 @@ public class TurnFlow : IPostInitializable, IDisposable
 
     private IDisposable _stepSubscription;
     private IDisposable _endTurnSubscription;
+    private IDisposable _interactCellSubscription;
     public TurnState State { get; private set; }
 
     public int StepsAvailable { get; private set; }
@@ -29,12 +30,14 @@ public class TurnFlow : IPostInitializable, IDisposable
     {
         _stepSubscription      = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
         _endTurnSubscription   = _eventBus.Subscribe<EndTurnRequested>(OnEndTurnKeyPressed);
+        _interactCellSubscription = _eventBus.Subscribe<InteractWithCellRequested>(OnInteractCellRequested);
     }
 
     public void Dispose()
     {
         _stepSubscription?.Dispose();
         _endTurnSubscription?.Dispose();
+        _interactCellSubscription?.Dispose();
     }
 
     public void StartTurn(CharacterInstance character)
@@ -132,6 +135,11 @@ public class TurnFlow : IPostInitializable, IDisposable
         {
             EndTurn();
         }
+    }
+
+    private void OnInteractCellRequested(InteractWithCellRequested msg)
+    {
+        TryInteractWithCell();
     }
 
     public bool TryAttack()

@@ -9,13 +9,16 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
     private IDisposable _turnStateSubscription;
     private IDisposable _diceRolledSubscription;
     private IDisposable _characterMovedSubscription;
+    private IDisposable _attackAvailabilitySubscription;
 
     private CharacterInstance _currentCharacter;
     private TurnState _currentTurnState = TurnState.None;
     private int _stepsTotal;
     private int _stepsRemaining;
 
-    public GameScreenPresenter(IEventBus eventBus, GameScreenView view)
+    public GameScreenPresenter(
+        IEventBus eventBus,
+        GameScreenView view)
     {
         _eventBus = eventBus;
         _view = view;
@@ -26,10 +29,21 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _turnStateSubscription = _eventBus.Subscribe<TurnPhaseChanged>(OnTurnStateChanged);
         _diceRolledSubscription = _eventBus.Subscribe<DiceRolled>(OnDiceRolled);
         _characterMovedSubscription = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
+        _attackAvailabilitySubscription = _eventBus.Subscribe<AttackAvailabilityChanged>(OnAttackAvailabilityChanged);
 
         if (_view.CharacaterButton != null)
         {
             _view.CharacaterButton.onClick.AddListener(OnCharacterButtonClicked);
+        }
+
+        if (_view.InteractCellButton != null)
+        {
+            _view.InteractCellButton.onClick.AddListener(OnInteractCellClicked);
+        }
+
+        if (_view.EndTurnButton != null)
+        {
+            _view.EndTurnButton.onClick.AddListener(OnEndTurnClicked);
         }
 
         if (_view.FollowPlayerToggle != null)
@@ -41,6 +55,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         UpdatePlayerText();
         UpdateTurnStateText();
         UpdateStepsText();
+        SetAttackButtonInteractable(false);
     }
 
     public void Dispose()
@@ -48,10 +63,21 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _turnStateSubscription?.Dispose();
         _diceRolledSubscription?.Dispose();
         _characterMovedSubscription?.Dispose();
+        _attackAvailabilitySubscription?.Dispose();
 
         if (_view.CharacaterButton != null)
         {
             _view.CharacaterButton.onClick.RemoveListener(OnCharacterButtonClicked);
+        }
+
+        if (_view.InteractCellButton != null)
+        {
+            _view.InteractCellButton.onClick.RemoveListener(OnInteractCellClicked);
+        }
+
+        if (_view.EndTurnButton != null)
+        {
+            _view.EndTurnButton.onClick.RemoveListener(OnEndTurnClicked);
         }
 
         if (_view.FollowPlayerToggle != null)
@@ -140,8 +166,33 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _eventBus.Publish(new CharacterScreenRequested());
     }
 
+    private void OnInteractCellClicked()
+    {
+        _eventBus.Publish(new InteractWithCellRequested());
+    }
+
+    private void OnEndTurnClicked()
+    {
+        _eventBus.Publish(new EndTurnRequested());
+    }
+
     private void OnFollowToggleChanged(bool isEnabled)
     {
         _eventBus.Publish(new CameraFollowToggled(isEnabled));
+    }
+
+    private void OnAttackAvailabilityChanged(AttackAvailabilityChanged msg)
+    {
+        SetAttackButtonInteractable(msg.IsAvailable);
+    }
+
+    private void SetAttackButtonInteractable(bool isInteractable)
+    {
+        if (_view.AttackButton == null)
+        {
+            return;
+        }
+
+        _view.AttackButton.interactable = isInteractable;
     }
 }
