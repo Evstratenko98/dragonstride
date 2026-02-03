@@ -5,12 +5,20 @@ using UnityEngine.UI;
 public class GameScreenView : MonoBehaviour
 {
     [SerializeField] private Button characaterButton;
+    [SerializeField] private Button interactCellButton;
+    [SerializeField] private Button endTurnButton;
+    [SerializeField] private Button tradeButton;
+    [SerializeField] private Button attackButton;
     [SerializeField] private Toggle followPlayerToggle;
     [SerializeField] private TMP_Text currentPlayerText;
     [SerializeField] private TMP_Text turnStateText;
     [SerializeField] private TMP_Text stepsText;
 
     public Button CharacaterButton => characaterButton;
+    public Button InteractCellButton => interactCellButton;
+    public Button EndTurnButton => endTurnButton;
+    public Button TradeButton => tradeButton;
+    public Button AttackButton => attackButton;
     public Toggle FollowPlayerToggle => followPlayerToggle;
 
     public void SetCurrentPlayer(string playerName)
