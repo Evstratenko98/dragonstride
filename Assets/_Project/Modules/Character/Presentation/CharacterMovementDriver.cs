@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -10,6 +9,7 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
     private readonly CharacterRoster _characterRoster;
     private readonly IEventBus _eventBus;
     private readonly CharacterInputReader _input;
+    private readonly ItemFactory _itemFactory;
 
     private IDisposable _turnStateSubscription;
     private IDisposable _diceRolledSubscription;
@@ -23,12 +23,14 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
     public CharacterMovementDriver(
         CharacterRoster characterRoster,
         IEventBus eventBus,
-        CharacterInputReader input
+        CharacterInputReader input,
+        ItemFactory itemFactory
     )
     {
         _characterRoster = characterRoster;
         _eventBus = eventBus;
         _input = input;
+        _itemFactory = itemFactory;
     }
 
     public void PostInitialize()
@@ -151,7 +153,23 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         switch (currentCell.Type)
         {
             case CellType.Start:
+                break;
             case CellType.Loot:
+                var loot = new List<ItemDefinition>(2);
+                for (int i = 0; i < 2; i++)
+                {
+                    var item = _itemFactory.CreateRandomChestLoot();
+                    if (item?.Definition != null)
+                    {
+                        loot.Add(item.Definition);
+                    }
+                }
+
+                if (loot.Count > 0)
+                {
+                    _eventBus.Publish(new ChestLootOpened(character, loot));
+                }
+                break;
             case CellType.Fight:
             case CellType.Teleport:
             case CellType.End:
