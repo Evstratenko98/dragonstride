@@ -182,6 +182,7 @@ public class InventoryGridView : MonoBehaviour
         _dragIndex = -1;
         _isDragging = false;
         dragIcon?.Hide();
+        _equipmentGridView?.ClearDropPreviews();
         Refresh();
     }
 
@@ -196,6 +197,7 @@ public class InventoryGridView : MonoBehaviour
         _dragIndex = -1;
         _isDragging = false;
         dragIcon?.Hide();
+        _equipmentGridView?.ClearDropPreviews();
         Refresh();
         return equipped;
     }
@@ -210,6 +212,7 @@ public class InventoryGridView : MonoBehaviour
         _dragIndex = -1;
         _isDragging = false;
         dragIcon?.Hide();
+        _equipmentGridView?.ClearDropPreviews();
         Refresh();
     }
 
@@ -233,5 +236,24 @@ public class InventoryGridView : MonoBehaviour
         {
             slot.SetData(null, 0);
         }
+    }
+
+    public bool TryGetDraggedItemDefinition(out ItemDefinition definition)
+    {
+        definition = null;
+
+        if (!_isDragging || _inventory == null || _dragIndex < 0 || _dragIndex >= _inventory.Slots.Count)
+        {
+            return false;
+        }
+
+        var slot = _inventory.Slots[_dragIndex];
+        if (slot == null || slot.IsEmpty)
+        {
+            return false;
+        }
+
+        definition = slot.Definition;
+        return definition != null;
     }
 }

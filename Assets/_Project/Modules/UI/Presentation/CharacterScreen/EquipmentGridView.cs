@@ -126,6 +126,7 @@ public class EquipmentGridView : MonoBehaviour
         }
 
         bool equipped = _inventoryGridView.HandleDropToEquipment(_equipment, targetIndex);
+        ClearDropPreviews();
         if (equipped)
         {
             Refresh();
@@ -191,6 +192,32 @@ public class EquipmentGridView : MonoBehaviour
         _isDragging = false;
         dragIcon?.Hide();
         Refresh();
+    }
+
+    public void HandlePointerEnter(int index)
+    {
+        if (_equipment == null || _inventoryGridView == null)
+        {
+            _slots[index].ClearDropPreview();
+            return;
+        }
+
+        if (!_inventoryGridView.TryGetDraggedItemDefinition(out var itemDefinition))
+        {
+            _slots[index].ClearDropPreview();
+            return;
+        }
+
+        bool canEquip = itemDefinition.Type == ItemType.Weapon && _equipment.Slots[index].IsEmpty;
+        _slots[index].ShowDropPreview(canEquip);
+    }
+
+    public void ClearDropPreviews()
+    {
+        foreach (var slot in _slots)
+        {
+            slot.ClearDropPreview();
+        }
     }
 
     public void Clear()
