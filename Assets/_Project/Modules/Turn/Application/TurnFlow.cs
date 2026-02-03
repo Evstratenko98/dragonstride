@@ -16,6 +16,8 @@ public class TurnFlow : IPostInitializable, IDisposable
 
     public CharacterInstance CurrentPlayer { get; private set; }
     private bool _allowEndTurn = false;
+    private bool _hasAttacked = false;
+    private bool _hasInteractedCell = false;
 
     public TurnFlow(IEventBus eventBus, IRandomSource randomSource)
     {
@@ -37,11 +39,8 @@ public class TurnFlow : IPostInitializable, IDisposable
 
     public void StartTurn(CharacterInstance character)
     {
+        ResetTurn();
         CurrentPlayer = character;
-        StepsAvailable = 0;
-        StepsRemaining = 0;
-
-        SetState(TurnState.Start);
 
         RollDice();
     }
@@ -55,22 +54,19 @@ public class TurnFlow : IPostInitializable, IDisposable
 
         _eventBus.Publish(new DiceRolled(CurrentPlayer, StepsAvailable));
 
-        StartMovement();
-    }
-
-    public void StartMovement()
-    {
         _allowEndTurn = true;
-        SetState(TurnState.Movement);
+        SetState(TurnState.ActionSelection);
     }
 
     public void RegisterStep()
     {
-        if (State != TurnState.Movement)
-            return;
-
         if (CurrentPlayer == null)
             return;
+
+        if (!CanMove())
+        {
+            return;
+        }
 
         if (StepsRemaining <= 0)
         {
@@ -85,36 +81,11 @@ public class TurnFlow : IPostInitializable, IDisposable
         }
 
         StepsRemaining--;
-
-        if (StepsRemaining <= 0)
-        {
-            StartInteractions();
-        }
-    }
-
-    public void StartInteractions()
-    {
-        if (CurrentPlayer == null)
-            return;
-
-        SetState(TurnState.InteractionCells);
-
-        StartPlayerInteractions();
-    }
-
-    private void StartPlayerInteractions()
-    {
-        if (CurrentPlayer == null)
-            return;
-
-        SetState(TurnState.InteractionPlayers);
     }
 
     public void EndTurn()
     {
-        CurrentPlayer = null;
-        StepsAvailable = 0;
-        StepsRemaining = 0;
+        ResetTurn();
 
         SetState(TurnState.End);
         _eventBus.Publish(new TurnEnded());
@@ -122,13 +93,24 @@ public class TurnFlow : IPostInitializable, IDisposable
 
     private void OnCharacterMoved(CharacterMoved msg)
     {
-        if (State != TurnState.Movement)
+        if (State != TurnState.ActionSelection && State != TurnState.Movement)
             return;
 
         if (msg.Character != CurrentPlayer)
             return;
 
+        if (!CanMove())
+        {
+            return;
+        }
+
+        SetState(TurnState.Movement);
         RegisterStep();
+
+        if (CurrentPlayer != null && State != TurnState.End)
+        {
+            SetState(TurnState.ActionSelection);
+        }
     }
 
     private void OnEndTurnKeyPressed(EndTurnRequested msg)
@@ -142,18 +124,86 @@ public class TurnFlow : IPostInitializable, IDisposable
         if (CurrentPlayer == null)
             return;
 
-        if (State == TurnState.Movement ||
-            State == TurnState.InteractionCells ||
-            State == TurnState.InteractionPlayers)
+        if (State == TurnState.ActionSelection ||
+            State == TurnState.Movement ||
+            State == TurnState.Attack ||
+            State == TurnState.InteractionCell ||
+            State == TurnState.Trade)
         {
-            if (State == TurnState.Movement && StepsRemaining > 0)
-            {
-                StepsRemaining = 0;
-                StartInteractions();
-            }
-
             EndTurn();
         }
+    }
+
+    public bool TryAttack()
+    {
+        if (!IsActionPhase())
+        {
+            return false;
+        }
+
+        if (_hasAttacked)
+        {
+            return false;
+        }
+
+        _hasAttacked = true;
+        SetState(TurnState.Attack);
+        SetState(TurnState.ActionSelection);
+        return true;
+    }
+
+    public bool TryInteractWithCell()
+    {
+        if (!IsActionPhase())
+        {
+            return false;
+        }
+
+        if (_hasInteractedCell)
+        {
+            return false;
+        }
+
+        _hasInteractedCell = true;
+        SetState(TurnState.InteractionCell);
+        SetState(TurnState.ActionSelection);
+        return true;
+    }
+
+    public bool TryTrade()
+    {
+        if (!IsActionPhase())
+        {
+            return false;
+        }
+
+        SetState(TurnState.Trade);
+        SetState(TurnState.ActionSelection);
+        return true;
+    }
+
+    private bool CanMove()
+    {
+        return StepsRemaining > 0 && !_hasInteractedCell;
+    }
+
+    private bool IsActionPhase()
+    {
+        return State == TurnState.ActionSelection ||
+               State == TurnState.Movement ||
+               State == TurnState.Attack ||
+               State == TurnState.InteractionCell ||
+               State == TurnState.Trade;
+    }
+
+    private void ResetTurn()
+    {
+        CurrentPlayer = null;
+        StepsAvailable = 0;
+        StepsRemaining = 0;
+        _allowEndTurn = false;
+        _hasAttacked = false;
+        _hasInteractedCell = false;
     }
 
     private void SetState(TurnState newState)

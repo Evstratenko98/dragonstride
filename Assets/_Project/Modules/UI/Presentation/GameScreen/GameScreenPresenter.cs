@@ -71,13 +71,13 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         UpdatePlayerText();
         UpdateTurnStateText();
 
-        if (msg.State == TurnState.Start || msg.State == TurnState.End || msg.State == TurnState.None)
+        if (msg.State == TurnState.End || msg.State == TurnState.None)
         {
             _stepsTotal = 0;
             _stepsRemaining = 0;
         }
 
-        if (msg.State == TurnState.InteractionCells || msg.State == TurnState.InteractionPlayers)
+        if (msg.State == TurnState.InteractionCell)
         {
             _stepsRemaining = 0;
         }

@@ -1,10 +1,11 @@
 public enum TurnState
 {
     None,
-    Start,
     RollDice,
     Movement,
-    InteractionCells,
-    InteractionPlayers,
+    ActionSelection,
+    Attack,
+    InteractionCell,
+    Trade,
     End
 }
