@@ -1,7 +1,7 @@
 using System;
 using VContainer.Unity;
 
-public class CharacterRosterPanelPresenter : IStartable, IDisposable
+public class CharacterRosterPanelPresenter : IPostInitializable, IDisposable
 {
     private readonly IEventBus _eventBus;
     private readonly CharacterRosterPanelView _view;
@@ -13,7 +13,7 @@ public class CharacterRosterPanelPresenter : IStartable, IDisposable
         _view = view;
     }
 
-    public void Start()
+    public void PostInitialize()
     {
         _subscription = _eventBus.Subscribe<CharacterRosterUpdated>(OnRosterUpdated);
     }

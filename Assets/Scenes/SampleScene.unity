@@ -6168,8 +6168,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: -20, y: 0}
-  m_SizeDelta: {x: 320, y: 420}
+  m_AnchoredPosition: {x: -0.16271973, y: 19.84}
+  m_SizeDelta: {x: 160, y: 380}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!222 &9100000002
 CanvasRenderer:
@@ -6199,7 +6199,16 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
 --- !u!114 &9100000004
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6318,7 +6327,16 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
 --- !u!114 &9100000024
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6331,7 +6349,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dfe94ad911eb439192ec3ff3fe33b6e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  portraitImage: {fileID: 0}
   infoText: {fileID: 9100000043}
 --- !u!1 &9100000040
 GameObject:
@@ -6368,7 +6385,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 12, y: 0}
-  m_SizeDelta: {x: -24, y: -16}
+  m_SizeDelta: {x: -24, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &9100000042
 CanvasRenderer:
@@ -6405,13 +6422,17 @@ MonoBehaviour:
     m_BestFit: 1
     m_MinSize: 10
     m_MaxSize: 16
-    m_Alignment: 0
+    m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\u0418\u043C\u044F: \u0418\u0433\u0440\u043E\u043A\n\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: 100\n\u0410\u0442\u0430\u043A\u0430: 10\n\u0417\u0430\u0449\u0438\u0442\u0430: 5\n\u0428\u0430\u043D\u0441 \u0443\u043A\u043B\u043E\u043D\u0435\u043D\u0438\u044F: 10%\n\u0418\u043D\u0438\u0446\u0438\u0430\u0442\u0438\u0432\u0430: 0\n\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C: 0\n\u0423\u0434\u0430\u0447\u0430: 10%"
+  m_Text: "\u0418\u043C\u044F: \u0418\u0433\u0440\u043E\u043A\n\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435:
+    100\n\u0410\u0442\u0430\u043A\u0430: 10\n\u0417\u0430\u0449\u0438\u0442\u0430:
+    5\n\u0428\u0430\u043D\u0441 \u0443\u043A\u043B\u043E\u043D\u0435\u043D\u0438\u044F:
+    10%\n\u0418\u043D\u0438\u0446\u0438\u0430\u0442\u0438\u0432\u0430: 0\n\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C:
+    0\n\u0423\u0434\u0430\u0447\u0430: 10%"
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
