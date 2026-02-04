@@ -66,6 +66,7 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         Cell startCell = _fieldPresenter.StartCell;
 
         _players = _characterDriver.SpawnCharacters(startCell);
+        _eventBus.Publish(new CharacterRosterUpdated(_players));
 
         StartGame();
     }

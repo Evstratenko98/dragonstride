@@ -1,5 +1,6 @@
 public class Character
 {
+    public string Name { get; private set; }
     public Inventory Inventory { get; private set; }
     public CharacterEquipment Equipment { get; private set; }
     public Cell CurrentCell { get; private set; }
@@ -7,6 +8,11 @@ public class Character
     public void SetCell(Cell cell)
     {
         CurrentCell = cell;
+    }
+
+    public void SetName(string name)
+    {
+        Name = name;
     }
 
     public int Health { get; private set; } = 100;

@@ -45,6 +45,7 @@ public class CharacterFactory
         }
 
         Character model = new Character();
+        model.SetName(name);
         model.InitializeInventory(_config.INVENTORY_CAPACITY);
         model.InitializeEquipment();
         characterClass.Apply(model);

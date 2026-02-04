@@ -12,6 +12,7 @@ public class UIScope : LifetimeScope
     [SerializeField] private UIScreenView screenView;
     [SerializeField] private CharacterScreenView characterScreenView;
     [SerializeField] private ChestLootView chestLootView;
+    [SerializeField] private CharacterRosterPanelView characterRosterPanelView;
     
     protected override void Configure(IContainerBuilder builder)
     {
@@ -26,12 +27,14 @@ public class UIScope : LifetimeScope
         builder.RegisterComponent(EnsureComponent(screenView, nameof(screenView)));
         builder.RegisterComponent(EnsureComponent(characterScreenView, nameof(characterScreenView)));
         builder.RegisterComponent(EnsureComponent(chestLootView, nameof(chestLootView)));
+        builder.RegisterComponent(EnsureComponent(characterRosterPanelView, nameof(characterRosterPanelView)));
 
         builder.RegisterEntryPoint<GameScreenPresenter>();
         builder.RegisterEntryPoint<FinishScreenPresenter>();
         builder.RegisterEntryPoint<UIScreenPresenter>();
         builder.RegisterEntryPoint<CharacterScreenPresenter>();
         builder.RegisterEntryPoint<ChestLootPresenter>();
+        builder.RegisterEntryPoint<CharacterRosterPanelPresenter>();
     }
 
     private T EnsureComponent<T>(T field, string fieldName) where T : Component
