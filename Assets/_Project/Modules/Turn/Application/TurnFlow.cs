@@ -16,6 +16,7 @@ public class TurnFlow : IPostInitializable, IDisposable
     public int StepsRemaining { get; private set; }
 
     public CharacterInstance CurrentPlayer { get; private set; }
+    public bool HasAttacked => _hasAttacked;
     private bool _allowEndTurn = false;
     private bool _hasAttacked = false;
     private bool _hasInteractedCell = false;

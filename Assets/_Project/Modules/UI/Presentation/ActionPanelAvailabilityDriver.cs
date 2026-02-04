@@ -5,15 +5,17 @@ public class ActionPanelAvailabilityDriver : IPostInitializable, IDisposable
 {
     private readonly CharacterRoster _characterRoster;
     private readonly IEventBus _eventBus;
+    private readonly TurnFlow _turnFlow;
     private IDisposable _turnStateSubscription;
     private IDisposable _characterMovedSubscription;
 
     private CharacterInstance _currentCharacter;
 
-    public ActionPanelAvailabilityDriver(CharacterRoster characterRoster, IEventBus eventBus)
+    public ActionPanelAvailabilityDriver(CharacterRoster characterRoster, IEventBus eventBus, TurnFlow turnFlow)
     {
         _characterRoster = characterRoster;
         _eventBus = eventBus;
+        _turnFlow = turnFlow;
     }
 
     public void PostInitialize()
@@ -52,6 +54,12 @@ public class ActionPanelAvailabilityDriver : IPostInitializable, IDisposable
             return;
         }
 
+        if (_turnFlow != null && _turnFlow.HasAttacked)
+        {
+            _eventBus.Publish(new AttackAvailabilityChanged(false));
+            return;
+        }
+
         var currentCell = _currentCharacter.Model.CurrentCell;
         if (currentCell.Type == CellType.Start)
         {
@@ -69,7 +77,8 @@ public class ActionPanelAvailabilityDriver : IPostInitializable, IDisposable
                 continue;
             }
 
-            if (character.Model?.CurrentCell == currentCell)
+            var targetCell = character.Model?.CurrentCell;
+            if (currentCell.CanMoveTo(targetCell))
             {
                 hasTarget = true;
                 break;

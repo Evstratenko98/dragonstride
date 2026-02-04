@@ -48,6 +48,11 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
             _view.EndTurnButton.onClick.AddListener(OnEndTurnClicked);
         }
 
+        if (_view.AttackButton != null)
+        {
+            _view.AttackButton.onClick.AddListener(OnAttackClicked);
+        }
+
         if (_view.FollowPlayerToggle != null)
         {
             _view.FollowPlayerToggle.onValueChanged.AddListener(OnFollowToggleChanged);
@@ -82,6 +87,11 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         if (_view.EndTurnButton != null)
         {
             _view.EndTurnButton.onClick.RemoveListener(OnEndTurnClicked);
+        }
+
+        if (_view.AttackButton != null)
+        {
+            _view.AttackButton.onClick.RemoveListener(OnAttackClicked);
         }
 
         if (_view.FollowPlayerToggle != null)
@@ -173,6 +183,11 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
     private void OnEndTurnClicked()
     {
         _eventBus.Publish(new EndTurnRequested());
+    }
+
+    private void OnAttackClicked()
+    {
+        _eventBus.Publish(new AttackRequested());
     }
 
     private void OnFollowToggleChanged(bool isEnabled)
