@@ -78,7 +78,7 @@ public class ActionPanelAvailabilityDriver : IPostInitializable, IDisposable
             }
 
             var targetCell = character.Model?.CurrentCell;
-            if (currentCell.CanMoveTo(targetCell))
+            if (targetCell == currentCell)
             {
                 hasTarget = true;
                 break;

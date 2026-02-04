@@ -83,11 +83,13 @@ public class AttackDriver : IPostInitializable, IDisposable
         }
 
         var target = msg.Character;
+        Debug.Log($"[Attack] Target selection attempted: {DescribeCharacter(_currentCharacter)} -> {DescribeCharacter(target)}");
         if (!IsValidTarget(target))
         {
             return;
         }
 
+        Debug.Log($"[Attack] Target selected: {DescribeCharacter(_currentCharacter)} -> {DescribeCharacter(target)}");
         _awaitingTarget = false;
 
         if (!_turnFlow.TryAttack())
@@ -117,7 +119,7 @@ public class AttackDriver : IPostInitializable, IDisposable
             return false;
         }
 
-        return attackerCell.CanMoveTo(defenderCell);
+        return attackerCell == defenderCell;
     }
 
     private void PerformAttack(CharacterInstance attacker, CharacterInstance defender)
@@ -131,6 +133,7 @@ public class AttackDriver : IPostInitializable, IDisposable
         float dodgeThreshold = defender.Model.DodgeChance * 100f;
         if (dodgeRoll < dodgeThreshold)
         {
+            Debug.Log($"[Attack] {DescribeCharacter(defender)} dodged the attack from {DescribeCharacter(attacker)}.");
             return;
         }
 
@@ -142,5 +145,11 @@ public class AttackDriver : IPostInitializable, IDisposable
 
         int newHealth = Mathf.Max(0, defender.Model.Health - damage);
         defender.Model.SetHealth(newHealth);
+        Debug.Log($"[Attack] {DescribeCharacter(defender)} took {damage} damage from {DescribeCharacter(attacker)}. Health: {newHealth}.");
+    }
+
+    private string DescribeCharacter(CharacterInstance character)
+    {
+        return character?.Name ?? "Unknown";
     }
 }
