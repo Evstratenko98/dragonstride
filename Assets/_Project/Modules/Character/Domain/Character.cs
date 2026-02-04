@@ -1,5 +1,6 @@
 public class Character
 {
+    public event System.Action StatsChanged;
     public string Name { get; private set; }
     public Inventory Inventory { get; private set; }
     public CharacterEquipment Equipment { get; private set; }
@@ -25,25 +26,89 @@ public class Character
     public int Speed { get; private set; } = 0;
     public float Luck { get; private set; } = 0.10f;
 
-    public void AddHealth(int value) => Health += value;
-    public void AddAttack(int value) => Attack += value;
-    public void AddArmor(int value) => Armor += value;
+    public void AddHealth(int value)
+    {
+        Health += value;
+        StatsChanged?.Invoke();
+    }
 
-    public void AddDodge(float value) => DodgeChance += value;
-    public void AddInitiative(int value) => Initiative += value;
+    public void AddAttack(int value)
+    {
+        Attack += value;
+        StatsChanged?.Invoke();
+    }
 
-    public void AddSpeed(int value) => Speed += value;
-    public void AddLuck(float value) => Luck += value;
+    public void AddArmor(int value)
+    {
+        Armor += value;
+        StatsChanged?.Invoke();
+    }
 
-    public void SetHealth(int value) => Health = value;
-    public void SetAttack(int value) => Attack = value;
-    public void SetArmor(int value) => Armor = value;
+    public void AddDodge(float value)
+    {
+        DodgeChance += value;
+        StatsChanged?.Invoke();
+    }
 
-    public void SetDodge(float value) => DodgeChance = value;
-    public void SetInitiative(int value) => Initiative = value;
+    public void AddInitiative(int value)
+    {
+        Initiative += value;
+        StatsChanged?.Invoke();
+    }
 
-    public void SetSpeed(int value) => Speed = value;
-    public void SetLuck(float value) => Luck = value;
+    public void AddSpeed(int value)
+    {
+        Speed += value;
+        StatsChanged?.Invoke();
+    }
+
+    public void AddLuck(float value)
+    {
+        Luck += value;
+        StatsChanged?.Invoke();
+    }
+
+    public void SetHealth(int value)
+    {
+        Health = value;
+        StatsChanged?.Invoke();
+    }
+
+    public void SetAttack(int value)
+    {
+        Attack = value;
+        StatsChanged?.Invoke();
+    }
+
+    public void SetArmor(int value)
+    {
+        Armor = value;
+        StatsChanged?.Invoke();
+    }
+
+    public void SetDodge(float value)
+    {
+        DodgeChance = value;
+        StatsChanged?.Invoke();
+    }
+
+    public void SetInitiative(int value)
+    {
+        Initiative = value;
+        StatsChanged?.Invoke();
+    }
+
+    public void SetSpeed(int value)
+    {
+        Speed = value;
+        StatsChanged?.Invoke();
+    }
+
+    public void SetLuck(float value)
+    {
+        Luck = value;
+        StatsChanged?.Invoke();
+    }
     
     public void InitializeInventory(int capacity)
     {

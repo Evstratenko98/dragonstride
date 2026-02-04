@@ -4,15 +4,41 @@ using UnityEngine.UI;
 public class CharacterCardView : MonoBehaviour
 {
     [SerializeField] private Text infoText;
+    private CharacterInstance _character;
 
     public void SetCharacter(CharacterInstance character)
     {
-        if (character == null || infoText == null)
+        if (_character != null && _character.Model != null)
+        {
+            _character.Model.StatsChanged -= UpdateInfo;
+        }
+
+        _character = character;
+
+        if (_character != null && _character.Model != null)
+        {
+            _character.Model.StatsChanged += UpdateInfo;
+        }
+
+        UpdateInfo();
+    }
+
+    private void OnDisable()
+    {
+        if (_character != null && _character.Model != null)
+        {
+            _character.Model.StatsChanged -= UpdateInfo;
+        }
+    }
+
+    private void UpdateInfo()
+    {
+        if (_character == null || _character.Model == null || infoText == null)
         {
             return;
         }
 
-        var model = character.Model;
+        var model = _character.Model;
         infoText.text =
             $"Имя: {model.Name}\n" +
             $"Здоровье: {model.Health}\n" +
