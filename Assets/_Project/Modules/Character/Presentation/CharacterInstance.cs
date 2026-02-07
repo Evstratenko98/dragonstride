@@ -2,9 +2,11 @@ using System.Threading.Tasks;
 using UnityEngine;
 
 public class CharacterInstance
+    : ICellLayoutOccupant
 {
     private readonly ConfigScriptableObject _config;
     public Character Model { get; private set; }
+    public Entity Entity => Model;
     public CharacterView View { get; private set; }
     public CharacterClass CharacterClass => Model?.Class;
     public bool IsMoving { get; private set; }
@@ -132,5 +134,10 @@ public class CharacterInstance
         }
 
         Model = null;
+    }
+
+    public void MoveToPosition(Vector3 targetPosition, float speed)
+    {
+        View?.MoveToPosition(targetPosition, speed);
     }
 }

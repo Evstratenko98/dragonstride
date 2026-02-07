@@ -10,7 +10,7 @@ public class CharacterLayout
         _config = config;
     }
 
-    public void ApplyLayout(Cell cell, IReadOnlyList<CharacterInstance> occupants)
+    public void ApplyLayout(Cell cell, IReadOnlyList<ICellLayoutOccupant> occupants)
     {
         if (cell == null || occupants == null || occupants.Count == 0)
         {
@@ -25,7 +25,7 @@ public class CharacterLayout
 
         if (occupants.Count == 1)
         {
-            occupants[0].View?.MoveToPosition(cellCenter, _config.CHARACTER_LAYOUT_SPEED);
+            occupants[0].MoveToPosition(cellCenter, _config.CHARACTER_LAYOUT_SPEED);
             return;
         }
 
@@ -38,7 +38,7 @@ public class CharacterLayout
             float offsetX = Mathf.Cos(angle) * radius;
             float offsetZ = Mathf.Sin(angle) * radius;
             Vector3 position = new Vector3(cellCenter.x + offsetX, cellCenter.y, cellCenter.z + offsetZ);
-            occupants[i].View?.MoveToPosition(position, _config.CHARACTER_LAYOUT_SPEED);
+            occupants[i].MoveToPosition(position, _config.CHARACTER_LAYOUT_SPEED);
         }
     }
 }

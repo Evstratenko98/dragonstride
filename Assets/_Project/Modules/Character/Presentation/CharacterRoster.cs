@@ -6,6 +6,7 @@ using UnityEngine;
 public class CharacterRoster
 {
     private List<CharacterInstance> _characters = new List<CharacterInstance>();
+    private readonly List<ICellLayoutOccupant> _extraLayoutOccupants = new List<ICellLayoutOccupant>();
     public IReadOnlyList<CharacterInstance> AllCharacters => _characters;
 
     public bool IsMoving => _characters.Any(c => c.IsMoving);
@@ -75,12 +76,45 @@ public class CharacterRoster
         _characters.Clear();
     }
 
+    public void RegisterLayoutOccupant(ICellLayoutOccupant occupant)
+    {
+        if (occupant == null || _extraLayoutOccupants.Contains(occupant))
+        {
+            return;
+        }
+
+        _extraLayoutOccupants.Add(occupant);
+        UpdateCellLayout(occupant.Entity?.CurrentCell);
+    }
+
+    public void UnregisterLayoutOccupant(ICellLayoutOccupant occupant)
+    {
+        if (occupant == null)
+        {
+            return;
+        }
+
+        Cell currentCell = occupant.Entity?.CurrentCell;
+        if (_extraLayoutOccupants.Remove(occupant))
+        {
+            UpdateCellLayout(currentCell);
+        }
+    }
+
+    public void UpdateEntityLayout(Entity entity, Cell previousCell = null)
+    {
+        UpdateCellLayout(previousCell);
+        UpdateCellLayout(entity?.CurrentCell);
+    }
+
     private void UpdateCellLayout(Cell cell)
     {
         if (cell == null) return;
 
-        List<CharacterInstance> occupants = _characters
-            .Where(character => character?.Model?.CurrentCell == cell)
+        List<ICellLayoutOccupant> occupants = _characters
+            .Cast<ICellLayoutOccupant>()
+            .Concat(_extraLayoutOccupants)
+            .Where(occupant => occupant?.Entity?.CurrentCell == cell)
             .ToList();
 
         _layoutService.ApplyLayout(cell, occupants);
