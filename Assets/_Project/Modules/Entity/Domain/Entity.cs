@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public class Entity
 {
     public event System.Action StatsChanged;
@@ -13,6 +15,7 @@ public class Entity
     public int Initiative { get; private set; } = 0;
     public int Speed { get; private set; } = 0;
     public float Luck { get; private set; } = 0.10f;
+    public virtual Color HealthBarFillColor => Color.green;
 
     public virtual int CalculateTurnSteps(int diceRoll)
     {

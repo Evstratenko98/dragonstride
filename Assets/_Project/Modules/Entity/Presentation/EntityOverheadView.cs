@@ -8,7 +8,6 @@ public class EntityOverheadView : MonoBehaviour
     [SerializeField] private float fallbackModelWidth = 0.8f;
     [SerializeField] private float barHeight = 0.1f;
     [SerializeField] private float nameOffset = 0.22f;
-    [SerializeField] private Color fillColor = new Color(0.85f, 0.08f, 0.08f, 1f);
     [SerializeField] private Color backgroundColor = new Color(0.14f, 0.14f, 0.14f, 1f);
 
     private Entity _model;
@@ -16,6 +15,7 @@ public class EntityOverheadView : MonoBehaviour
 
     private Transform _uiRoot;
     private Transform _fillTransform;
+    private Renderer _fillRenderer;
     private TextMesh _nameText;
     private float _barWidth;
 
@@ -30,6 +30,7 @@ public class EntityOverheadView : MonoBehaviour
         _maxHealth = Mathf.Max(1, model?.Health ?? 1);
 
         EnsureOverheadUi();
+        RefreshFillColor();
         SetEntityName(string.IsNullOrWhiteSpace(displayName) ? _model?.Name : displayName);
         RefreshHealth();
 
@@ -85,9 +86,10 @@ public class EntityOverheadView : MonoBehaviour
         fillPivot.transform.localPosition = new Vector3(-_barWidth * 0.5f, 0f, -0.001f);
         _fillTransform = fillPivot.transform;
 
-        var fill = CreateQuad("HealthBarFill", fillColor, _barWidth, barHeight);
+        var fill = CreateQuad("HealthBarFill", ResolveFillColor(), _barWidth, barHeight);
         fill.transform.SetParent(_fillTransform, false);
         fill.transform.localPosition = new Vector3(_barWidth * 0.5f, 0f, 0f);
+        _fillRenderer = fill.GetComponent<Renderer>();
 
         var nameObject = new GameObject("Name");
         nameObject.transform.SetParent(_uiRoot, false);
@@ -184,6 +186,11 @@ public class EntityOverheadView : MonoBehaviour
         _nameText.text = string.IsNullOrWhiteSpace(entityName) ? "Unknown" : entityName;
     }
 
+    private void RefreshFillColor()
+    {
+        ApplyMaterialColor(_fillRenderer?.material, ResolveFillColor());
+    }
+
     private void RefreshHealth()
     {
         if (_model == null || _fillTransform == null)
@@ -194,6 +201,11 @@ public class EntityOverheadView : MonoBehaviour
         _maxHealth = Mathf.Max(_maxHealth, _model.Health, 1);
         float normalized = Mathf.Clamp01((float)_model.Health / _maxHealth);
         _fillTransform.localScale = new Vector3(normalized, 1f, 1f);
+    }
+
+    private Color ResolveFillColor()
+    {
+        return _model?.HealthBarFillColor ?? Color.green;
     }
 
     private float ResolveModelWidth()
