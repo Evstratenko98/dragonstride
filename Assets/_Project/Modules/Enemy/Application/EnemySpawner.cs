@@ -49,7 +49,7 @@ public sealed class EnemySpawner
             return null;
         }
 
-        var model = new Enemy();
+        var model = new SlimeEnemy();
         model.SetName($"Enemy {_enemyCounter++}");
         var enemy = new EnemyInstance(_config, model, _enemyPrefab, _fieldRoot, _eventBus);
         enemy.Spawn(cell);

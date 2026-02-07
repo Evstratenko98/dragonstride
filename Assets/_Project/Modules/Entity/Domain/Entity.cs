@@ -14,6 +14,11 @@ public class Entity
     public int Speed { get; private set; } = 0;
     public float Luck { get; private set; } = 0.10f;
 
+    public virtual int CalculateTurnSteps(int diceRoll)
+    {
+        return System.Math.Max(0, diceRoll + Speed);
+    }
+
     public void SetCell(Cell cell)
     {
         CurrentCell = cell;

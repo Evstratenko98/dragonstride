@@ -54,7 +54,9 @@ public class TurnFlow : IPostInitializable, IDisposable
     {
         SetState(TurnState.RollDice);
 
-        StepsAvailable = _randomSource.Range(1, 7);
+        int diceRoll = _randomSource.Range(1, 7);
+        int steps = CurrentActor?.Entity?.CalculateTurnSteps(diceRoll) ?? diceRoll;
+        StepsAvailable = System.Math.Max(0, steps);
         StepsRemaining = StepsAvailable;
 
         _eventBus.Publish(new DiceRolled(CurrentActor, StepsAvailable));

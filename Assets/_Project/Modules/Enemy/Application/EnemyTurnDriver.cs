@@ -63,25 +63,13 @@ public sealed class EnemyTurnDriver : IPostInitializable, ITickable, IDisposable
 
     private void PerformEnemyTurn(EnemyInstance enemy)
     {
-        var currentCell = enemy.Entity?.CurrentCell;
-        if (currentCell == null)
+        var model = enemy.EntityModel;
+        if (model?.Behavior == null)
         {
             _turnFlow.EndTurn();
             return;
         }
 
-        if (_turnFlow.StepsRemaining > 0 && currentCell.Neighbors.Count > 0)
-        {
-            int nextIndex = _randomSource.Range(0, currentCell.Neighbors.Count);
-            var nextCell = currentCell.Neighbors[nextIndex];
-            Cell previousCell = currentCell;
-            bool moved = enemy.MoveTo(nextCell);
-            if (moved)
-            {
-                _characterRoster.UpdateEntityLayout(enemy.Entity, previousCell);
-            }
-        }
-
-        _turnFlow.EndTurn();
+        model.Behavior.ExecuteTurn(enemy, _randomSource, _turnFlow, _characterRoster);
     }
 }
