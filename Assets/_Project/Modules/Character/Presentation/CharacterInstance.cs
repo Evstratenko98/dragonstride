@@ -68,6 +68,7 @@ public class CharacterInstance
             return;
         }
 
+        View.Bind(Model, Name);
         View.SetPosition(GetCoordinatesForCellView(cell.X, cell.Y));
 
         var clickHandler = View.gameObject.GetComponent<CharacterClickHandler>();
