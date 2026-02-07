@@ -44,6 +44,7 @@ public class GameScope : LifetimeScope
         builder.RegisterEntryPoint<FogOfWarPresenter>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<CharacterMovementDriver>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<ActionPanelAvailabilityDriver>(Lifetime.Singleton).AsSelf();
+        builder.RegisterEntryPoint<AttackDriver>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<TurnFlow>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<GameFlow>();
     }
