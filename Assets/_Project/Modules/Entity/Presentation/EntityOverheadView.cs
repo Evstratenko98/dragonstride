@@ -108,8 +108,11 @@ public class EntityOverheadView : MonoBehaviour
         quad.transform.localScale = new Vector3(width, height, 1f);
 
         var renderer = quad.GetComponent<MeshRenderer>();
-        renderer.material = new Material(Shader.Find("Unlit/Color"));
-        renderer.material.color = color;
+        var material = CreateRuntimeMaterial(renderer, color);
+        if (material != null)
+        {
+            renderer.material = material;
+        }
 
         var collider = quad.GetComponent<Collider>();
         if (collider != null)
@@ -118,6 +121,57 @@ public class EntityOverheadView : MonoBehaviour
         }
 
         return quad;
+    }
+
+    private Material CreateRuntimeMaterial(Renderer renderer, Color color)
+    {
+        string[] shaderNames =
+        {
+            "Unlit/Color",
+            "Universal Render Pipeline/Unlit",
+            "Sprites/Default",
+            "Standard"
+        };
+
+        for (int i = 0; i < shaderNames.Length; i++)
+        {
+            Shader shader = Shader.Find(shaderNames[i]);
+            if (shader == null)
+            {
+                continue;
+            }
+
+            var material = new Material(shader);
+            ApplyMaterialColor(material, color);
+            return material;
+        }
+
+        if (renderer != null && renderer.sharedMaterial != null)
+        {
+            var fallbackMaterial = new Material(renderer.sharedMaterial);
+            ApplyMaterialColor(fallbackMaterial, color);
+            return fallbackMaterial;
+        }
+
+        Debug.LogError("[EntityOverheadView] Failed to create runtime material because no compatible shader was found.");
+        return null;
+    }
+
+    private static void ApplyMaterialColor(Material material, Color color)
+    {
+        if (material == null)
+        {
+            return;
+        }
+
+        if (material.HasProperty("_BaseColor"))
+        {
+            material.SetColor("_BaseColor", color);
+        }
+        else if (material.HasProperty("_Color"))
+        {
+            material.SetColor("_Color", color);
+        }
     }
 
     private void SetEntityName(string entityName)
