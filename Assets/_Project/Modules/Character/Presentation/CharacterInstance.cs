@@ -69,6 +69,14 @@ public class CharacterInstance
         }
 
         View.SetPosition(GetCoordinatesForCellView(cell.X, cell.Y));
+
+        var clickHandler = View.gameObject.GetComponent<CharacterClickHandler>();
+        if (clickHandler == null)
+        {
+            clickHandler = View.gameObject.AddComponent<CharacterClickHandler>();
+        }
+
+        clickHandler.Initialize(this, _eventBus);
     }
 
     public async Task MoveTo(Cell nextTarget)
