@@ -71,7 +71,13 @@ public class CharacterInstance
             return;
         }
 
-        View.Bind(Model, Name);
+        var overhead = View.GetComponent<EntityOverheadView>();
+        if (overhead == null)
+        {
+            overhead = View.gameObject.AddComponent<EntityOverheadView>();
+        }
+
+        overhead.Bind(Model, Name);
         View.SetPosition(GetCoordinatesForCellView(cell.X, cell.Y));
 
         var clickHandler = View.gameObject.GetComponent<CharacterClickHandler>();

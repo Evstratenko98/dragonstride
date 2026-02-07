@@ -53,6 +53,13 @@ public sealed class EnemyInstance : ICellLayoutOccupant
         }
 
         View.name = _model.Name;
+        var overhead = View.GetComponent<EntityOverheadView>();
+        if (overhead == null)
+        {
+            overhead = View.AddComponent<EntityOverheadView>();
+        }
+
+        overhead.Bind(_model);
         _mover = View.GetComponent<EnemyMover>();
         if (_mover == null)
         {
