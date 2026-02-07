@@ -146,4 +146,9 @@ public class CharacterInstance
     {
         View?.MoveToPosition(targetPosition, speed);
     }
+
+    public void SetWorldVisible(bool isVisible)
+    {
+        // Characters are always visible by design.
+    }
 }

@@ -9,6 +9,8 @@ public sealed class EnemyInstance : ICellLayoutOccupant
     private readonly IEventBus _eventBus;
 
     private EnemyMover _mover;
+    private Renderer[] _renderers;
+    private Collider[] _colliders;
 
     public Enemy EntityModel => _model;
     public Entity Entity => _model;
@@ -78,6 +80,8 @@ public sealed class EnemyInstance : ICellLayoutOccupant
         clickHandler.Initialize(this, _eventBus);
 
         View.transform.position = GetPosition(cell);
+        CacheVisibilityComponents();
+        SetWorldVisible(cell.VisibilityState == CellVisibility.Visible);
     }
 
     public bool MoveTo(Cell targetCell)
@@ -94,6 +98,7 @@ public sealed class EnemyInstance : ICellLayoutOccupant
 
         _model.SetCell(targetCell);
         MoveToPosition(GetPosition(targetCell), _config.CHARACTER_SPEED);
+        SetWorldVisible(targetCell.VisibilityState == CellVisibility.Visible);
         return true;
     }
 
@@ -121,6 +126,54 @@ public sealed class EnemyInstance : ICellLayoutOccupant
         }
 
         _model.SetCell(null);
+    }
+
+    public void SetWorldVisible(bool isVisible)
+    {
+        if (View == null)
+        {
+            return;
+        }
+
+        if (_renderers == null || _colliders == null)
+        {
+            CacheVisibilityComponents();
+        }
+
+        if (_renderers != null)
+        {
+            for (int i = 0; i < _renderers.Length; i++)
+            {
+                if (_renderers[i] != null)
+                {
+                    _renderers[i].enabled = isVisible;
+                }
+            }
+        }
+
+        if (_colliders != null)
+        {
+            for (int i = 0; i < _colliders.Length; i++)
+            {
+                if (_colliders[i] != null)
+                {
+                    _colliders[i].enabled = isVisible;
+                }
+            }
+        }
+    }
+
+    private void CacheVisibilityComponents()
+    {
+        if (View == null)
+        {
+            _renderers = null;
+            _colliders = null;
+            return;
+        }
+
+        _renderers = View.GetComponentsInChildren<Renderer>(true);
+        _colliders = View.GetComponentsInChildren<Collider>(true);
     }
 
     private Vector3 GetPosition(Cell cell)

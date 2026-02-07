@@ -119,6 +119,25 @@ public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
 
             _view.ApplyVisibility(cell);
         }
+
+        ApplyOccupantsVisibility();
+    }
+
+    private void ApplyOccupantsVisibility()
+    {
+        var actors = _characterRoster.GetAllOccupants();
+        for (int i = 0; i < actors.Count; i++)
+        {
+            var occupant = actors[i];
+            if (occupant == null || occupant is CharacterInstance)
+            {
+                continue;
+            }
+
+            var cell = occupant.Entity?.CurrentCell;
+            bool isVisible = cell != null && cell.VisibilityState == CellVisibility.Visible;
+            occupant.SetWorldVisible(isVisible);
+        }
     }
 
     private IEnumerable<Cell> CollectVisibleCells(Cell origin, int radius)

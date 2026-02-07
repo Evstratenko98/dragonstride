@@ -4,6 +4,7 @@ public interface ICellLayoutOccupant
 {
     Entity Entity { get; }
     void MoveToPosition(Vector3 targetPosition, float speed);
+    void SetWorldVisible(bool isVisible);
 }
 
 public readonly struct EntityClicked

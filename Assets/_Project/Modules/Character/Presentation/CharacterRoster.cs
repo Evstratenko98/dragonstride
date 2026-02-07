@@ -107,6 +107,14 @@ public class CharacterRoster
         UpdateCellLayout(entity?.CurrentCell);
     }
 
+    public IReadOnlyList<ICellLayoutOccupant> GetAllOccupants()
+    {
+        return _characters
+            .Cast<ICellLayoutOccupant>()
+            .Concat(_extraLayoutOccupants)
+            .ToList();
+    }
+
     private void UpdateCellLayout(Cell cell)
     {
         if (cell == null) return;
