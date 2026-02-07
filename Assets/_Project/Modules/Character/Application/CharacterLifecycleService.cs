@@ -28,7 +28,7 @@ public class CharacterLifecycleService
         }
 
         Character model = CreateModel(name, characterClass, withStarterItems: true);
-        CharacterInstance character = _characterFactory.Create(model, name, prefabIndex, characterClass);
+        CharacterInstance character = _characterFactory.Create(model, name, prefabIndex);
         if (character == null)
         {
             return null;
@@ -40,7 +40,7 @@ public class CharacterLifecycleService
 
     public bool TryRebirth(CharacterInstance character)
     {
-        if (character == null)
+        if (character == null || character.Model == null)
         {
             return false;
         }
@@ -52,7 +52,7 @@ public class CharacterLifecycleService
             return false;
         }
 
-        CharacterClass characterClass = character.CharacterClass;
+        CharacterClass characterClass = character.Model.Class;
         if (characterClass == null)
         {
             Debug.LogError($"[CharacterLifecycleService] Character class is not configured for '{character.Name}'.");
@@ -66,7 +66,7 @@ public class CharacterLifecycleService
 
     private Character CreateModel(string name, CharacterClass characterClass, bool withStarterItems)
     {
-        Character model = new Character();
+        Character model = new Character(characterClass);
         model.SetName(name);
         model.InitializeInventory(_config.INVENTORY_CAPACITY);
         model.InitializeEquipment();

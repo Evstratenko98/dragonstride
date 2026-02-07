@@ -19,7 +19,7 @@ public class CharacterFactory
         _fieldRootService = fieldRootService;
     }
 
-    public CharacterInstance Create(Character model, string name, int prefabIndex, CharacterClass characterClass)
+    public CharacterInstance Create(Character model, string name, int prefabIndex)
     {
         if (_prefabs == null || _prefabs.Length == 0)
         {
@@ -40,7 +40,7 @@ public class CharacterFactory
             return null;
         }
 
-        CharacterInstance instance = new CharacterInstance(_config, model, prefab, name, characterClass, _eventBus, _fieldRootService);
+        CharacterInstance instance = new CharacterInstance(_config, model, prefab, name, _eventBus, _fieldRootService);
 
         return instance;
     }
