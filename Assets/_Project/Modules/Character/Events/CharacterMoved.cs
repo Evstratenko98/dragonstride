@@ -1,9 +1,9 @@
 public readonly struct CharacterMoved
 {
-    public CharacterInstance Character { get; }
+    public ICellLayoutOccupant Actor { get; }
 
-    public CharacterMoved(CharacterInstance character)
+    public CharacterMoved(ICellLayoutOccupant actor)
     {
-        Character = character;
+        Actor = actor;
     }
 }

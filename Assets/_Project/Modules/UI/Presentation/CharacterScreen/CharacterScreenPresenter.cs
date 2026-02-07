@@ -58,9 +58,14 @@ public class CharacterScreenPresenter : IPostInitializable, IDisposable
 
     private void OnOpenRequested(CharacterScreenRequested message)
     {
+        if (_currentCharacter == null)
+        {
+            return;
+        }
+
         _view.Show();
-        _view.BindInventory(_currentCharacter?.Model?.Inventory);
-        _view.BindEquipment(_currentCharacter?.Model?.Equipment);
+        _view.BindInventory(_currentCharacter.Model.Inventory);
+        _view.BindEquipment(_currentCharacter.Model.Equipment);
     }
 
     private void OnCloseClicked()
@@ -70,17 +75,12 @@ public class CharacterScreenPresenter : IPostInitializable, IDisposable
 
     private void OnTurnStateChanged(TurnPhaseChanged message)
     {
-        if (message.Character == null)
-        {
-            return;
-        }
-
-        _currentCharacter = message.Character;
+        _currentCharacter = message.Actor as CharacterInstance;
 
         if (_view.gameObject.activeSelf)
         {
-            _view.BindInventory(_currentCharacter.Model.Inventory);
-            _view.BindEquipment(_currentCharacter.Model.Equipment);
+            _view.BindInventory(_currentCharacter?.Model?.Inventory);
+            _view.BindEquipment(_currentCharacter?.Model?.Equipment);
         }
     }
 }

@@ -11,11 +11,13 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
     private readonly CharacterInputReader _input;
     private readonly ItemFactory _itemFactory;
     private readonly FieldPresenter _fieldPresenter;
+    private readonly TurnActorRegistry _turnActorRegistry;
 
     private IDisposable _turnStateSubscription;
     private IDisposable _diceRolledSubscription;
     private IDisposable _characterMovedSubscription;
 
+    private ICellLayoutOccupant _currentActor;
     private CharacterInstance _currentCharacter;
     private TurnState _currentTurnState = TurnState.None;
     private int _stepsRemaining = 0;
@@ -26,7 +28,8 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         IEventBus eventBus,
         CharacterInputReader input,
         ItemFactory itemFactory,
-        FieldPresenter fieldPresenter
+        FieldPresenter fieldPresenter,
+        TurnActorRegistry turnActorRegistry
     )
     {
         _characterRoster = characterRoster;
@@ -34,6 +37,7 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         _input = input;
         _itemFactory = itemFactory;
         _fieldPresenter = fieldPresenter;
+        _turnActorRegistry = turnActorRegistry;
     }
 
     public void PostInitialize()
@@ -50,12 +54,18 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         _characterRoster.CreateCharacter(startCell, "Patrick", 1, new RunnerClass());
         _characterRoster.CreateCharacter(startCell, "Jonh", 2, new RunnerClass());
 
+        foreach (var character in _characterRoster.AllCharacters)
+        {
+            _turnActorRegistry.Register(character);
+        }
+
         return _characterRoster.AllCharacters;
     }
 
     private void OnTurnStateChanged(TurnPhaseChanged msg)
     {
-        _currentCharacter = msg.Character;
+        _currentActor = msg.Actor;
+        _currentCharacter = msg.Actor as CharacterInstance;
         _currentTurnState = msg.State;
 
         if (msg.State == TurnState.RollDice || msg.State == TurnState.End || msg.State == TurnState.None)
@@ -66,7 +76,7 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
 
         if (msg.State == TurnState.InteractionCell)
         {
-            HandleCellInteraction(msg.Character);
+            HandleCellInteraction(msg.Actor);
         }
     }
 
@@ -100,16 +110,18 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
 
     public void Reset()
     {
+        _currentActor = null;
         _currentCharacter = null;
         _currentTurnState = TurnState.None;
         _stepsRemaining = 0;
         _movementBlocked = false;
         _characterRoster.RemoveAllCharacters();
+        _turnActorRegistry.Clear();
     }
 
     private void OnDiceRolled(DiceRolled msg)
     {
-        if (msg.Character != _currentCharacter)
+        if (msg.Actor != _currentActor)
         {
             return;
         }
@@ -120,7 +132,7 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
 
     private void OnCharacterMoved(CharacterMoved msg)
     {
-        if (msg.Character != _currentCharacter)
+        if (msg.Actor != _currentActor)
         {
             return;
         }
@@ -133,14 +145,15 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         _stepsRemaining--;
     }
 
-    private void HandleCellInteraction(CharacterInstance character)
+    private void HandleCellInteraction(ICellLayoutOccupant actor)
     {
-        if (character == null)
+        var entity = actor?.Entity;
+        if (entity == null)
         {
             return;
         }
 
-        var currentCell = character.Model.CurrentCell;
+        var currentCell = entity.CurrentCell;
         if (currentCell == null)
         {
             return;
@@ -151,37 +164,47 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
             return;
         }
 
+        bool shouldConsumeCell = false;
+
         switch (currentCell.Type)
         {
             case CellType.Start:
-                break;
+            case CellType.End:
+                return;
             case CellType.Loot:
-                int lootCount = UnityEngine.Random.Range(1, 4);
-                var loot = new List<ItemDefinition>(lootCount);
-                for (int i = 0; i < lootCount; i++)
+                if (actor is CharacterInstance character)
                 {
-                    var item = _itemFactory.CreateRandomChestLoot();
-                    if (item?.Definition != null)
+                    int lootCount = UnityEngine.Random.Range(1, 4);
+                    var loot = new List<ItemDefinition>(lootCount);
+                    for (int i = 0; i < lootCount; i++)
                     {
-                        loot.Add(item.Definition);
+                        var item = _itemFactory.CreateRandomChestLoot();
+                        if (item?.Definition != null)
+                        {
+                            loot.Add(item.Definition);
+                        }
+                    }
+
+                    if (loot.Count > 0)
+                    {
+                        _eventBus.Publish(new ChestLootOpened(character, loot));
                     }
                 }
-
-                if (loot.Count > 0)
-                {
-                    _eventBus.Publish(new ChestLootOpened(character, loot));
-                }
+                shouldConsumeCell = true;
                 break;
             case CellType.Fight:
             case CellType.Teleport:
-            case CellType.End:
                 // TODO: implement interaction logic for non-common cell types.
+                shouldConsumeCell = true;
                 break;
             default:
                 return;
         }
 
-        currentCell.SetType(CellType.Common);
-        _fieldPresenter.RefreshCell(currentCell);
+        if (shouldConsumeCell)
+        {
+            currentCell.SetType(CellType.Common);
+            _fieldPresenter.RefreshCell(currentCell);
+        }
     }
 }

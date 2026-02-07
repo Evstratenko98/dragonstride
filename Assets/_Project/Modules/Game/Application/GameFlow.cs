@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using VContainer;
 using VContainer.Unity;
 
@@ -13,30 +14,30 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
     private readonly FieldPresenter _fieldPresenter;
     private readonly CharacterMovementDriver _characterDriver;
     private readonly TurnFlow _turnFlow;
+    private readonly TurnActorRegistry _turnActorRegistry;
 
-    private IReadOnlyList<CharacterInstance> _players = Array.Empty<CharacterInstance>();
-    private int _currentPlayerIndex = -1;
+    private IReadOnlyList<Entity> _turnEntities = Array.Empty<Entity>();
+    private ICellLayoutOccupant _currentTurnActor;
 
     public GameState GameState { get; private set; } = GameState.Init;
     public GameTurnState GameTurnState { get; private set; } = GameTurnState.Init;
 
-    public IReadOnlyList<CharacterInstance> Players => _players;
-    public CharacterInstance CurrentPlayer =>
-        (_currentPlayerIndex < 0 || _currentPlayerIndex >= _players.Count)
-        ? null
-        : _players[_currentPlayerIndex];
+    public IReadOnlyList<Entity> TurnEntities => _turnEntities;
+    public ICellLayoutOccupant CurrentTurnActor => _currentTurnActor;
 
     public GameFlow(
         IEventBus eventBus,
         TurnFlow turnFlow,
         FieldPresenter fieldPresenter,
-        CharacterMovementDriver characterDriver
+        CharacterMovementDriver characterDriver,
+        TurnActorRegistry turnActorRegistry
     )
     {
         _eventBus = eventBus;
         _fieldPresenter = fieldPresenter;
         _characterDriver = characterDriver;
         _turnFlow = turnFlow;
+        _turnActorRegistry = turnActorRegistry;
     }
 
     public void PostInitialize()
@@ -62,11 +63,13 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
     {
         SetGameState(GameState.Loading);
 
+        _characterDriver.Reset();
         _fieldPresenter.CreateField();
         Cell startCell = _fieldPresenter.StartCell;
 
-        _players = _characterDriver.SpawnCharacters(startCell);
-        _eventBus.Publish(new CharacterRosterUpdated(_players));
+        var characters = _characterDriver.SpawnCharacters(startCell);
+        _eventBus.Publish(new CharacterRosterUpdated(characters));
+        UpdateTurnEntities();
 
         StartGame();
     }
@@ -81,38 +84,55 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
     public void StartTurnCycle()
     {
         GameTurnState = GameTurnState.BeginTurn;
-        _currentPlayerIndex = 0;
+        _currentTurnActor = null;
 
-        StartTurn();
+        NextTurnActor();
     }
 
     private void StartTurn()
     {
         GameTurnState = GameTurnState.CharacterTurns;
 
-        _turnFlow.StartTurn(CurrentPlayer);
+        _turnFlow.StartTurn(_currentTurnActor);
     }
 
     public void OnEndTurn(TurnEnded msg)
     {
-        if (GameState == GameState.Finished || _players == null || _players.Count == 0)
+        if (GameState == GameState.Finished)
         {
             return;
         }
         
-        NextPlayer();
+        NextTurnActor();
     }
 
-    public void NextPlayer()
+    public void NextTurnActor()
     {
-        _currentPlayerIndex++;
+        var activeActors = _turnActorRegistry.GetActiveActorsSnapshot();
+        _turnEntities = activeActors
+            .Select(actor => actor.Entity)
+            .Where(entity => entity != null)
+            .ToArray();
 
-        if (_currentPlayerIndex >= _players.Count)
+        if (activeActors.Count == 0)
         {
-            StartTurnCycle();
+            _currentTurnActor = null;
             return;
         }
 
+        int nextIndex = 0;
+        if (_currentTurnActor != null)
+        {
+            int currentIndex = activeActors.IndexOf(_currentTurnActor);
+            nextIndex = currentIndex >= 0 ? currentIndex + 1 : 0;
+            if (nextIndex >= activeActors.Count)
+            {
+                GameTurnState = GameTurnState.BeginTurn;
+                nextIndex = 0;
+            }
+        }
+
+        _currentTurnActor = activeActors[nextIndex];
         StartTurn();
     }
 
@@ -129,6 +149,8 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         GameState = GameState.Finished;
         _characterDriver.Reset();
         _fieldPresenter.Reset();
+        _turnEntities = Array.Empty<Entity>();
+        _currentTurnActor = null;
     }
 
     private void SetGameState(GameState newState)
@@ -136,5 +158,13 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         GameState = newState;
         
         _eventBus.Publish(new GameStateChanged(newState));
+    }
+
+    private void UpdateTurnEntities()
+    {
+        _turnEntities = _turnActorRegistry.GetActiveActorsSnapshot()
+            .Select(actor => actor.Entity)
+            .Where(entity => entity != null)
+            .ToArray();
     }
 }

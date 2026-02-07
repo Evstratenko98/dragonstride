@@ -1,11 +1,11 @@
 public readonly struct DiceRolled
 {
-    public CharacterInstance Character { get; }
+    public ICellLayoutOccupant Actor { get; }
     public int Steps { get; }
 
-    public DiceRolled(CharacterInstance character, int steps)
+    public DiceRolled(ICellLayoutOccupant actor, int steps)
     {
-        Character = character;
+        Actor = actor;
         Steps = steps;
     }
 }

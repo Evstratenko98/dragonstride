@@ -39,6 +39,7 @@ public class GameScope : LifetimeScope
         builder.Register<ItemFactory>(Lifetime.Singleton);
 
         builder.Register<IRandomSource, UnityRandomSource>(Lifetime.Singleton);
+        builder.Register<TurnActorRegistry>(Lifetime.Singleton);
         builder.Register<FieldPresenter>(Lifetime.Singleton);
         builder.RegisterEntryPoint<FogOfWarPresenter>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<CharacterMovementDriver>(Lifetime.Singleton).AsSelf();

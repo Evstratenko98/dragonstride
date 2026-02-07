@@ -1,11 +1,11 @@
 public readonly struct TurnPhaseChanged
 {
-    public CharacterInstance Character { get; }
+    public ICellLayoutOccupant Actor { get; }
     public TurnState State { get; }
 
-    public TurnPhaseChanged(CharacterInstance character, TurnState state)
+    public TurnPhaseChanged(ICellLayoutOccupant actor, TurnState state)
     {
-        Character = character;
+        Actor = actor;
         State = state;
     }
 }

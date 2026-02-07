@@ -39,8 +39,12 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
 
     private void FocusCameraForCharacter(TurnPhaseChanged msg)
     {
-        if(msg.State == TurnState.RollDice)
-            _cameraFocusState.SetTarget(msg.Character);
+        if (msg.State != TurnState.RollDice)
+        {
+            return;
+        }
+
+        _cameraFocusState.SetTarget(msg.Actor as CharacterInstance);
     }
 
     public void Tick()

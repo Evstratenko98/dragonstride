@@ -15,7 +15,7 @@ public class TurnFlow : IPostInitializable, IDisposable
     public int StepsAvailable { get; private set; }
     public int StepsRemaining { get; private set; }
 
-    public CharacterInstance CurrentPlayer { get; private set; }
+    public ICellLayoutOccupant CurrentActor { get; private set; }
     public bool HasAttacked => _hasAttacked;
     private bool _allowEndTurn = false;
     private bool _hasAttacked = false;
@@ -41,10 +41,10 @@ public class TurnFlow : IPostInitializable, IDisposable
         _interactCellSubscription?.Dispose();
     }
 
-    public void StartTurn(CharacterInstance character)
+    public void StartTurn(ICellLayoutOccupant actor)
     {
         ResetTurn();
-        CurrentPlayer = character;
+        CurrentActor = actor;
         PublishInteractAvailability(true);
 
         RollDice();
@@ -57,7 +57,7 @@ public class TurnFlow : IPostInitializable, IDisposable
         StepsAvailable = _randomSource.Range(1, 7);
         StepsRemaining = StepsAvailable;
 
-        _eventBus.Publish(new DiceRolled(CurrentPlayer, StepsAvailable));
+        _eventBus.Publish(new DiceRolled(CurrentActor, StepsAvailable));
 
         _allowEndTurn = true;
         SetState(TurnState.ActionSelection);
@@ -65,7 +65,7 @@ public class TurnFlow : IPostInitializable, IDisposable
 
     public void RegisterStep()
     {
-        if (CurrentPlayer == null)
+        if (CurrentActor?.Entity == null)
             return;
 
         if (!CanMove())
@@ -78,7 +78,13 @@ public class TurnFlow : IPostInitializable, IDisposable
             return;
         }
 
-        if (CurrentPlayer.Model.CurrentCell.Type == CellType.End)
+        var currentCell = CurrentActor.Entity.CurrentCell;
+        if (currentCell == null)
+        {
+            return;
+        }
+
+        if (CurrentActor is CharacterInstance && currentCell.Type == CellType.End)
         {
             _eventBus.Publish(new GameStateChanged(GameState.Finished));
 
@@ -101,7 +107,7 @@ public class TurnFlow : IPostInitializable, IDisposable
         if (State != TurnState.ActionSelection && State != TurnState.Movement)
             return;
 
-        if (msg.Character != CurrentPlayer)
+        if (msg.Actor != CurrentActor)
             return;
 
         if (!CanMove())
@@ -112,7 +118,7 @@ public class TurnFlow : IPostInitializable, IDisposable
         SetState(TurnState.Movement);
         RegisterStep();
 
-        if (CurrentPlayer != null && State != TurnState.End)
+        if (CurrentActor != null && State != TurnState.End)
         {
             SetState(TurnState.ActionSelection);
         }
@@ -126,7 +132,7 @@ public class TurnFlow : IPostInitializable, IDisposable
         }
         _allowEndTurn = false;
 
-        if (CurrentPlayer == null)
+        if (CurrentActor == null)
             return;
 
         if (State == TurnState.ActionSelection ||
@@ -209,7 +215,7 @@ public class TurnFlow : IPostInitializable, IDisposable
 
     private void ResetTurn()
     {
-        CurrentPlayer = null;
+        CurrentActor = null;
         StepsAvailable = 0;
         StepsRemaining = 0;
         _allowEndTurn = false;
@@ -222,7 +228,7 @@ public class TurnFlow : IPostInitializable, IDisposable
     {
         State = newState;
 
-        _eventBus.Publish(new TurnPhaseChanged(CurrentPlayer, newState));
+        _eventBus.Publish(new TurnPhaseChanged(CurrentActor, newState));
     }
 
     private void PublishInteractAvailability(bool isAvailable)

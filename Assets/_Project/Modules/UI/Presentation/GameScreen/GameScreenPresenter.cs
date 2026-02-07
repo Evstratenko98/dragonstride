@@ -12,7 +12,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
     private IDisposable _attackAvailabilitySubscription;
     private IDisposable _interactAvailabilitySubscription;
 
-    private CharacterInstance _currentCharacter;
+    private ICellLayoutOccupant _currentActor;
     private TurnState _currentTurnState = TurnState.None;
     private int _stepsTotal;
     private int _stepsRemaining;
@@ -62,6 +62,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         UpdatePlayerText();
         UpdateTurnStateText();
         UpdateStepsText();
+        SetCharacterButtonInteractable(false);
         SetAttackButtonInteractable(false);
         SetInteractButtonInteractable(false);
     }
@@ -102,14 +103,12 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     private void OnTurnStateChanged(TurnPhaseChanged msg)
     {
-        if (msg.Character != null)
-        {
-            _currentCharacter = msg.Character;
-        }
+        _currentActor = msg.Actor;
 
         _currentTurnState = msg.State;
         UpdatePlayerText();
         UpdateTurnStateText();
+        SetCharacterButtonInteractable(_currentActor is CharacterInstance);
 
         if (msg.State == TurnState.End || msg.State == TurnState.None)
         {
@@ -122,22 +121,23 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     private void OnDiceRolled(DiceRolled msg)
     {
-        if (_currentCharacter != null && msg.Character != _currentCharacter)
+        if (_currentActor != null && msg.Actor != _currentActor)
         {
             return;
         }
 
-        _currentCharacter = msg.Character;
+        _currentActor = msg.Actor;
         _stepsTotal = msg.Steps;
         _stepsRemaining = msg.Steps;
 
         UpdatePlayerText();
         UpdateStepsText();
+        SetCharacterButtonInteractable(_currentActor is CharacterInstance);
     }
 
     private void OnCharacterMoved(CharacterMoved msg)
     {
-        if (_currentCharacter == null || msg.Character != _currentCharacter)
+        if (_currentActor == null || msg.Actor != _currentActor)
         {
             return;
         }
@@ -153,7 +153,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     private void UpdatePlayerText()
     {
-        var playerName = _currentCharacter != null ? _currentCharacter.Name : FallbackValue;
+        var playerName = _currentActor?.Entity?.Name ?? FallbackValue;
         _view.SetCurrentPlayer(playerName);
     }
 
@@ -172,6 +172,11 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     private void OnCharacterButtonClicked()
     {
+        if (_currentActor is not CharacterInstance)
+        {
+            return;
+        }
+
         _eventBus.Publish(new CharacterScreenRequested());
     }
 
@@ -223,5 +228,15 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         }
 
         _view.InteractCellButton.interactable = isInteractable;
+    }
+
+    private void SetCharacterButtonInteractable(bool isInteractable)
+    {
+        if (_view.CharacaterButton == null)
+        {
+            return;
+        }
+
+        _view.CharacaterButton.interactable = isInteractable;
     }
 }

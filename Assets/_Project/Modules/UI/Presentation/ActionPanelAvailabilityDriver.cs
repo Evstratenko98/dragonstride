@@ -9,7 +9,7 @@ public class ActionPanelAvailabilityDriver : IPostInitializable, IDisposable
     private IDisposable _turnStateSubscription;
     private IDisposable _characterMovedSubscription;
 
-    private CharacterInstance _currentCharacter;
+    private ICellLayoutOccupant _currentActor;
 
     public ActionPanelAvailabilityDriver(CharacterRoster characterRoster, IEventBus eventBus, TurnFlow turnFlow)
     {
@@ -33,10 +33,7 @@ public class ActionPanelAvailabilityDriver : IPostInitializable, IDisposable
 
     private void OnTurnStateChanged(TurnPhaseChanged msg)
     {
-        if (msg.Character != null)
-        {
-            _currentCharacter = msg.Character;
-        }
+        _currentActor = msg.Actor;
 
         PublishAvailability();
     }
@@ -48,7 +45,7 @@ public class ActionPanelAvailabilityDriver : IPostInitializable, IDisposable
 
     private void PublishAvailability()
     {
-        if (_currentCharacter?.Model?.CurrentCell == null)
+        if (_currentActor?.Entity?.CurrentCell == null)
         {
             _eventBus.Publish(new AttackAvailabilityChanged(false));
             return;
@@ -60,7 +57,7 @@ public class ActionPanelAvailabilityDriver : IPostInitializable, IDisposable
             return;
         }
 
-        var currentCell = _currentCharacter.Model.CurrentCell;
+        var currentCell = _currentActor.Entity.CurrentCell;
         if (currentCell.Type == CellType.Start)
         {
             _eventBus.Publish(new AttackAvailabilityChanged(false));
@@ -72,7 +69,7 @@ public class ActionPanelAvailabilityDriver : IPostInitializable, IDisposable
         for (int i = 0; i < characters.Count; i++)
         {
             var character = characters[i];
-            if (character == null || character == _currentCharacter)
+            if (character == null || character == _currentActor)
             {
                 continue;
             }
