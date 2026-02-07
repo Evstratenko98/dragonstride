@@ -7,6 +7,7 @@ public class AttackDriver : IPostInitializable, IDisposable
     private readonly IEventBus _eventBus;
     private readonly IRandomSource _randomSource;
     private readonly TurnFlow _turnFlow;
+    private readonly CharacterRoster _characterRoster;
 
     private IDisposable _attackRequestedSubscription;
     private IDisposable _characterClickedSubscription;
@@ -16,11 +17,16 @@ public class AttackDriver : IPostInitializable, IDisposable
     private CharacterInstance _currentCharacter;
     private bool _awaitingTarget;
 
-    public AttackDriver(IEventBus eventBus, IRandomSource randomSource, TurnFlow turnFlow)
+    public AttackDriver(
+        IEventBus eventBus,
+        IRandomSource randomSource,
+        TurnFlow turnFlow,
+        CharacterRoster characterRoster)
     {
         _eventBus = eventBus;
         _randomSource = randomSource;
         _turnFlow = turnFlow;
+        _characterRoster = characterRoster;
     }
 
     public void PostInitialize()
@@ -146,6 +152,15 @@ public class AttackDriver : IPostInitializable, IDisposable
         int newHealth = Mathf.Max(0, defender.Model.Health - damage);
         defender.Model.SetHealth(newHealth);
         Debug.Log($"[Attack] {DescribeCharacter(defender)} took {damage} damage from {DescribeCharacter(attacker)}. Health: {newHealth}.");
+
+        if (newHealth == 0)
+        {
+            bool reborn = _characterRoster.TryRebirthCharacter(defender);
+            if (reborn)
+            {
+                Debug.Log($"[Attack] {DescribeCharacter(defender)} has been reborn at the start cell.");
+            }
+        }
     }
 
     private string DescribeCharacter(CharacterInstance character)

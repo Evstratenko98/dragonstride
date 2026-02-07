@@ -30,10 +30,9 @@ public class GameScope : LifetimeScope
         builder.Register<FieldGenerator>(Lifetime.Singleton);
 
         builder.RegisterInstance(characterPrefabs).As<CharacterView[]>();
-        builder.Register<Character>(Lifetime.Transient);
-        builder.Register<CharacterInstance>(Lifetime.Transient);
         builder.Register<CharacterInputReader>(Lifetime.Singleton);
         builder.Register<CharacterFactory>(Lifetime.Singleton);
+        builder.Register<CharacterLifecycleService>(Lifetime.Singleton);
         builder.Register<CharacterLayout>(Lifetime.Singleton);
         builder.Register<CharacterRoster>(Lifetime.Singleton);
 

@@ -17,7 +17,7 @@ public class Character
     }
 
     public int Health { get; private set; } = 100;
-    public int Attack { get; private set; } = 10;
+    public int Attack { get; private set; } = 50;
     public int Armor { get; private set; } = 5;
 
     public float DodgeChance { get; private set; } = 0.10f;

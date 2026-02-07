@@ -9,34 +9,45 @@ public class CharacterRoster
     public IReadOnlyList<CharacterInstance> AllCharacters => _characters;
 
     public bool IsMoving => _characters.Any(c => c.IsMoving);
-    private readonly CharacterFactory _factory;
+    private readonly CharacterLifecycleService _lifecycleService;
     private readonly CharacterLayout _layoutService;
 
-    public CharacterRoster(CharacterFactory factory, CharacterLayout layoutService)
+    public CharacterRoster(CharacterLifecycleService lifecycleService, CharacterLayout layoutService)
     {
-        _factory = factory;
+        _lifecycleService = lifecycleService;
         _layoutService = layoutService;
     }
 
     public CharacterInstance CreateCharacter(Cell startCell, string name, int prefabIndex, CharacterClass characterClass)
     {
-        if (startCell == null)
-        {
-            Debug.LogError("[CharacterRoster] Start cell is not available. Character will not be created.");
-            return null;
-        }
-
-        CharacterInstance character = _factory.Create(name, prefabIndex, characterClass);
+        CharacterInstance character = _lifecycleService.CreateCharacter(startCell, name, prefabIndex, characterClass);
         if (character == null)
         {
             return null;
         }
 
-        character.Spawn(startCell);
-
         _characters.Add(character);
         UpdateCellLayout(startCell);
         return character;
+    }
+
+    public bool TryRebirthCharacter(CharacterInstance character)
+    {
+        if (character?.Model == null)
+        {
+            return false;
+        }
+
+        Cell previousCell = character.Model.CurrentCell;
+        bool rebirthSuccess = _lifecycleService.TryRebirth(character);
+        if (!rebirthSuccess)
+        {
+            return false;
+        }
+
+        UpdateCellLayout(previousCell);
+        UpdateCellLayout(character.Model.CurrentCell);
+        return true;
     }
 
     public async Task TryMove(CharacterInstance characterInstance, Vector2Int dir)

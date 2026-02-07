@@ -6,6 +6,7 @@ public class CharacterInstance
     private readonly ConfigScriptableObject _config;
     public Character Model { get; private set; }
     public CharacterView View { get; private set; }
+    public CharacterClass CharacterClass { get; private set; }
     public bool IsMoving { get; private set; }
     public string Name { get; private set; }
 
@@ -19,6 +20,7 @@ public class CharacterInstance
         Character model,
         CharacterView prefab,
         string name,
+        CharacterClass characterClass,
         IEventBus eventBus,
         FieldRoot fieldRootService
     )
@@ -30,6 +32,7 @@ public class CharacterInstance
 
         Model = model;
         Name = name;
+        CharacterClass = characterClass;
     }
 
     public Vector3 GetCoordinatesForCellView(int x, int y)
@@ -78,6 +81,24 @@ public class CharacterInstance
         }
 
         clickHandler.Initialize(this, _eventBus);
+    }
+
+    public void Respawn(Character model, Cell startCell)
+    {
+        if (model == null)
+        {
+            Debug.LogError("[CharacterInstance] Cannot respawn character because model is missing.");
+            return;
+        }
+
+        if (View != null)
+        {
+            UnityEngine.Object.Destroy(View.gameObject);
+            View = null;
+        }
+
+        Model = model;
+        Spawn(startCell);
     }
 
     public async Task MoveTo(Cell nextTarget)
