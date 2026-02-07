@@ -1,0 +1,87 @@
+using System;
+using VContainer.Unity;
+
+public sealed class EnemyTurnDriver : IPostInitializable, ITickable, IDisposable
+{
+    private readonly IEventBus _eventBus;
+    private readonly IRandomSource _randomSource;
+    private readonly TurnFlow _turnFlow;
+    private readonly CharacterRoster _characterRoster;
+
+    private IDisposable _turnPhaseSubscription;
+    private EnemyInstance _pendingEnemyTurn;
+
+    public EnemyTurnDriver(
+        IEventBus eventBus,
+        IRandomSource randomSource,
+        TurnFlow turnFlow,
+        CharacterRoster characterRoster
+    )
+    {
+        _eventBus = eventBus;
+        _randomSource = randomSource;
+        _turnFlow = turnFlow;
+        _characterRoster = characterRoster;
+    }
+
+    public void PostInitialize()
+    {
+        _turnPhaseSubscription = _eventBus.Subscribe<TurnPhaseChanged>(OnTurnPhaseChanged);
+    }
+
+    public void Dispose()
+    {
+        _turnPhaseSubscription?.Dispose();
+    }
+
+    private void OnTurnPhaseChanged(TurnPhaseChanged message)
+    {
+        if (message.State != TurnState.ActionSelection)
+        {
+            return;
+        }
+
+        if (message.Actor is not EnemyInstance enemy)
+        {
+            return;
+        }
+
+        _pendingEnemyTurn = enemy;
+    }
+
+    public void Tick()
+    {
+        if (_pendingEnemyTurn == null)
+        {
+            return;
+        }
+
+        var enemy = _pendingEnemyTurn;
+        _pendingEnemyTurn = null;
+        PerformEnemyTurn(enemy);
+    }
+
+    private void PerformEnemyTurn(EnemyInstance enemy)
+    {
+        var currentCell = enemy.Entity?.CurrentCell;
+        if (currentCell == null)
+        {
+            _turnFlow.EndTurn();
+            return;
+        }
+
+        if (_turnFlow.StepsRemaining > 0 && currentCell.Neighbors.Count > 0)
+        {
+            int nextIndex = _randomSource.Range(0, currentCell.Neighbors.Count);
+            var nextCell = currentCell.Neighbors[nextIndex];
+            Cell previousCell = currentCell;
+            bool moved = enemy.MoveTo(nextCell);
+            if (moved)
+            {
+                _characterRoster.UpdateEntityLayout(enemy.Entity, previousCell);
+            }
+        }
+
+        _turnFlow.EndTurn();
+    }
+}

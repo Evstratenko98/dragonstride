@@ -12,6 +12,7 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
     private readonly ItemFactory _itemFactory;
     private readonly FieldPresenter _fieldPresenter;
     private readonly TurnActorRegistry _turnActorRegistry;
+    private readonly EnemySpawner _enemySpawner;
 
     private IDisposable _turnStateSubscription;
     private IDisposable _diceRolledSubscription;
@@ -29,7 +30,8 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         CharacterInputReader input,
         ItemFactory itemFactory,
         FieldPresenter fieldPresenter,
-        TurnActorRegistry turnActorRegistry
+        TurnActorRegistry turnActorRegistry,
+        EnemySpawner enemySpawner
     )
     {
         _characterRoster = characterRoster;
@@ -38,6 +40,7 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         _itemFactory = itemFactory;
         _fieldPresenter = fieldPresenter;
         _turnActorRegistry = turnActorRegistry;
+        _enemySpawner = enemySpawner;
     }
 
     public void PostInitialize()
@@ -115,6 +118,7 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         _currentTurnState = TurnState.None;
         _stepsRemaining = 0;
         _movementBlocked = false;
+        _enemySpawner.Reset();
         _characterRoster.RemoveAllCharacters();
         _turnActorRegistry.Clear();
     }
@@ -193,6 +197,9 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
                 shouldConsumeCell = true;
                 break;
             case CellType.Fight:
+                _enemySpawner.SpawnOnCell(currentCell);
+                shouldConsumeCell = true;
+                break;
             case CellType.Teleport:
                 // TODO: implement interaction logic for non-common cell types.
                 shouldConsumeCell = true;

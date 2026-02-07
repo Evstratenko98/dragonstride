@@ -3,6 +3,12 @@ using System.Collections.Generic;
 
 public sealed class FieldGenerator
 {
+    private static readonly (CellType Type, float Weight)[] RandomCellTypeWeights =
+    {
+        (CellType.Loot, 0.25f),
+        (CellType.Fight, 0.25f)
+    };
+
     private readonly Random _random = new Random();
     
     public FieldGenerator()
@@ -17,7 +23,7 @@ public sealed class FieldGenerator
         AddExtraConnections(field, extraConnectionChance);
         EnsureFullConnectivity(field);
         AssignStartAndEnd(field);
-        AssignLootCells(field);
+        AssignSpecialCells(field);
         return field;
     }
 
@@ -30,9 +36,8 @@ public sealed class FieldGenerator
         finishCell?.SetType(CellType.End);
     }
 
-    private void AssignLootCells(FieldGrid field)
+    private void AssignSpecialCells(FieldGrid field)
     {
-        const float lootChance = 0.25f;
         var candidates = new List<Cell>();
 
         foreach (var cell in field.GetAllCells())
@@ -43,13 +48,32 @@ public sealed class FieldGenerator
             }
         }
 
-        int lootCount = (int)Math.Round(candidates.Count * lootChance, MidpointRounding.AwayFromZero);
-        for (int i = 0; i < lootCount && candidates.Count > 0; i++)
+        for (int i = 0; i < candidates.Count; i++)
         {
-            int index = _random.Next(candidates.Count);
-            candidates[index].SetType(CellType.Loot);
-            candidates.RemoveAt(index);
+            var randomType = RollRandomCellType();
+
+            if (randomType != CellType.Common)
+            {
+                candidates[i].SetType(randomType);
+            }
         }
+    }
+
+    private CellType RollRandomCellType()
+    {
+        float roll = (float)_random.NextDouble();
+        float cumulative = 0f;
+
+        for (int i = 0; i < RandomCellTypeWeights.Length; i++)
+        {
+            cumulative += RandomCellTypeWeights[i].Weight;
+            if (roll < cumulative)
+            {
+                return RandomCellTypeWeights[i].Type;
+            }
+        }
+
+        return CellType.Common;
     }
 
     private Cell GetRandomFinishCell(FieldGrid field)
