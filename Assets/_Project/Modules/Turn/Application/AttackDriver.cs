@@ -8,9 +8,10 @@ public class AttackDriver : IPostInitializable, IDisposable
     private readonly IRandomSource _randomSource;
     private readonly TurnFlow _turnFlow;
     private readonly CharacterRoster _characterRoster;
+    private readonly EnemySpawner _enemySpawner;
 
     private IDisposable _attackRequestedSubscription;
-    private IDisposable _characterClickedSubscription;
+    private IDisposable _entityClickedSubscription;
     private IDisposable _turnPhaseSubscription;
     private IDisposable _turnEndedSubscription;
 
@@ -21,18 +22,20 @@ public class AttackDriver : IPostInitializable, IDisposable
         IEventBus eventBus,
         IRandomSource randomSource,
         TurnFlow turnFlow,
-        CharacterRoster characterRoster)
+        CharacterRoster characterRoster,
+        EnemySpawner enemySpawner)
     {
         _eventBus = eventBus;
         _randomSource = randomSource;
         _turnFlow = turnFlow;
         _characterRoster = characterRoster;
+        _enemySpawner = enemySpawner;
     }
 
     public void PostInitialize()
     {
         _attackRequestedSubscription = _eventBus.Subscribe<AttackRequested>(OnAttackRequested);
-        _characterClickedSubscription = _eventBus.Subscribe<CharacterClicked>(OnCharacterClicked);
+        _entityClickedSubscription = _eventBus.Subscribe<EntityClicked>(OnEntityClicked);
         _turnPhaseSubscription = _eventBus.Subscribe<TurnPhaseChanged>(OnTurnPhaseChanged);
         _turnEndedSubscription = _eventBus.Subscribe<TurnEnded>(OnTurnEnded);
     }
@@ -40,7 +43,7 @@ public class AttackDriver : IPostInitializable, IDisposable
     public void Dispose()
     {
         _attackRequestedSubscription?.Dispose();
-        _characterClickedSubscription?.Dispose();
+        _entityClickedSubscription?.Dispose();
         _turnPhaseSubscription?.Dispose();
         _turnEndedSubscription?.Dispose();
     }
@@ -81,21 +84,21 @@ public class AttackDriver : IPostInitializable, IDisposable
         _awaitingTarget = true;
     }
 
-    private void OnCharacterClicked(CharacterClicked msg)
+    private void OnEntityClicked(EntityClicked msg)
     {
         if (!_awaitingTarget)
         {
             return;
         }
 
-        var target = msg.Character;
-        Debug.Log($"[Attack] Target selection attempted: {DescribeActor(_currentActor)} -> {DescribeCharacter(target)}");
+        var target = msg.Occupant;
+        Debug.Log($"[Attack] Target selection attempted: {DescribeActor(_currentActor)} -> {DescribeActor(target)}");
         if (!IsValidTarget(target))
         {
             return;
         }
 
-        Debug.Log($"[Attack] Target selected: {DescribeActor(_currentActor)} -> {DescribeCharacter(target)}");
+        Debug.Log($"[Attack] Target selected: {DescribeActor(_currentActor)} -> {DescribeActor(target)}");
         _awaitingTarget = false;
 
         if (!_turnFlow.TryAttack())
@@ -106,7 +109,7 @@ public class AttackDriver : IPostInitializable, IDisposable
         PerformAttack(_currentActor, target);
     }
 
-    private bool IsValidTarget(CharacterInstance target)
+    private bool IsValidTarget(ICellLayoutOccupant target)
     {
         if (target == null || _currentActor?.Entity == null)
         {
@@ -119,7 +122,7 @@ public class AttackDriver : IPostInitializable, IDisposable
         }
 
         var attackerCell = _currentActor.Entity.CurrentCell;
-        var defenderCell = target.Model?.CurrentCell;
+        var defenderCell = target.Entity?.CurrentCell;
         if (attackerCell == null || defenderCell == null)
         {
             return false;
@@ -128,44 +131,48 @@ public class AttackDriver : IPostInitializable, IDisposable
         return attackerCell == defenderCell;
     }
 
-    private void PerformAttack(ICellLayoutOccupant attacker, CharacterInstance defender)
+    private void PerformAttack(ICellLayoutOccupant attacker, ICellLayoutOccupant defender)
     {
-        if (attacker?.Entity == null || defender?.Model == null)
+        if (attacker?.Entity == null || defender?.Entity == null)
         {
             return;
         }
 
         float dodgeRoll = _randomSource.Range(0, 100);
-        float dodgeThreshold = defender.Model.DodgeChance * 100f;
+        float dodgeThreshold = defender.Entity.DodgeChance * 100f;
         if (dodgeRoll < dodgeThreshold)
         {
-            Debug.Log($"[Attack] {DescribeCharacter(defender)} dodged the attack from {DescribeActor(attacker)}.");
+            Debug.Log($"[Attack] {DescribeActor(defender)} dodged the attack from {DescribeActor(attacker)}.");
             return;
         }
 
-        int damage = Mathf.Max(0, attacker.Entity.Attack - defender.Model.Armor);
+        int damage = Mathf.Max(0, attacker.Entity.Attack - defender.Entity.Armor);
         if (damage <= 0)
         {
             return;
         }
 
-        int newHealth = Mathf.Max(0, defender.Model.Health - damage);
-        defender.Model.SetHealth(newHealth);
-        Debug.Log($"[Attack] {DescribeCharacter(defender)} took {damage} damage from {DescribeActor(attacker)}. Health: {newHealth}.");
+        int newHealth = Mathf.Max(0, defender.Entity.Health - damage);
+        defender.Entity.SetHealth(newHealth);
+        Debug.Log($"[Attack] {DescribeActor(defender)} took {damage} damage from {DescribeActor(attacker)}. Health: {newHealth}.");
 
-        if (newHealth == 0)
+        if (newHealth == 0 && defender is CharacterInstance character)
         {
-            bool reborn = _characterRoster.TryRebirthCharacter(defender);
+            bool reborn = _characterRoster.TryRebirthCharacter(character);
             if (reborn)
             {
-                Debug.Log($"[Attack] {DescribeCharacter(defender)} has been reborn at the start cell.");
+                Debug.Log($"[Attack] {DescribeActor(defender)} has been reborn at the start cell.");
             }
         }
-    }
 
-    private string DescribeCharacter(CharacterInstance character)
-    {
-        return character?.Name ?? "Unknown";
+        if (newHealth == 0 && defender is EnemyInstance enemy)
+        {
+            bool removed = _enemySpawner.RemoveEnemy(enemy);
+            if (removed)
+            {
+                Debug.Log($"[Attack] {DescribeActor(defender)} has been removed from the game.");
+            }
+        }
     }
 
     private string DescribeActor(ICellLayoutOccupant actor)

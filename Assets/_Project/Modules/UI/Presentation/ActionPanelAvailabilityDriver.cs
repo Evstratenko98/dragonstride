@@ -3,7 +3,7 @@ using VContainer.Unity;
 
 public class ActionPanelAvailabilityDriver : IPostInitializable, IDisposable
 {
-    private readonly CharacterRoster _characterRoster;
+    private readonly TurnActorRegistry _turnActorRegistry;
     private readonly IEventBus _eventBus;
     private readonly TurnFlow _turnFlow;
     private IDisposable _turnStateSubscription;
@@ -11,9 +11,9 @@ public class ActionPanelAvailabilityDriver : IPostInitializable, IDisposable
 
     private ICellLayoutOccupant _currentActor;
 
-    public ActionPanelAvailabilityDriver(CharacterRoster characterRoster, IEventBus eventBus, TurnFlow turnFlow)
+    public ActionPanelAvailabilityDriver(TurnActorRegistry turnActorRegistry, IEventBus eventBus, TurnFlow turnFlow)
     {
-        _characterRoster = characterRoster;
+        _turnActorRegistry = turnActorRegistry;
         _eventBus = eventBus;
         _turnFlow = turnFlow;
     }
@@ -65,16 +65,16 @@ public class ActionPanelAvailabilityDriver : IPostInitializable, IDisposable
         }
 
         bool hasTarget = false;
-        var characters = _characterRoster.AllCharacters;
-        for (int i = 0; i < characters.Count; i++)
+        var actors = _turnActorRegistry.GetActiveActorsSnapshot();
+        for (int i = 0; i < actors.Count; i++)
         {
-            var character = characters[i];
-            if (character == null || character == _currentActor)
+            var target = actors[i];
+            if (target == null || target == _currentActor)
             {
                 continue;
             }
 
-            var targetCell = character.Model?.CurrentCell;
+            var targetCell = target.Entity?.CurrentCell;
             if (targetCell == currentCell)
             {
                 hasTarget = true;

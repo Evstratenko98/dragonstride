@@ -6,6 +6,7 @@ public sealed class EnemyInstance : ICellLayoutOccupant
     private readonly Enemy _model;
     private readonly GameObject _prefab;
     private readonly FieldRoot _fieldRoot;
+    private readonly IEventBus _eventBus;
 
     private EnemyMover _mover;
 
@@ -17,13 +18,15 @@ public sealed class EnemyInstance : ICellLayoutOccupant
         ConfigScriptableObject config,
         Enemy model,
         GameObject prefab,
-        FieldRoot fieldRoot
+        FieldRoot fieldRoot,
+        IEventBus eventBus
     )
     {
         _config = config;
         _model = model;
         _prefab = prefab;
         _fieldRoot = fieldRoot;
+        _eventBus = eventBus;
     }
 
     public void Spawn(Cell cell)
@@ -65,6 +68,14 @@ public sealed class EnemyInstance : ICellLayoutOccupant
         {
             _mover = View.AddComponent<EnemyMover>();
         }
+
+        var clickHandler = View.GetComponent<EntityClickHandler>();
+        if (clickHandler == null)
+        {
+            clickHandler = View.AddComponent<EntityClickHandler>();
+        }
+
+        clickHandler.Initialize(this, _eventBus);
 
         View.transform.position = GetPosition(cell);
     }

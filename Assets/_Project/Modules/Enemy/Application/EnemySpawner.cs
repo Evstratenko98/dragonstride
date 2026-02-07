@@ -9,6 +9,7 @@ public sealed class EnemySpawner
     private readonly FieldRoot _fieldRoot;
     private readonly CharacterRoster _characterRoster;
     private readonly TurnActorRegistry _turnActorRegistry;
+    private readonly IEventBus _eventBus;
 
     private readonly List<EnemyInstance> _enemies = new();
     private int _enemyCounter = 1;
@@ -18,7 +19,8 @@ public sealed class EnemySpawner
         GameObject enemyPrefab,
         FieldRoot fieldRoot,
         CharacterRoster characterRoster,
-        TurnActorRegistry turnActorRegistry
+        TurnActorRegistry turnActorRegistry,
+        IEventBus eventBus
     )
     {
         _config = config;
@@ -26,6 +28,7 @@ public sealed class EnemySpawner
         _fieldRoot = fieldRoot;
         _characterRoster = characterRoster;
         _turnActorRegistry = turnActorRegistry;
+        _eventBus = eventBus;
     }
 
     public EnemyInstance SpawnOnCell(Cell cell)
@@ -48,7 +51,7 @@ public sealed class EnemySpawner
 
         var model = new Enemy();
         model.SetName($"Enemy {_enemyCounter++}");
-        var enemy = new EnemyInstance(_config, model, _enemyPrefab, _fieldRoot);
+        var enemy = new EnemyInstance(_config, model, _enemyPrefab, _fieldRoot, _eventBus);
         enemy.Spawn(cell);
 
         if (enemy.View == null)
@@ -72,12 +75,33 @@ public sealed class EnemySpawner
                 continue;
             }
 
-            _characterRoster.UnregisterLayoutOccupant(enemy);
-            _turnActorRegistry.Unregister(enemy);
-            enemy.Destroy();
+            DespawnEnemy(enemy);
         }
 
         _enemies.Clear();
         _enemyCounter = 1;
+    }
+
+    public bool RemoveEnemy(EnemyInstance enemy)
+    {
+        if (enemy == null)
+        {
+            return false;
+        }
+
+        if (!_enemies.Remove(enemy))
+        {
+            return false;
+        }
+
+        DespawnEnemy(enemy);
+        return true;
+    }
+
+    private void DespawnEnemy(EnemyInstance enemy)
+    {
+        _characterRoster.UnregisterLayoutOccupant(enemy);
+        _turnActorRegistry.Unregister(enemy);
+        enemy.Destroy();
     }
 }

@@ -80,10 +80,10 @@ public class CharacterInstance
         overhead.Bind(Model, Name);
         View.SetPosition(GetCoordinatesForCellView(cell.X, cell.Y));
 
-        var clickHandler = View.gameObject.GetComponent<CharacterClickHandler>();
+        var clickHandler = View.gameObject.GetComponent<EntityClickHandler>();
         if (clickHandler == null)
         {
-            clickHandler = View.gameObject.AddComponent<CharacterClickHandler>();
+            clickHandler = View.gameObject.AddComponent<EntityClickHandler>();
         }
 
         clickHandler.Initialize(this, _eventBus);
