@@ -128,6 +128,12 @@ public class AttackDriver : IPostInitializable, IDisposable
             return false;
         }
 
+        if (attackerCell.Type == CellType.Start || defenderCell.Type == CellType.Start)
+        {
+            Debug.Log($"[Attack] Attack is blocked on Start cell: {DescribeActor(_currentActor)} -> {DescribeActor(target)}.");
+            return false;
+        }
+
         return attackerCell == defenderCell;
     }
 
@@ -135,6 +141,14 @@ public class AttackDriver : IPostInitializable, IDisposable
     {
         if (attacker?.Entity == null || defender?.Entity == null)
         {
+            return;
+        }
+
+        Cell attackerCell = attacker.Entity.CurrentCell;
+        Cell defenderCell = defender.Entity.CurrentCell;
+        if (attackerCell?.Type == CellType.Start || defenderCell?.Type == CellType.Start)
+        {
+            Debug.Log($"[Attack] Attack canceled because Start cell is a safe zone: {DescribeActor(attacker)} -> {DescribeActor(defender)}.");
             return;
         }
 

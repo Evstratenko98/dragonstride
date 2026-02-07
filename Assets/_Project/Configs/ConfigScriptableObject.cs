@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(fileName = "GameConfig", menuName = "Configs/Game Config")]
 public class ConfigScriptableObject : ScriptableObject
@@ -10,7 +11,8 @@ public class ConfigScriptableObject : ScriptableObject
     public float EXTRA_CONNECTION_CHANCE = 0.2f;
 
     [Header("Characters")]
-    public float CHARACTER_SPEED = 2.5f;
+    [FormerlySerializedAs("CHARACTER_SPEED")]
+    public float ENTITY_SPEED = 2.5f;
     public float CHARACTER_HEIGHT = 1.1f;
     public float CHARACTER_LAYOUT_SPEED = 12f;
 

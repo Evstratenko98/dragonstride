@@ -97,7 +97,7 @@ public sealed class EnemyInstance : ICellLayoutOccupant
         }
 
         _model.SetCell(targetCell);
-        MoveToPosition(GetPosition(targetCell), _config.CHARACTER_SPEED);
+        MoveToPosition(GetPosition(targetCell), _config.ENTITY_SPEED);
         SetWorldVisible(targetCell.VisibilityState == CellVisibility.Visible);
         return true;
     }

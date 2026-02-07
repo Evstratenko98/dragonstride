@@ -3,11 +3,12 @@ using UnityEngine;
 public class EntityOverheadView : MonoBehaviour
 {
     [Header("Overhead UI")]
-    [SerializeField] private float uiHeightOffset = 1.8f;
-    [SerializeField] private float widthMultiplier = 1.5f;
-    [SerializeField] private float fallbackModelWidth = 0.8f;
-    [SerializeField] private float barHeight = 0.1f;
+    [SerializeField] private float extraHeightAboveModel = 0.2f;
+    [SerializeField] private float fixedUiWidth = 1.2f;
+    [SerializeField] private float fixedBarHeight = 0.1f;
     [SerializeField] private float nameOffset = 0.22f;
+    [SerializeField] private int fixedNameFontSize = 36;
+    [SerializeField] private float fixedNameCharacterSize = 0.05f;
     [SerializeField] private Color backgroundColor = new Color(0.14f, 0.14f, 0.14f, 1f);
 
     private Entity _model;
@@ -47,13 +48,7 @@ public class EntityOverheadView : MonoBehaviour
             return;
         }
 
-        Camera activeCamera = Camera.main;
-        if (activeCamera == null)
-        {
-            return;
-        }
-
-        _uiRoot.forward = activeCamera.transform.forward;
+        UpdateOverheadTransform();
     }
 
     private void OnDestroy()
@@ -71,13 +66,15 @@ public class EntityOverheadView : MonoBehaviour
             return;
         }
 
-        _barWidth = ResolveModelWidth() * widthMultiplier;
+        _barWidth = Mathf.Max(0.1f, fixedUiWidth);
 
         var root = new GameObject("OverheadUI");
         root.transform.SetParent(transform, false);
-        root.transform.localPosition = new Vector3(0f, uiHeightOffset, 0f);
+        root.transform.localPosition = Vector3.zero;
         _uiRoot = root.transform;
+        UpdateOverheadTransform();
 
+        float barHeight = Mathf.Max(0.01f, fixedBarHeight);
         var background = CreateQuad("HealthBarBackground", backgroundColor, _barWidth, barHeight);
         background.transform.SetParent(_uiRoot, false);
 
@@ -96,11 +93,11 @@ public class EntityOverheadView : MonoBehaviour
         nameObject.transform.localPosition = new Vector3(0f, nameOffset, -0.001f);
         _nameText = nameObject.AddComponent<TextMesh>();
         _nameText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        _nameText.fontSize = 36;
+        _nameText.fontSize = Mathf.Max(1, fixedNameFontSize);
         _nameText.anchor = TextAnchor.MiddleCenter;
         _nameText.alignment = TextAlignment.Center;
         _nameText.color = Color.white;
-        _nameText.characterSize = 0.05f;
+        _nameText.characterSize = Mathf.Max(0.001f, fixedNameCharacterSize);
     }
 
     private GameObject CreateQuad(string objectName, Color color, float width, float height)
@@ -208,26 +205,77 @@ public class EntityOverheadView : MonoBehaviour
         return _model?.HealthBarFillColor ?? Color.green;
     }
 
-    private float ResolveModelWidth()
+    private void UpdateOverheadTransform()
     {
-        var renderers = GetComponentsInChildren<Renderer>();
-        if (renderers == null || renderers.Length == 0)
+        if (_uiRoot == null)
         {
-            return fallbackModelWidth;
+            return;
         }
 
-        Bounds bounds = renderers[0].bounds;
-        for (int i = 1; i < renderers.Length; i++)
+        float topY = ResolveModelTopY();
+        _uiRoot.position = new Vector3(
+            transform.position.x,
+            topY + Mathf.Max(0f, extraHeightAboveModel),
+            transform.position.z
+        );
+
+        Camera activeCamera = Camera.main;
+        if (activeCamera != null)
         {
-            if (_uiRoot != null && renderers[i].transform.IsChildOf(_uiRoot))
+            _uiRoot.forward = activeCamera.transform.forward;
+        }
+
+        Vector3 parentScale = transform.lossyScale;
+        _uiRoot.localScale = new Vector3(
+            SafeReciprocal(parentScale.x),
+            SafeReciprocal(parentScale.y),
+            SafeReciprocal(parentScale.z)
+        );
+    }
+
+    private static float SafeReciprocal(float value)
+    {
+        float abs = Mathf.Abs(value);
+        if (abs < 0.0001f)
+        {
+            return 1f;
+        }
+
+        return 1f / value;
+    }
+
+    private float ResolveModelTopY()
+    {
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        if (renderers == null || renderers.Length == 0)
+        {
+            return transform.position.y;
+        }
+
+        bool hasBounds = false;
+        float topY = transform.position.y;
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
             {
                 continue;
             }
 
-            bounds.Encapsulate(renderers[i].bounds);
+            if (_uiRoot != null && renderer.transform.IsChildOf(_uiRoot))
+            {
+                continue;
+            }
+
+            float rendererTopY = renderer.bounds.max.y;
+            if (!hasBounds || rendererTopY > topY)
+            {
+                topY = rendererTopY;
+                hasBounds = true;
+            }
         }
 
-        float width = Mathf.Max(bounds.size.x, bounds.size.z);
-        return width > 0.01f ? width : fallbackModelWidth;
+        return hasBounds ? topY : transform.position.y;
     }
 }

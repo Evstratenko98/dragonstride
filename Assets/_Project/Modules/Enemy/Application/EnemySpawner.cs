@@ -5,7 +5,7 @@ using UnityEngine;
 public sealed class EnemySpawner
 {
     private readonly ConfigScriptableObject _config;
-    private readonly GameObject _slimePrefab;
+    private readonly EnemyPrefabs _enemyPrefabs;
     private readonly FieldRoot _fieldRoot;
     private readonly CharacterRoster _characterRoster;
     private readonly TurnActorRegistry _turnActorRegistry;
@@ -15,7 +15,7 @@ public sealed class EnemySpawner
 
     public EnemySpawner(
         ConfigScriptableObject config,
-        GameObject slimePrefab,
+        EnemyPrefabs enemyPrefabs,
         FieldRoot fieldRoot,
         CharacterRoster characterRoster,
         TurnActorRegistry turnActorRegistry,
@@ -23,7 +23,7 @@ public sealed class EnemySpawner
     )
     {
         _config = config;
-        _slimePrefab = slimePrefab;
+        _enemyPrefabs = enemyPrefabs;
         _fieldRoot = fieldRoot;
         _characterRoster = characterRoster;
         _turnActorRegistry = turnActorRegistry;
@@ -37,9 +37,12 @@ public sealed class EnemySpawner
             return null;
         }
 
-        if (_slimePrefab == null)
+        GameObject prefab = _enemyPrefabs?.WolfPrefab != null
+            ? _enemyPrefabs.WolfPrefab
+            : _enemyPrefabs?.SlimePrefab;
+        if (prefab == null)
         {
-            Debug.LogError("[EnemySpawner] Slime prefab is not configured in GameScope.");
+            Debug.LogError("[EnemySpawner] Wolf prefab is not configured in GameScope.");
             return null;
         }
 
@@ -48,8 +51,8 @@ public sealed class EnemySpawner
             return null;
         }
 
-        var model = new SlimeEnemy();
-        var enemy = new EnemyInstance(_config, model, _slimePrefab, _fieldRoot, _eventBus);
+        var model = new WolfEnemy();
+        var enemy = new EnemyInstance(_config, model, prefab, _fieldRoot, _eventBus);
         enemy.Spawn(cell);
 
         if (enemy.View == null)

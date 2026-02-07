@@ -114,14 +114,20 @@ public class CharacterInstance
 
         Vector3 start = View.transform.position;
         Vector3 end = GetCoordinatesForCellView(nextTarget.X, nextTarget.Y);
+        float distance = Vector3.Distance(start, end);
+        float speed = Mathf.Max(0f, _config.ENTITY_SPEED);
+        float duration = speed > 0f ? distance / speed : 0f;
 
-        float t = 0f;
-
-        while (t < 1f)
+        if (duration > 0f)
         {
-            t += Time.deltaTime * _config.CHARACTER_SPEED;
-            View.transform.position = Vector3.Lerp(start, end, t);
-            await Task.Yield();
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                View.transform.position = Vector3.Lerp(start, end, t);
+                await Task.Yield();
+            }
         }
 
         View.transform.position = end;

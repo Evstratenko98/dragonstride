@@ -17,6 +17,7 @@ public class GameScope : LifetimeScope
     [SerializeField] private CharacterView[] characterPrefabs;
     [FormerlySerializedAs("slimePrefab")]
     [SerializeField] private GameObject slimePrefab;
+    [SerializeField] private GameObject wolfPrefab;
 
     protected override void Configure(IContainerBuilder builder)
     {
@@ -38,7 +39,7 @@ public class GameScope : LifetimeScope
         builder.Register<CharacterLifecycleService>(Lifetime.Singleton);
         builder.Register<CharacterLayout>(Lifetime.Singleton);
         builder.Register<CharacterRoster>(Lifetime.Singleton);
-        builder.RegisterInstance(slimePrefab);
+        builder.RegisterInstance(new EnemyPrefabs(slimePrefab, wolfPrefab));
         builder.Register<EnemySpawner>(Lifetime.Singleton);
         builder.RegisterEntryPoint<EnemyTurnDriver>(Lifetime.Singleton).AsSelf();
 

@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using VContainer.Unity;
 
 public sealed class EnemyTurnDriver : IPostInitializable, ITickable, IDisposable
@@ -66,10 +67,13 @@ public sealed class EnemyTurnDriver : IPostInitializable, ITickable, IDisposable
         var model = enemy.EntityModel;
         if (model?.Behavior == null)
         {
+            Debug.Log($"[EnemyTurn] {enemy?.Entity?.Name ?? "Unknown"} has no behavior. Turn ends.");
             _turnFlow.EndTurn();
             return;
         }
 
+        Debug.Log($"[EnemyTurn] {enemy.Entity.Name} turn started.");
         model.Behavior.ExecuteTurn(enemy, _randomSource, _turnFlow, _characterRoster);
+        Debug.Log($"[EnemyTurn] {enemy.Entity.Name} turn finished.");
     }
 }
