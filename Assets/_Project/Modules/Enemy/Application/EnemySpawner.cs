@@ -5,18 +5,17 @@ using UnityEngine;
 public sealed class EnemySpawner
 {
     private readonly ConfigScriptableObject _config;
-    private readonly GameObject _enemyPrefab;
+    private readonly GameObject _slimePrefab;
     private readonly FieldRoot _fieldRoot;
     private readonly CharacterRoster _characterRoster;
     private readonly TurnActorRegistry _turnActorRegistry;
     private readonly IEventBus _eventBus;
 
     private readonly List<EnemyInstance> _enemies = new();
-    private int _enemyCounter = 1;
 
     public EnemySpawner(
         ConfigScriptableObject config,
-        GameObject enemyPrefab,
+        GameObject slimePrefab,
         FieldRoot fieldRoot,
         CharacterRoster characterRoster,
         TurnActorRegistry turnActorRegistry,
@@ -24,7 +23,7 @@ public sealed class EnemySpawner
     )
     {
         _config = config;
-        _enemyPrefab = enemyPrefab;
+        _slimePrefab = slimePrefab;
         _fieldRoot = fieldRoot;
         _characterRoster = characterRoster;
         _turnActorRegistry = turnActorRegistry;
@@ -38,9 +37,9 @@ public sealed class EnemySpawner
             return null;
         }
 
-        if (_enemyPrefab == null)
+        if (_slimePrefab == null)
         {
-            Debug.LogError("[EnemySpawner] Enemy prefab is not configured in GameScope.");
+            Debug.LogError("[EnemySpawner] Slime prefab is not configured in GameScope.");
             return null;
         }
 
@@ -50,8 +49,7 @@ public sealed class EnemySpawner
         }
 
         var model = new SlimeEnemy();
-        model.SetName($"Enemy {_enemyCounter++}");
-        var enemy = new EnemyInstance(_config, model, _enemyPrefab, _fieldRoot, _eventBus);
+        var enemy = new EnemyInstance(_config, model, _slimePrefab, _fieldRoot, _eventBus);
         enemy.Spawn(cell);
 
         if (enemy.View == null)
@@ -79,7 +77,6 @@ public sealed class EnemySpawner
         }
 
         _enemies.Clear();
-        _enemyCounter = 1;
     }
 
     public bool RemoveEnemy(EnemyInstance enemy)

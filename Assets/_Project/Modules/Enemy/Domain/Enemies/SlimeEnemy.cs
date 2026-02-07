@@ -1,7 +1,7 @@
 public sealed class SlimeEnemy : Enemy
 {
     public SlimeEnemy()
-        : base(new WanderingBehavior())
+        : base(new WanderingBehavior(), "Slime")
     {
     }
 

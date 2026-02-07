@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 using VContainer;
 using VContainer.Unity;
 
@@ -14,7 +15,8 @@ public class GameScope : LifetimeScope
     [SerializeField] private FogOfWarView fogOfWarViewPrefab;
 
     [SerializeField] private CharacterView[] characterPrefabs;
-    [SerializeField] private GameObject enemyPrefab;
+    [FormerlySerializedAs("slimePrefab")]
+    [SerializeField] private GameObject slimePrefab;
 
     protected override void Configure(IContainerBuilder builder)
     {
@@ -36,7 +38,7 @@ public class GameScope : LifetimeScope
         builder.Register<CharacterLifecycleService>(Lifetime.Singleton);
         builder.Register<CharacterLayout>(Lifetime.Singleton);
         builder.Register<CharacterRoster>(Lifetime.Singleton);
-        builder.RegisterInstance(enemyPrefab);
+        builder.RegisterInstance(slimePrefab);
         builder.Register<EnemySpawner>(Lifetime.Singleton);
         builder.RegisterEntryPoint<EnemyTurnDriver>(Lifetime.Singleton).AsSelf();
 
