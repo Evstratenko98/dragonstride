@@ -1,11 +1,16 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class Entity
 {
     public event System.Action StatsChanged;
+    public event System.Action StatesChanged;
+
+    private readonly List<State> _states = new();
 
     public string Name { get; private set; }
     public Cell CurrentCell { get; private set; }
+    public IReadOnlyList<State> States => _states;
 
     public int Health { get; private set; } = 100;
     public int MaxHealth { get; private set; } = 100;
@@ -22,6 +27,44 @@ public class Entity
     public virtual int CalculateTurnSteps(int diceRoll)
     {
         return System.Math.Max(0, diceRoll + Speed);
+    }
+
+    public void AddState(State state)
+    {
+        if (state == null || _states.Contains(state))
+        {
+            return;
+        }
+
+        _states.Add(state);
+        state.ApplyTo(this);
+        StatesChanged?.Invoke();
+    }
+
+    public bool RemoveState(State state)
+    {
+        if (state == null || !_states.Remove(state))
+        {
+            return false;
+        }
+
+        state.RemoveFrom(this);
+        StatesChanged?.Invoke();
+        return true;
+    }
+
+    public void TickStates()
+    {
+        for (int i = _states.Count - 1; i >= 0; i--)
+        {
+            State state = _states[i];
+            if (state.TickRound(this))
+            {
+                _states.RemoveAt(i);
+                state.RemoveFrom(this);
+                StatesChanged?.Invoke();
+            }
+        }
     }
 
     public void SetCell(Cell cell)
