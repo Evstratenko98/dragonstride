@@ -1086,7 +1086,7 @@ GameObject:
   - component: {fileID: 354459741}
   - component: {fileID: 354459742}
   m_Layer: 0
-  m_Name: HiddenCells
+  m_Name: ToggleHiddenCells
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1930,6 +1930,7 @@ MonoBehaviour:
   tradeButton: {fileID: 0}
   attackButton: {fileID: 6000001042}
   followPlayerToggle: {fileID: 635516421}
+  toggleFog: {fileID: 724769238}
   currentPlayerText: {fileID: 199446756}
   turnStateText: {fileID: 170073377}
   stepsText: {fileID: 1563712913}
