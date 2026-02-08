@@ -9,7 +9,7 @@ public class TurnFlow : IPostInitializable, IDisposable
 
     private IDisposable _stepSubscription;
     private IDisposable _endTurnSubscription;
-    private IDisposable _interactCellSubscription;
+    private IDisposable _openCellSubscription;
     public TurnState State { get; private set; }
 
     public int StepsAvailable { get; private set; }
@@ -19,7 +19,7 @@ public class TurnFlow : IPostInitializable, IDisposable
     public bool HasAttacked => _hasAttacked;
     private bool _allowEndTurn = false;
     private bool _hasAttacked = false;
-    private bool _hasInteractedCell = false;
+    private bool _hasOpenedCell = false;
 
     public TurnFlow(IEventBus eventBus, IRandomSource randomSource)
     {
@@ -31,21 +31,21 @@ public class TurnFlow : IPostInitializable, IDisposable
     {
         _stepSubscription      = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
         _endTurnSubscription   = _eventBus.Subscribe<EndTurnRequested>(OnEndTurnKeyPressed);
-        _interactCellSubscription = _eventBus.Subscribe<InteractWithCellRequested>(OnInteractCellRequested);
+        _openCellSubscription = _eventBus.Subscribe<OpenCellRequested>(OnOpenCellRequested);
     }
 
     public void Dispose()
     {
         _stepSubscription?.Dispose();
         _endTurnSubscription?.Dispose();
-        _interactCellSubscription?.Dispose();
+        _openCellSubscription?.Dispose();
     }
 
     public void StartTurn(ICellLayoutOccupant actor)
     {
         ResetTurn();
         CurrentActor = actor;
-        PublishInteractAvailability(true);
+        PublishOpenCellAvailability(true);
 
         RollDice();
     }
@@ -140,16 +140,16 @@ public class TurnFlow : IPostInitializable, IDisposable
         if (State == TurnState.ActionSelection ||
             State == TurnState.Movement ||
             State == TurnState.Attack ||
-            State == TurnState.InteractionCell ||
+            State == TurnState.OpenCell ||
             State == TurnState.Trade)
         {
             EndTurn();
         }
     }
 
-    private void OnInteractCellRequested(InteractWithCellRequested msg)
+    private void OnOpenCellRequested(OpenCellRequested msg)
     {
-        TryInteractWithCell();
+        TryOpenCell();
     }
 
     public bool TryAttack()
@@ -170,22 +170,22 @@ public class TurnFlow : IPostInitializable, IDisposable
         return true;
     }
 
-    public bool TryInteractWithCell()
+    public bool TryOpenCell()
     {
         if (!IsActionPhase())
         {
             return false;
         }
 
-        if (_hasInteractedCell)
+        if (_hasOpenedCell)
         {
             return false;
         }
 
-        _hasInteractedCell = true;
-        SetState(TurnState.InteractionCell);
+        _hasOpenedCell = true;
+        SetState(TurnState.OpenCell);
         SetState(TurnState.ActionSelection);
-        PublishInteractAvailability(false);
+        PublishOpenCellAvailability(false);
         return true;
     }
 
@@ -211,7 +211,7 @@ public class TurnFlow : IPostInitializable, IDisposable
         return State == TurnState.ActionSelection ||
                State == TurnState.Movement ||
                State == TurnState.Attack ||
-               State == TurnState.InteractionCell ||
+               State == TurnState.OpenCell ||
                State == TurnState.Trade;
     }
 
@@ -222,8 +222,8 @@ public class TurnFlow : IPostInitializable, IDisposable
         StepsRemaining = 0;
         _allowEndTurn = false;
         _hasAttacked = false;
-        _hasInteractedCell = false;
-        PublishInteractAvailability(false);
+        _hasOpenedCell = false;
+        PublishOpenCellAvailability(false);
     }
 
     private void SetState(TurnState newState)
@@ -233,8 +233,8 @@ public class TurnFlow : IPostInitializable, IDisposable
         _eventBus.Publish(new TurnPhaseChanged(CurrentActor, newState));
     }
 
-    private void PublishInteractAvailability(bool isAvailable)
+    private void PublishOpenCellAvailability(bool isAvailable)
     {
-        _eventBus.Publish(new InteractCellAvailabilityChanged(isAvailable));
+        _eventBus.Publish(new OpenCellAvailabilityChanged(isAvailable));
     }
 }

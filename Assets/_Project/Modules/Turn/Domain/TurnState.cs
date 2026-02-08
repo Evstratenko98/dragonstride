@@ -5,7 +5,7 @@ public enum TurnState
     Movement,
     ActionSelection,
     Attack,
-    InteractionCell,
+    OpenCell,
     Trade,
     End
 }

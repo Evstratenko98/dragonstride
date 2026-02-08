@@ -6,6 +6,7 @@ public sealed class Cell
     public int Y { get; }
 
     public CellType Type { get; private set; }
+    public bool IsOpened { get; private set; }
     public CellVisibility VisibilityState { get; private set; }
 
     private readonly List<Cell> _neighbors = new();
@@ -16,6 +17,7 @@ public sealed class Cell
         X = x;
         Y = y;
         Type = type;
+        IsOpened = false;
         VisibilityState = CellVisibility.Unseen;
     }
 
@@ -53,6 +55,12 @@ public sealed class Cell
     public void SetType(CellType type)
     {
         Type = type;
+        IsOpened = false;
+    }
+
+    public void MarkOpened()
+    {
+        IsOpened = true;
     }
 
     public void SetVisibility(CellVisibility state)

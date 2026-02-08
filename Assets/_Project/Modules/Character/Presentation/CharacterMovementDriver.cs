@@ -9,8 +9,6 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
     private readonly CharacterRoster _characterRoster;
     private readonly IEventBus _eventBus;
     private readonly CharacterInputReader _input;
-    private readonly ItemFactory _itemFactory;
-    private readonly FieldPresenter _fieldPresenter;
     private readonly TurnActorRegistry _turnActorRegistry;
     private readonly EnemySpawner _enemySpawner;
 
@@ -28,8 +26,6 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         CharacterRoster characterRoster,
         IEventBus eventBus,
         CharacterInputReader input,
-        ItemFactory itemFactory,
-        FieldPresenter fieldPresenter,
         TurnActorRegistry turnActorRegistry,
         EnemySpawner enemySpawner
     )
@@ -37,8 +33,6 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         _characterRoster = characterRoster;
         _eventBus = eventBus;
         _input = input;
-        _itemFactory = itemFactory;
-        _fieldPresenter = fieldPresenter;
         _turnActorRegistry = turnActorRegistry;
         _enemySpawner = enemySpawner;
     }
@@ -77,10 +71,6 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
             _movementBlocked = false;
         }
 
-        if (msg.State == TurnState.InteractionCell)
-        {
-            HandleCellInteraction(msg.Actor);
-        }
     }
 
     public void Dispose()
@@ -149,69 +139,4 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         _stepsRemaining--;
     }
 
-    private void HandleCellInteraction(ICellLayoutOccupant actor)
-    {
-        var entity = actor?.Entity;
-        if (entity == null)
-        {
-            return;
-        }
-
-        var currentCell = entity.CurrentCell;
-        if (currentCell == null)
-        {
-            return;
-        }
-
-        if (currentCell.Type == CellType.Common)
-        {
-            return;
-        }
-
-        bool shouldConsumeCell = false;
-
-        switch (currentCell.Type)
-        {
-            case CellType.Start:
-            case CellType.End:
-                return;
-            case CellType.Loot:
-                if (actor is CharacterInstance character)
-                {
-                    int lootCount = UnityEngine.Random.Range(1, 4);
-                    var loot = new List<ItemDefinition>(lootCount);
-                    for (int i = 0; i < lootCount; i++)
-                    {
-                        var item = _itemFactory.CreateRandomChestLoot();
-                        if (item?.Definition != null)
-                        {
-                            loot.Add(item.Definition);
-                        }
-                    }
-
-                    if (loot.Count > 0)
-                    {
-                        _eventBus.Publish(new ChestLootOpened(character, loot));
-                    }
-                }
-                shouldConsumeCell = true;
-                break;
-            case CellType.Fight:
-                _enemySpawner.SpawnOnCell(currentCell);
-                shouldConsumeCell = true;
-                break;
-            case CellType.Teleport:
-                // TODO: implement interaction logic for non-common cell types.
-                shouldConsumeCell = true;
-                break;
-            default:
-                return;
-        }
-
-        if (shouldConsumeCell)
-        {
-            currentCell.SetType(CellType.Common);
-            _fieldPresenter.RefreshCell(currentCell);
-        }
-    }
 }

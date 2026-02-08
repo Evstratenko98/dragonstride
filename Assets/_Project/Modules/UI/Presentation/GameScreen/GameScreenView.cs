@@ -15,7 +15,7 @@ public class GameScreenView : MonoBehaviour
     [SerializeField] private TMP_Text stepsText;
 
     public Button CharacaterButton => characaterButton;
-    public Button InteractCellButton => interactCellButton;
+    public Button OpenCellButton => interactCellButton;
     public Button EndTurnButton => endTurnButton;
     public Button TradeButton => tradeButton;
     public Button AttackButton => attackButton;

@@ -78,7 +78,7 @@ public class CharacterInputReader : IDisposable
     {
         if (ctx.performed)
         {
-            _eventBus.Publish(new InteractWithCellRequested());
+            _eventBus.Publish(new OpenCellRequested());
         }
     }
 

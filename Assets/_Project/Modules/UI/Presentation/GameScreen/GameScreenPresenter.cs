@@ -10,7 +10,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
     private IDisposable _diceRolledSubscription;
     private IDisposable _characterMovedSubscription;
     private IDisposable _attackAvailabilitySubscription;
-    private IDisposable _interactAvailabilitySubscription;
+    private IDisposable _openCellAvailabilitySubscription;
 
     private ICellLayoutOccupant _currentActor;
     private TurnState _currentTurnState = TurnState.None;
@@ -31,16 +31,16 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _diceRolledSubscription = _eventBus.Subscribe<DiceRolled>(OnDiceRolled);
         _characterMovedSubscription = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
         _attackAvailabilitySubscription = _eventBus.Subscribe<AttackAvailabilityChanged>(OnAttackAvailabilityChanged);
-        _interactAvailabilitySubscription = _eventBus.Subscribe<InteractCellAvailabilityChanged>(OnInteractCellAvailabilityChanged);
+        _openCellAvailabilitySubscription = _eventBus.Subscribe<OpenCellAvailabilityChanged>(OnOpenCellAvailabilityChanged);
 
         if (_view.CharacaterButton != null)
         {
             _view.CharacaterButton.onClick.AddListener(OnCharacterButtonClicked);
         }
 
-        if (_view.InteractCellButton != null)
+        if (_view.OpenCellButton != null)
         {
-            _view.InteractCellButton.onClick.AddListener(OnInteractCellClicked);
+            _view.OpenCellButton.onClick.AddListener(OnOpenCellClicked);
         }
 
         if (_view.EndTurnButton != null)
@@ -64,7 +64,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         UpdateStepsText();
         SetCharacterButtonInteractable(false);
         SetAttackButtonInteractable(false);
-        SetInteractButtonInteractable(false);
+        SetOpenCellButtonInteractable(false);
     }
 
     public void Dispose()
@@ -73,16 +73,16 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _diceRolledSubscription?.Dispose();
         _characterMovedSubscription?.Dispose();
         _attackAvailabilitySubscription?.Dispose();
-        _interactAvailabilitySubscription?.Dispose();
+        _openCellAvailabilitySubscription?.Dispose();
 
         if (_view.CharacaterButton != null)
         {
             _view.CharacaterButton.onClick.RemoveListener(OnCharacterButtonClicked);
         }
 
-        if (_view.InteractCellButton != null)
+        if (_view.OpenCellButton != null)
         {
-            _view.InteractCellButton.onClick.RemoveListener(OnInteractCellClicked);
+            _view.OpenCellButton.onClick.RemoveListener(OnOpenCellClicked);
         }
 
         if (_view.EndTurnButton != null)
@@ -180,9 +180,9 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _eventBus.Publish(new CharacterScreenRequested());
     }
 
-    private void OnInteractCellClicked()
+    private void OnOpenCellClicked()
     {
-        _eventBus.Publish(new InteractWithCellRequested());
+        _eventBus.Publish(new OpenCellRequested());
     }
 
     private void OnEndTurnClicked()
@@ -205,9 +205,9 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         SetAttackButtonInteractable(msg.IsAvailable);
     }
 
-    private void OnInteractCellAvailabilityChanged(InteractCellAvailabilityChanged msg)
+    private void OnOpenCellAvailabilityChanged(OpenCellAvailabilityChanged msg)
     {
-        SetInteractButtonInteractable(msg.IsAvailable);
+        SetOpenCellButtonInteractable(msg.IsAvailable);
     }
 
     private void SetAttackButtonInteractable(bool isInteractable)
@@ -220,14 +220,14 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _view.AttackButton.interactable = isInteractable;
     }
 
-    private void SetInteractButtonInteractable(bool isInteractable)
+    private void SetOpenCellButtonInteractable(bool isInteractable)
     {
-        if (_view.InteractCellButton == null)
+        if (_view.OpenCellButton == null)
         {
             return;
         }
 
-        _view.InteractCellButton.interactable = isInteractable;
+        _view.OpenCellButton.interactable = isInteractable;
     }
 
     private void SetCharacterButtonInteractable(bool isInteractable)

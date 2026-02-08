@@ -50,6 +50,13 @@ public class GameScope : LifetimeScope
             wolfSpawnChancePercent));
         builder.Register<EnemySpawner>(Lifetime.Singleton);
         builder.RegisterEntryPoint<EnemyTurnDriver>(Lifetime.Singleton).AsSelf();
+        builder.Register<CellOpenService>(Lifetime.Singleton);
+        builder.Register<CommonCellOpenHandler>(Lifetime.Singleton).As<ICellOpenHandler>();
+        builder.Register<StartCellOpenHandler>(Lifetime.Singleton).As<ICellOpenHandler>();
+        builder.Register<EndCellOpenHandler>(Lifetime.Singleton).As<ICellOpenHandler>();
+        builder.Register<LootCellOpenHandler>(Lifetime.Singleton).As<ICellOpenHandler>();
+        builder.Register<FightCellOpenHandler>(Lifetime.Singleton).As<ICellOpenHandler>();
+        builder.Register<TeleportCellOpenHandler>(Lifetime.Singleton).As<ICellOpenHandler>();
 
         builder.Register<ItemFactory>(Lifetime.Singleton);
         builder.Register<ConsumableItemUseService>(Lifetime.Singleton);
@@ -59,6 +66,7 @@ public class GameScope : LifetimeScope
         builder.Register<FieldPresenter>(Lifetime.Singleton);
         builder.RegisterEntryPoint<FogOfWarPresenter>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<CharacterMovementDriver>(Lifetime.Singleton).AsSelf();
+        builder.RegisterEntryPoint<CellOpenDriver>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<ActionPanelAvailabilityDriver>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<AttackDriver>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<TurnFlow>(Lifetime.Singleton).AsSelf();
