@@ -45,7 +45,6 @@ public class TurnFlow : IPostInitializable, IDisposable
     {
         ResetTurn();
         CurrentActor = actor;
-        PublishOpenCellAvailability(true);
 
         RollDice();
     }
@@ -172,12 +171,7 @@ public class TurnFlow : IPostInitializable, IDisposable
 
     public bool TryOpenCell()
     {
-        if (!IsActionPhase())
-        {
-            return false;
-        }
-
-        if (_hasOpenedCell)
+        if (!IsOpenCellAvailable())
         {
             return false;
         }
@@ -185,7 +179,6 @@ public class TurnFlow : IPostInitializable, IDisposable
         _hasOpenedCell = true;
         SetState(TurnState.OpenCell);
         SetState(TurnState.ActionSelection);
-        PublishOpenCellAvailability(false);
         return true;
     }
 
@@ -215,6 +208,27 @@ public class TurnFlow : IPostInitializable, IDisposable
                State == TurnState.Trade;
     }
 
+    private bool IsOpenCellAvailable()
+    {
+        if (!IsActionPhase() || _hasOpenedCell)
+        {
+            return false;
+        }
+
+        var currentCell = CurrentActor?.Entity?.CurrentCell;
+        if (currentCell == null)
+        {
+            return false;
+        }
+
+        if (currentCell.Type == CellType.Start)
+        {
+            return false;
+        }
+
+        return !currentCell.IsOpened;
+    }
+
     private void ResetTurn()
     {
         CurrentActor = null;
@@ -231,6 +245,7 @@ public class TurnFlow : IPostInitializable, IDisposable
         State = newState;
 
         _eventBus.Publish(new TurnPhaseChanged(CurrentActor, newState));
+        PublishOpenCellAvailability(IsOpenCellAvailable());
     }
 
     private void PublishOpenCellAvailability(bool isAvailable)
