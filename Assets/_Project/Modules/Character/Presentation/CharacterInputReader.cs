@@ -25,6 +25,8 @@ public class CharacterInputReader : IDisposable
         _actions.Character.Move.performed += OnMove;
         _actions.Character.Move.canceled  += OnMoveCanceled;
         _actions.Character.EndTurn.performed += OnEndTurn;
+        _actions.Character.Attack.performed += OnAttack;
+        _actions.Character.Open.performed += OnOpen;
 
         _actions.Character.Enable();
     }
@@ -64,6 +66,22 @@ public class CharacterInputReader : IDisposable
         }
     }
 
+    private void OnAttack(InputAction.CallbackContext ctx)
+    {
+        if (ctx.performed)
+        {
+            _eventBus.Publish(new AttackRequested());
+        }
+    }
+
+    private void OnOpen(InputAction.CallbackContext ctx)
+    {
+        if (ctx.performed)
+        {
+            _eventBus.Publish(new InteractWithCellRequested());
+        }
+    }
+
     public void Dispose()
     {
         _gameStateSub?.Dispose();
@@ -71,6 +89,8 @@ public class CharacterInputReader : IDisposable
         _actions.Character.Move.performed -= OnMove;
         _actions.Character.Move.canceled  -= OnMoveCanceled;
         _actions.Character.EndTurn.performed -= OnEndTurn;
+        _actions.Character.Attack.performed -= OnAttack;
+        _actions.Character.Open.performed -= OnOpen;
 
         _actions.Character.Disable();
         _actions.Dispose();
