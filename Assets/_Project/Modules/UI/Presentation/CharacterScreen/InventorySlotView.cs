@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class InventorySlotView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler
+public class InventorySlotView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler, IPointerClickHandler
 {
     [SerializeField] private Image iconImage;
     [SerializeField] private TMP_Text countLabel;
@@ -71,5 +71,10 @@ public class InventorySlotView : MonoBehaviour, IBeginDragHandler, IDragHandler,
     public void OnDrop(PointerEventData eventData)
     {
         _grid?.HandleDrop(_index);
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        _grid?.HandlePointerClick(_index, eventData);
     }
 }

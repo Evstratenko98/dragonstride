@@ -18,6 +18,7 @@ public class CharacterScreenView : MonoBehaviour
 
     public void Hide()
     {
+        inventoryGridView?.HideItemContextMenu();
         gameObject.SetActive(false);
     }
 
@@ -29,5 +30,10 @@ public class CharacterScreenView : MonoBehaviour
     public void BindEquipment(CharacterEquipment equipment)
     {
         equipmentGridView?.BindEquipment(equipment);
+    }
+
+    public void HideItemContextMenu()
+    {
+        inventoryGridView?.HideItemContextMenu();
     }
 }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -9,16 +10,24 @@ public class InventoryGridView : MonoBehaviour
     [SerializeField] private InventorySlotView slotTemplate;
     [SerializeField] private InventoryDragIconView dragIcon;
     [SerializeField] private GridLayoutGroup gridLayout;
+    [SerializeField] private RectTransform itemContextMenu;
+    [SerializeField] private Button itemContextButton;
+    [SerializeField] private Canvas uiCanvas;
 
     private readonly List<InventorySlotView> _slots = new();
     private Inventory _inventory;
     private EquipmentGridView _equipmentGridView;
     private int _dragIndex = -1;
     private bool _isDragging;
+    private int _contextSlotIndex = -1;
+
+    public event Action<int> ItemUseRequested;
     public bool IsDragging => _isDragging;
 
     private void Awake()
     {
+        TryAutoWireContextMenu();
+
         if (slotTemplate != null)
         {
             slotTemplate.gameObject.SetActive(false);
@@ -27,6 +36,34 @@ public class InventoryGridView : MonoBehaviour
         if (dragIcon != null)
         {
             dragIcon.Hide();
+        }
+
+        if (itemContextButton != null)
+        {
+            itemContextButton.onClick.AddListener(OnUseButtonClicked);
+        }
+
+        HideItemContextMenu();
+    }
+
+    private void OnDestroy()
+    {
+        if (itemContextButton != null)
+        {
+            itemContextButton.onClick.RemoveListener(OnUseButtonClicked);
+        }
+    }
+
+    private void Update()
+    {
+        if (!IsContextMenuShown())
+        {
+            return;
+        }
+
+        if (Input.GetMouseButtonDown(0) && !IsPointerInsideContextMenu(Input.mousePosition))
+        {
+            HideItemContextMenu();
         }
     }
 
@@ -112,6 +149,7 @@ public class InventoryGridView : MonoBehaviour
         if (_inventory == null)
         {
             Clear();
+            HideItemContextMenu();
             return;
         }
 
@@ -125,6 +163,8 @@ public class InventoryGridView : MonoBehaviour
 
     public void HandleBeginDrag(int index, PointerEventData eventData)
     {
+        HideItemContextMenu();
+
         if (_inventory == null || index < 0 || index >= _inventory.Slots.Count)
         {
             return;
@@ -159,6 +199,8 @@ public class InventoryGridView : MonoBehaviour
 
     public void HandleDrop(int targetIndex)
     {
+        HideItemContextMenu();
+
         if (_inventory == null)
         {
             return;
@@ -188,6 +230,8 @@ public class InventoryGridView : MonoBehaviour
 
     public bool HandleDropToEquipment(CharacterEquipment equipment, int equipmentSlotIndex)
     {
+        HideItemContextMenu();
+
         if (!_isDragging || _inventory == null || equipment == null)
         {
             return false;
@@ -204,6 +248,8 @@ public class InventoryGridView : MonoBehaviour
 
     public void HandleEndDrag()
     {
+        HideItemContextMenu();
+
         if (!_isDragging)
         {
             return;
@@ -218,6 +264,8 @@ public class InventoryGridView : MonoBehaviour
 
     public void HandleDropFromEquipment(CharacterEquipment equipment, int equipmentSlotIndex, int inventorySlotIndex)
     {
+        HideItemContextMenu();
+
         if (_inventory == null || equipment == null)
         {
             return;
@@ -232,9 +280,50 @@ public class InventoryGridView : MonoBehaviour
 
     public void Clear()
     {
+        HideItemContextMenu();
+
         foreach (var slot in _slots)
         {
             slot.SetData(null, 0);
+        }
+    }
+
+    public void HandlePointerClick(int index, PointerEventData eventData)
+    {
+        if (eventData.button != PointerEventData.InputButton.Right)
+        {
+            return;
+        }
+
+        if (_isDragging || _inventory == null || index < 0 || index >= _inventory.Slots.Count)
+        {
+            HideItemContextMenu();
+            return;
+        }
+
+        var slot = _inventory.Slots[index];
+        if (slot == null || slot.IsEmpty)
+        {
+            HideItemContextMenu();
+            return;
+        }
+
+        _contextSlotIndex = index;
+        ShowItemContextMenu(eventData.position);
+    }
+
+    public void HideItemContextMenu()
+    {
+        _contextSlotIndex = -1;
+
+        if (itemContextButton != null)
+        {
+            itemContextButton.gameObject.SetActive(false);
+        }
+
+        if (itemContextMenu != null)
+        {
+            itemContextMenu.gameObject.SetActive(false);
         }
     }
 
@@ -255,5 +344,133 @@ public class InventoryGridView : MonoBehaviour
 
         definition = slot.Definition;
         return definition != null;
+    }
+
+    private void TryAutoWireContextMenu()
+    {
+        if (itemContextMenu == null)
+        {
+            var allRects = transform.root.GetComponentsInChildren<RectTransform>(true);
+            foreach (var rect in allRects)
+            {
+                if (rect != null && rect.name == "ItemContextMenu")
+                {
+                    itemContextMenu = rect;
+                    break;
+                }
+            }
+
+            if (itemContextMenu == null)
+            {
+                var menuObject = GameObject.Find("ItemContextMenu");
+                if (menuObject != null)
+                {
+                    itemContextMenu = menuObject.GetComponent<RectTransform>();
+                }
+            }
+        }
+
+        if (itemContextButton == null && itemContextMenu != null)
+        {
+            itemContextButton = itemContextMenu.GetComponentInChildren<Button>(true);
+        }
+
+        if (itemContextButton == null)
+        {
+            var buttonObject = GameObject.Find("ItemContextButton");
+            if (buttonObject != null)
+            {
+                itemContextButton = buttonObject.GetComponent<Button>();
+            }
+        }
+
+        if (uiCanvas == null)
+        {
+            uiCanvas = GetComponentInParent<Canvas>();
+            if (uiCanvas == null && itemContextMenu != null)
+            {
+                uiCanvas = itemContextMenu.GetComponentInParent<Canvas>();
+            }
+        }
+    }
+
+    private void ShowItemContextMenu(Vector2 screenPosition)
+    {
+        if (itemContextMenu == null)
+        {
+            return;
+        }
+
+        itemContextMenu.gameObject.SetActive(true);
+        SetContextMenuPosition(screenPosition);
+
+        if (itemContextButton != null)
+        {
+            itemContextButton.gameObject.SetActive(true);
+        }
+    }
+
+    private void SetContextMenuPosition(Vector2 screenPosition)
+    {
+        if (itemContextMenu == null)
+        {
+            return;
+        }
+
+        var parentRect = itemContextMenu.parent as RectTransform;
+        if (parentRect == null)
+        {
+            itemContextMenu.position = screenPosition;
+            return;
+        }
+
+        Camera camera = null;
+        if (uiCanvas != null && uiCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+        {
+            camera = uiCanvas.worldCamera;
+        }
+
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, screenPosition, camera, out var localPoint))
+        {
+            itemContextMenu.anchoredPosition = localPoint;
+        }
+        else
+        {
+            itemContextMenu.position = screenPosition;
+        }
+    }
+
+    private bool IsContextMenuShown()
+    {
+        return itemContextMenu != null && itemContextMenu.gameObject.activeSelf;
+    }
+
+    private bool IsPointerInsideContextMenu(Vector2 screenPosition)
+    {
+        if (itemContextMenu == null)
+        {
+            return false;
+        }
+
+        Camera camera = null;
+        if (uiCanvas != null && uiCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+        {
+            camera = uiCanvas.worldCamera;
+        }
+
+        return RectTransformUtility.RectangleContainsScreenPoint(itemContextMenu, screenPosition, camera);
+    }
+
+    private void OnUseButtonClicked()
+    {
+        if (_contextSlotIndex < 0)
+        {
+            HideItemContextMenu();
+            return;
+        }
+
+        ItemUseRequested?.Invoke(_contextSlotIndex);
+        Refresh();
+        HideItemContextMenu();
     }
 }

@@ -43,6 +43,11 @@ public class CharacterScreenPresenter : IPostInitializable, IDisposable
         {
             _view.CloseButton.onClick.AddListener(OnCloseClicked);
         }
+
+        if (_view.InventoryGridView != null)
+        {
+            _view.InventoryGridView.ItemUseRequested += OnItemUseRequested;
+        }
     }
 
     public void Dispose()
@@ -53,6 +58,11 @@ public class CharacterScreenPresenter : IPostInitializable, IDisposable
         if (_view.CloseButton != null)
         {
             _view.CloseButton.onClick.RemoveListener(OnCloseClicked);
+        }
+
+        if (_view.InventoryGridView != null)
+        {
+            _view.InventoryGridView.ItemUseRequested -= OnItemUseRequested;
         }
     }
 
@@ -81,6 +91,21 @@ public class CharacterScreenPresenter : IPostInitializable, IDisposable
         {
             _view.BindInventory(_currentCharacter?.Model?.Inventory);
             _view.BindEquipment(_currentCharacter?.Model?.Equipment);
+            _view.HideItemContextMenu();
+        }
+    }
+
+    private void OnItemUseRequested(int inventorySlotIndex)
+    {
+        if (_currentCharacter?.Model == null)
+        {
+            return;
+        }
+
+        bool used = _currentCharacter.Model.TryUseConsumable(inventorySlotIndex);
+        if (used && _view.InventoryGridView != null)
+        {
+            _view.InventoryGridView.Refresh();
         }
     }
 }
