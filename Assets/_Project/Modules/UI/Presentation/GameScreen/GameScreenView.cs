@@ -11,6 +11,7 @@ public class GameScreenView : MonoBehaviour
     [SerializeField] private Button attackButton;
     [SerializeField] private Toggle followPlayerToggle;
     [SerializeField] private Toggle toggleFog;
+    [SerializeField] private Toggle toggleHiddenCells;
     [SerializeField] private TMP_Text currentPlayerText;
     [SerializeField] private TMP_Text turnStateText;
     [SerializeField] private TMP_Text stepsText;
@@ -22,6 +23,7 @@ public class GameScreenView : MonoBehaviour
     public Button AttackButton => attackButton;
     public Toggle FollowPlayerToggle => followPlayerToggle;
     public Toggle FogToggle => toggleFog;
+    public Toggle HiddenCellsToggle => toggleHiddenCells;
 
     public void SetCurrentPlayer(string playerName)
     {

@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
-public sealed class FieldPresenter
+public sealed class FieldPresenter : IDisposable
 {
     private readonly ConfigScriptableObject _config;
     private readonly FieldGenerator _fieldGenerator;
@@ -10,11 +12,14 @@ public sealed class FieldPresenter
     private readonly CellColorTheme _theme;
     private readonly FieldRoot _fieldRoot;
     private readonly FieldViewFactory _viewFactory;
+    private readonly IEventBus _eventBus;
 
     private readonly Dictionary<Cell, CellView> _views = new();
 
     private LinkView _linkView;
     private Transform _root;
+    private IDisposable _hiddenCellsToggleSubscription;
+    private bool _areHiddenCellsEnabled = true;
 
     public FieldPresenter(
         ConfigScriptableObject config,
@@ -23,7 +28,8 @@ public sealed class FieldPresenter
         CellView cellPrefab,
         CellColorTheme theme,
         FieldRoot fieldRoot,
-        FieldViewFactory viewFactory)
+        FieldViewFactory viewFactory,
+        IEventBus eventBus)
     {
         _config = config;
         _fieldGenerator = fieldGenerator;
@@ -32,6 +38,8 @@ public sealed class FieldPresenter
         _theme = theme;
         _fieldRoot = fieldRoot;
         _viewFactory = viewFactory;
+        _eventBus = eventBus;
+        _hiddenCellsToggleSubscription = _eventBus.Subscribe<HiddenCellsToggled>(OnHiddenCellsToggled);
     }
 
     public Cell StartCell => _fieldState.StartCell;
@@ -64,6 +72,11 @@ public sealed class FieldPresenter
         _fieldState.Clear();
     }
 
+    public void Dispose()
+    {
+        _hiddenCellsToggleSubscription?.Dispose();
+    }
+
     public void RefreshCell(Cell cell)
     {
         if (cell == null)
@@ -84,9 +97,27 @@ public sealed class FieldPresenter
             var view = Object.Instantiate(_cellPrefab, _root);
             view.Initialize(_theme);
             view.Bind(cell);
+            view.SetHiddenOverlayEnabled(_areHiddenCellsEnabled);
             view.transform.localPosition = new Vector3(cell.X * _config.CELL_SIZE, 0f, cell.Y * _config.CELL_SIZE);
             view.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
             _views[cell] = view;
+        }
+    }
+
+    private void OnHiddenCellsToggled(HiddenCellsToggled message)
+    {
+        _areHiddenCellsEnabled = message.IsEnabled;
+        ApplyHiddenCellsState();
+    }
+
+    private void ApplyHiddenCellsState()
+    {
+        foreach (var view in _views.Values)
+        {
+            if (view != null)
+            {
+                view.SetHiddenOverlayEnabled(_areHiddenCellsEnabled);
+            }
         }
     }
 

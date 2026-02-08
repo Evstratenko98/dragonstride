@@ -64,6 +64,12 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
             _view.FogToggle.onValueChanged.AddListener(OnFogToggleChanged);
             OnFogToggleChanged(_view.FogToggle.isOn);
         }
+
+        if (_view.HiddenCellsToggle != null)
+        {
+            _view.HiddenCellsToggle.onValueChanged.AddListener(OnHiddenCellsToggleChanged);
+            OnHiddenCellsToggleChanged(_view.HiddenCellsToggle.isOn);
+        }
         
         UpdatePlayerText();
         UpdateTurnStateText();
@@ -109,6 +115,11 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         if (_view.FogToggle != null)
         {
             _view.FogToggle.onValueChanged.RemoveListener(OnFogToggleChanged);
+        }
+
+        if (_view.HiddenCellsToggle != null)
+        {
+            _view.HiddenCellsToggle.onValueChanged.RemoveListener(OnHiddenCellsToggleChanged);
         }
     }
 
@@ -214,6 +225,11 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
     private void OnFogToggleChanged(bool isEnabled)
     {
         _eventBus.Publish(new FogOfWarToggled(isEnabled));
+    }
+
+    private void OnHiddenCellsToggleChanged(bool isEnabled)
+    {
+        _eventBus.Publish(new HiddenCellsToggled(isEnabled));
     }
 
     private void OnAttackAvailabilityChanged(AttackAvailabilityChanged msg)

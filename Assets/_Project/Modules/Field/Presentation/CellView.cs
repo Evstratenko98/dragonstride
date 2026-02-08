@@ -9,6 +9,7 @@ public class CellView : MonoBehaviour
     private CellColorTheme _theme;
     private Material _openedLootMaterial;
     private Material _openedFightMaterial;
+    private bool _isHiddenOverlayEnabled = true;
     private static Mesh _cachedCylinderMesh;
 
     private void Awake()
@@ -40,6 +41,21 @@ public class CellView : MonoBehaviour
         UpdateMaterial(_model.Type);
     }
 
+    public void SetHiddenOverlayEnabled(bool isEnabled)
+    {
+        _isHiddenOverlayEnabled = isEnabled;
+        if (_model == null)
+        {
+            SetHiddenVisualsVisible(_isHiddenOverlayEnabled);
+            return;
+        }
+
+        if (_model != null)
+        {
+            UpdateMaterial(_model.Type);
+        }
+    }
+
     private void UpdateMaterial(CellType type)
     {
         if (_renderer == null || _theme == null)
@@ -48,8 +64,9 @@ public class CellView : MonoBehaviour
         }
 
         bool isRevealed = _model != null && _model.IsTypeRevealed;
-        SetHiddenVisualsVisible(!isRevealed);
-        if (!isRevealed)
+        bool shouldHideType = _isHiddenOverlayEnabled && !isRevealed;
+        SetHiddenVisualsVisible(_isHiddenOverlayEnabled);
+        if (shouldHideType)
         {
             _renderer.material = _theme.hiddenMaterial ?? _theme.commonMaterial;
             return;
