@@ -14,6 +14,8 @@ public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
 
     private IDisposable _moveSubscription;
     private IDisposable _gameStateSubscription;
+    private IDisposable _fogToggleSubscription;
+    private bool _isFogEnabled = true;
 
     public FogOfWarPresenter(
         IEventBus eventBus,
@@ -33,12 +35,14 @@ public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
     {
         _moveSubscription = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
         _gameStateSubscription = _eventBus.Subscribe<GameStateChanged>(OnGameStateChanged);
+        _fogToggleSubscription = _eventBus.Subscribe<FogOfWarToggled>(OnFogToggleChanged);
     }
 
     public void Dispose()
     {
         _moveSubscription?.Dispose();
         _gameStateSubscription?.Dispose();
+        _fogToggleSubscription?.Dispose();
     }
 
     private void OnGameStateChanged(GameStateChanged message)
@@ -46,6 +50,7 @@ public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
         if (message.State == GameState.Playing)
         {
             InitializeFog();
+            ApplyFogEnabledState();
         }
 
         if (message.State == GameState.Finished)
@@ -73,7 +78,34 @@ public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
 
     private void OnCharacterMoved(CharacterMoved message)
     {
+        if (!_isFogEnabled)
+        {
+            return;
+        }
+
         UpdateVisibility();
+    }
+
+    private void OnFogToggleChanged(FogOfWarToggled message)
+    {
+        _isFogEnabled = message.IsEnabled;
+        ApplyFogEnabledState();
+    }
+
+    private void ApplyFogEnabledState()
+    {
+        if (_view != null)
+        {
+            _view.gameObject.SetActive(_isFogEnabled);
+        }
+
+        if (_isFogEnabled)
+        {
+            UpdateVisibility();
+            return;
+        }
+
+        ShowEverything();
     }
 
     private void UpdateVisibility()
@@ -121,6 +153,30 @@ public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
         }
 
         ApplyOccupantsVisibility();
+    }
+
+    private void ShowEverything()
+    {
+        var field = _fieldState.CurrentField;
+        if (field != null)
+        {
+            foreach (var cell in field.GetAllCells())
+            {
+                cell.SetVisibility(CellVisibility.Visible);
+            }
+        }
+
+        var actors = _characterRoster.GetAllOccupants();
+        for (int i = 0; i < actors.Count; i++)
+        {
+            var occupant = actors[i];
+            if (occupant == null)
+            {
+                continue;
+            }
+
+            occupant.SetWorldVisible(true);
+        }
     }
 
     private void ApplyOccupantsVisibility()

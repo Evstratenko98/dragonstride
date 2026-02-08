@@ -58,6 +58,12 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
             _view.FollowPlayerToggle.onValueChanged.AddListener(OnFollowToggleChanged);
             OnFollowToggleChanged(_view.FollowPlayerToggle.isOn);
         }
+
+        if (_view.FogToggle != null)
+        {
+            _view.FogToggle.onValueChanged.AddListener(OnFogToggleChanged);
+            OnFogToggleChanged(_view.FogToggle.isOn);
+        }
         
         UpdatePlayerText();
         UpdateTurnStateText();
@@ -98,6 +104,11 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         if (_view.FollowPlayerToggle != null)
         {
             _view.FollowPlayerToggle.onValueChanged.RemoveListener(OnFollowToggleChanged);
+        }
+
+        if (_view.FogToggle != null)
+        {
+            _view.FogToggle.onValueChanged.RemoveListener(OnFogToggleChanged);
         }
     }
 
@@ -198,6 +209,11 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
     private void OnFollowToggleChanged(bool isEnabled)
     {
         _eventBus.Publish(new CameraFollowToggled(isEnabled));
+    }
+
+    private void OnFogToggleChanged(bool isEnabled)
+    {
+        _eventBus.Publish(new FogOfWarToggled(isEnabled));
     }
 
     private void OnAttackAvailabilityChanged(AttackAvailabilityChanged msg)
