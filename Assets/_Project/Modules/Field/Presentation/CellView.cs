@@ -93,8 +93,8 @@ public class CellView : MonoBehaviour
             case CellType.Teleport:
                 _renderer.material = _theme.teleportMaterial;
                 break;
-            case CellType.End:
-                _renderer.material = _theme.endMaterial;
+            case CellType.Boss:
+                _renderer.material = _theme.bossMaterial;
                 break;
         }
     }

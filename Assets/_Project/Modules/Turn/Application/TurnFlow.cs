@@ -6,6 +6,7 @@ public class TurnFlow : IPostInitializable, IDisposable
 {
     private readonly IEventBus _eventBus;
     private readonly IRandomSource _randomSource;
+    private readonly CrownOwnershipService _crownOwnershipService;
 
     private IDisposable _stepSubscription;
     private IDisposable _endTurnSubscription;
@@ -21,10 +22,11 @@ public class TurnFlow : IPostInitializable, IDisposable
     private bool _hasAttacked = false;
     private bool _hasOpenedCell = false;
 
-    public TurnFlow(IEventBus eventBus, IRandomSource randomSource)
+    public TurnFlow(IEventBus eventBus, IRandomSource randomSource, CrownOwnershipService crownOwnershipService)
     {
         _eventBus = eventBus;
         _randomSource = randomSource;
+        _crownOwnershipService = crownOwnershipService;
     }
 
     public void PostInitialize()
@@ -85,10 +87,8 @@ public class TurnFlow : IPostInitializable, IDisposable
             return;
         }
 
-        if (CurrentActor is CharacterInstance && currentCell.Type == CellType.End)
+        if (CurrentActor is CharacterInstance && _crownOwnershipService.TryFinishGame(CurrentActor))
         {
-            _eventBus.Publish(new GameStateChanged(GameState.Finished));
-
             return;
         }
 

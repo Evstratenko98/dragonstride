@@ -25,6 +25,7 @@ public class EntityOverheadView : MonoBehaviour
         if (_model != null)
         {
             _model.StatsChanged -= Refresh;
+            _model.StatesChanged -= Refresh;
         }
 
         _model = model;
@@ -36,6 +37,7 @@ public class EntityOverheadView : MonoBehaviour
         if (_model != null)
         {
             _model.StatsChanged += Refresh;
+            _model.StatesChanged += Refresh;
         }
     }
 
@@ -54,6 +56,7 @@ public class EntityOverheadView : MonoBehaviour
         if (_model != null)
         {
             _model.StatsChanged -= Refresh;
+            _model.StatesChanged -= Refresh;
         }
     }
 
@@ -181,7 +184,8 @@ public class EntityOverheadView : MonoBehaviour
         int level = Mathf.Max(1, _model?.Level ?? 1);
         string fallbackName = _model?.Name;
         string resolvedName = string.IsNullOrWhiteSpace(entityName) ? fallbackName : entityName;
-        _nameText.text = $"{level} {(string.IsNullOrWhiteSpace(resolvedName) ? "Unknown" : resolvedName)}";
+        string crownSuffix = HasCrownState(_model) ? $" [{CrownOwnershipService.CrownStateName}]" : string.Empty;
+        _nameText.text = $"{level} {(string.IsNullOrWhiteSpace(resolvedName) ? "Unknown" : resolvedName)}{crownSuffix}";
     }
 
     private void Refresh()
@@ -250,6 +254,25 @@ public class EntityOverheadView : MonoBehaviour
         }
 
         return 1f / value;
+    }
+
+    private static bool HasCrownState(Entity entity)
+    {
+        if (entity == null)
+        {
+            return false;
+        }
+
+        var states = entity.States;
+        for (int i = 0; i < states.Count; i++)
+        {
+            if (states[i]?.Id == CrownOwnershipService.CrownStateId)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private float ResolveModelTopY()

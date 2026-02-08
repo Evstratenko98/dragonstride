@@ -22,20 +22,20 @@ public sealed class FieldGenerator
         GeneratePerfectMaze(field);
         AddExtraConnections(field, extraConnectionChance);
         EnsureFullConnectivity(field);
-        AssignStartAndEnd(field);
+        AssignStartAndBoss(field);
         AssignSpecialCells(field);
         return field;
     }
 
-    private void AssignStartAndEnd(FieldGrid field)
+    private void AssignStartAndBoss(FieldGrid field)
     {
         var startCell = field.GetCell(field.Width / 2, field.Height / 2);
         startCell?.SetType(CellType.Start);
         startCell?.RevealType();
         startCell?.MarkOpened();
 
-        var finishCell = GetRandomFinishCell(field);
-        finishCell?.SetType(CellType.End);
+        var bossCell = GetRandomBossCell(field);
+        bossCell?.SetType(CellType.Boss);
     }
 
     private void AssignSpecialCells(FieldGrid field)
@@ -78,7 +78,7 @@ public sealed class FieldGenerator
         return CellType.Common;
     }
 
-    private Cell GetRandomFinishCell(FieldGrid field)
+    private Cell GetRandomBossCell(FieldGrid field)
     {
         var candidates = new List<Cell>();
 

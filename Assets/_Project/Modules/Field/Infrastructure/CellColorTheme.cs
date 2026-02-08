@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(
     fileName = "CellColorTheme",
@@ -11,5 +12,6 @@ public class CellColorTheme : ScriptableObject
     public Material lootMaterial;
     public Material fightMaterial;
     public Material teleportMaterial;
-    public Material endMaterial;
+    [FormerlySerializedAs("endMaterial")]
+    public Material bossMaterial;
 }

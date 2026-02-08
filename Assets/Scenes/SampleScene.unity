@@ -1533,6 +1533,7 @@ MonoBehaviour:
   - {fileID: 1718596269872910320, guid: cf1a0962abbead346986479ae8bfa6ff, type: 3}
   slimePrefab: {fileID: 4100841407007838268, guid: 545c135f3bf054fae960bb3b71659215, type: 3}
   wolfPrefab: {fileID: 2814495358027237811, guid: 3435889e2e78c4d349d5714669aa9203, type: 3}
+  bossPrefab: {fileID: 4303136554011951677, guid: c0940fcd26ad74527a86f97311e055b0, type: 3}
   slimeSpawnChancePercent: 60
   wolfSpawnChancePercent: 40
 --- !u!4 &556131712

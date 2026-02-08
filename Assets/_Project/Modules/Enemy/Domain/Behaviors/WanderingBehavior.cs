@@ -4,7 +4,8 @@ public sealed class WanderingBehavior : Behavior
         EnemyInstance enemy,
         IRandomSource randomSource,
         TurnFlow turnFlow,
-        CharacterRoster characterRoster
+        CharacterRoster characterRoster,
+        CrownOwnershipService crownOwnershipService
     )
     {
         var currentCell = enemy.Entity?.CurrentCell;

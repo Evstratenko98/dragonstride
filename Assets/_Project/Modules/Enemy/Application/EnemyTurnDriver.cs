@@ -8,6 +8,7 @@ public sealed class EnemyTurnDriver : IPostInitializable, ITickable, IDisposable
     private readonly IRandomSource _randomSource;
     private readonly TurnFlow _turnFlow;
     private readonly CharacterRoster _characterRoster;
+    private readonly CrownOwnershipService _crownOwnershipService;
 
     private IDisposable _turnPhaseSubscription;
     private EnemyInstance _pendingEnemyTurn;
@@ -16,13 +17,15 @@ public sealed class EnemyTurnDriver : IPostInitializable, ITickable, IDisposable
         IEventBus eventBus,
         IRandomSource randomSource,
         TurnFlow turnFlow,
-        CharacterRoster characterRoster
+        CharacterRoster characterRoster,
+        CrownOwnershipService crownOwnershipService
     )
     {
         _eventBus = eventBus;
         _randomSource = randomSource;
         _turnFlow = turnFlow;
         _characterRoster = characterRoster;
+        _crownOwnershipService = crownOwnershipService;
     }
 
     public void PostInitialize()
@@ -73,7 +76,7 @@ public sealed class EnemyTurnDriver : IPostInitializable, ITickable, IDisposable
         }
 
         Debug.Log($"[EnemyTurn] {enemy.Entity.Name} turn started.");
-        model.Behavior.ExecuteTurn(enemy, _randomSource, _turnFlow, _characterRoster);
+        model.Behavior.ExecuteTurn(enemy, _randomSource, _turnFlow, _characterRoster, _crownOwnershipService);
         Debug.Log($"[EnemyTurn] {enemy.Entity.Name} turn finished.");
     }
 }

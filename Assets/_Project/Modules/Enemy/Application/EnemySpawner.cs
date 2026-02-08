@@ -15,6 +15,7 @@ public sealed class EnemySpawner
 
     private readonly List<EnemyInstance> _enemies = new();
     private readonly List<EnemySpawnOption> _spawnOptions = new();
+    private EnemyInstance _bossEnemy;
 
     public EnemySpawner(
         ConfigScriptableObject config,
@@ -66,32 +67,38 @@ public sealed class EnemySpawner
             return null;
         }
 
-        GameObject prefab = selectedOption.PrefabFactory?.Invoke();
-        if (prefab == null)
-        {
-            Debug.LogError($"[EnemySpawner] Prefab is not configured for {selectedOption.Name}.");
-            return null;
-        }
+        return SpawnEnemy(cell, selectedOption.Name, selectedOption.ModelFactory, selectedOption.PrefabFactory);
+    }
 
-        Enemy model = selectedOption.ModelFactory?.Invoke();
-        if (model == null)
-        {
-            Debug.LogError($"[EnemySpawner] Model factory returned null for {selectedOption.Name}.");
-            return null;
-        }
-
-        var enemy = new EnemyInstance(_config, model, prefab, _fieldRoot, _eventBus);
-        enemy.Spawn(cell);
-
-        if (enemy.View == null)
+    public EnemyInstance SpawnBossOnCell(Cell cell)
+    {
+        if (cell == null)
         {
             return null;
         }
 
-        _enemies.Add(enemy);
-        _characterRoster.RegisterLayoutOccupant(enemy);
-        _turnActorRegistry.Register(enemy);
-        return enemy;
+        if (_bossEnemy?.Entity?.CurrentCell != null)
+        {
+            return _bossEnemy;
+        }
+
+        if (_enemies.Any(enemy => enemy?.Entity?.CurrentCell == cell))
+        {
+            return null;
+        }
+
+        var spawnedBoss = SpawnEnemy(
+            cell,
+            "BossEnemy",
+            () => new BossEnemy(),
+            () => _enemyPrefabs?.BossPrefab);
+
+        if (spawnedBoss != null)
+        {
+            _bossEnemy = spawnedBoss;
+        }
+
+        return spawnedBoss;
     }
 
     public void Reset()
@@ -108,6 +115,7 @@ public sealed class EnemySpawner
         }
 
         _enemies.Clear();
+        _bossEnemy = null;
     }
 
     public bool RemoveEnemy(EnemyInstance enemy)
@@ -122,8 +130,47 @@ public sealed class EnemySpawner
             return false;
         }
 
+        if (ReferenceEquals(enemy, _bossEnemy))
+        {
+            _bossEnemy = null;
+        }
+
         DespawnEnemy(enemy);
         return true;
+    }
+
+    private EnemyInstance SpawnEnemy(
+        Cell cell,
+        string enemyName,
+        Func<Enemy> modelFactory,
+        Func<GameObject> prefabFactory)
+    {
+        GameObject prefab = prefabFactory?.Invoke();
+        if (prefab == null)
+        {
+            Debug.LogError($"[EnemySpawner] Prefab is not configured for {enemyName}.");
+            return null;
+        }
+
+        Enemy model = modelFactory?.Invoke();
+        if (model == null)
+        {
+            Debug.LogError($"[EnemySpawner] Model factory returned null for {enemyName}.");
+            return null;
+        }
+
+        var enemy = new EnemyInstance(_config, model, prefab, _fieldRoot, _eventBus);
+        enemy.Spawn(cell);
+
+        if (enemy.View == null)
+        {
+            return null;
+        }
+
+        _enemies.Add(enemy);
+        _characterRoster.RegisterLayoutOccupant(enemy);
+        _turnActorRegistry.Register(enemy);
+        return enemy;
     }
 
     private EnemySpawnOption SelectRandomEnemyOption()

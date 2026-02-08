@@ -5,5 +5,5 @@ public enum CellType
     Loot,
     Fight,
     Teleport,
-    End
+    Boss
 }

@@ -4,6 +4,7 @@ public abstract class Behavior
         EnemyInstance enemy,
         IRandomSource randomSource,
         TurnFlow turnFlow,
-        CharacterRoster characterRoster
+        CharacterRoster characterRoster,
+        CrownOwnershipService crownOwnershipService
     );
 }

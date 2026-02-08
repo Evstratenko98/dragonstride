@@ -18,6 +18,7 @@ public class GameScope : LifetimeScope
     [FormerlySerializedAs("slimePrefab")]
     [SerializeField] private GameObject slimePrefab;
     [SerializeField] private GameObject wolfPrefab;
+    [SerializeField] private GameObject bossPrefab;
 
     [Header("Enemy Spawn Chances (%)")]
     [SerializeField] private int slimeSpawnChancePercent = 60;
@@ -46,6 +47,7 @@ public class GameScope : LifetimeScope
         builder.RegisterInstance(new EnemyPrefabs(
             slimePrefab,
             wolfPrefab,
+            bossPrefab,
             slimeSpawnChancePercent,
             wolfSpawnChancePercent));
         builder.Register<EnemySpawner>(Lifetime.Singleton);
@@ -53,13 +55,14 @@ public class GameScope : LifetimeScope
         builder.Register<CellOpenService>(Lifetime.Singleton);
         builder.Register<CommonCellOpenHandler>(Lifetime.Singleton).As<ICellOpenHandler>();
         builder.Register<StartCellOpenHandler>(Lifetime.Singleton).As<ICellOpenHandler>();
-        builder.Register<EndCellOpenHandler>(Lifetime.Singleton).As<ICellOpenHandler>();
+        builder.Register<BossCellOpenHandler>(Lifetime.Singleton).As<ICellOpenHandler>();
         builder.Register<LootCellOpenHandler>(Lifetime.Singleton).As<ICellOpenHandler>();
         builder.Register<FightCellOpenHandler>(Lifetime.Singleton).As<ICellOpenHandler>();
         builder.Register<TeleportCellOpenHandler>(Lifetime.Singleton).As<ICellOpenHandler>();
 
         builder.Register<ItemFactory>(Lifetime.Singleton);
         builder.Register<ConsumableItemUseService>(Lifetime.Singleton);
+        builder.Register<CrownOwnershipService>(Lifetime.Singleton);
 
         builder.Register<IRandomSource, UnityRandomSource>(Lifetime.Singleton);
         builder.Register<TurnActorRegistry>(Lifetime.Singleton);

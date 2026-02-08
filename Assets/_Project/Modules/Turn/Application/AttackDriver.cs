@@ -9,6 +9,7 @@ public class AttackDriver : IPostInitializable, IDisposable
     private readonly TurnFlow _turnFlow;
     private readonly CharacterRoster _characterRoster;
     private readonly EnemySpawner _enemySpawner;
+    private readonly CrownOwnershipService _crownOwnershipService;
 
     private IDisposable _attackRequestedSubscription;
     private IDisposable _entityClickedSubscription;
@@ -23,13 +24,15 @@ public class AttackDriver : IPostInitializable, IDisposable
         IRandomSource randomSource,
         TurnFlow turnFlow,
         CharacterRoster characterRoster,
-        EnemySpawner enemySpawner)
+        EnemySpawner enemySpawner,
+        CrownOwnershipService crownOwnershipService)
     {
         _eventBus = eventBus;
         _randomSource = randomSource;
         _turnFlow = turnFlow;
         _characterRoster = characterRoster;
         _enemySpawner = enemySpawner;
+        _crownOwnershipService = crownOwnershipService;
     }
 
     public void PostInitialize()
@@ -172,6 +175,7 @@ public class AttackDriver : IPostInitializable, IDisposable
 
         if (newHealth == 0 && defender is CharacterInstance character)
         {
+            _crownOwnershipService.OnEntityKilled(attacker, defender);
             bool reborn = _characterRoster.TryRebirthCharacter(character);
             if (reborn)
             {
@@ -181,6 +185,7 @@ public class AttackDriver : IPostInitializable, IDisposable
 
         if (newHealth == 0 && defender is EnemyInstance enemy)
         {
+            _crownOwnershipService.OnEntityKilled(attacker, defender);
             bool removed = _enemySpawner.RemoveEnemy(enemy);
             if (removed)
             {

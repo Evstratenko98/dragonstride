@@ -7,7 +7,8 @@ public sealed class HunterBehavior : Behavior
         EnemyInstance enemy,
         IRandomSource randomSource,
         TurnFlow turnFlow,
-        CharacterRoster characterRoster
+        CharacterRoster characterRoster,
+        CrownOwnershipService crownOwnershipService
     )
     {
         Cell startCell = enemy?.Entity?.CurrentCell;
@@ -34,7 +35,7 @@ public sealed class HunterBehavior : Behavior
         {
             if (enemy.Entity.CurrentCell == target.Entity.CurrentCell)
             {
-                AttackTarget(enemy, target, randomSource, characterRoster);
+                AttackTarget(enemy, target, randomSource, characterRoster, crownOwnershipService);
                 Debug.Log($"[HunterBehavior] {enemy.Entity.Name} ended turn after reaching target.");
                 turnFlow.EndTurn();
                 return;
@@ -65,7 +66,7 @@ public sealed class HunterBehavior : Behavior
 
         if (enemy.Entity.CurrentCell == target.Entity.CurrentCell)
         {
-            AttackTarget(enemy, target, randomSource, characterRoster);
+            AttackTarget(enemy, target, randomSource, characterRoster, crownOwnershipService);
             Debug.Log($"[HunterBehavior] {enemy.Entity.Name} ended turn after reaching target.");
             turnFlow.EndTurn();
             return;
@@ -239,7 +240,8 @@ public sealed class HunterBehavior : Behavior
         EnemyInstance enemy,
         CharacterInstance target,
         IRandomSource randomSource,
-        CharacterRoster characterRoster
+        CharacterRoster characterRoster,
+        CrownOwnershipService crownOwnershipService
     )
     {
         if (enemy?.Entity == null || target?.Entity == null)
@@ -276,6 +278,7 @@ public sealed class HunterBehavior : Behavior
 
         if (newHealth == 0)
         {
+            crownOwnershipService?.OnEntityKilled(enemy, target);
             bool reborn = characterRoster.TryRebirthCharacter(target);
             if (reborn)
             {
