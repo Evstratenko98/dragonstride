@@ -25,6 +25,9 @@ public class ItemDefinition : ScriptableObject
     public int SpeedModifier;
     public float LuckModifier;
 
+    [Header("Эффекты расходуемых предметов")]
+    public int HealAmount;
+
     [Header("Предметы для будущего UI/3D")]
     public Sprite Icon;
     public GameObject WorldPrefab;

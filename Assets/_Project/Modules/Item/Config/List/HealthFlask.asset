@@ -26,5 +26,6 @@ MonoBehaviour:
   InitiativeModifier: 0
   SpeedModifier: 0
   LuckModifier: 0
+  HealAmount: 50
   Icon: {fileID: 21300000, guid: e52ea25af699fd445b7046374f81a5b9, type: 3}
   WorldPrefab: {fileID: 0}

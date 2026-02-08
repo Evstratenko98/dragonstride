@@ -48,6 +48,23 @@ public class Inventory
         slot.Remove(1);
         return true;
     }
+
+    public bool RemoveOneAt(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= _slots.Count)
+        {
+            return false;
+        }
+
+        var slot = _slots[slotIndex];
+        if (slot.IsEmpty)
+        {
+            return false;
+        }
+
+        slot.Remove(1);
+        return true;
+    }
     
     public bool RemoveAll(ItemDefinition item)
     {

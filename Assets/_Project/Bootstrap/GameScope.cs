@@ -44,6 +44,7 @@ public class GameScope : LifetimeScope
         builder.RegisterEntryPoint<EnemyTurnDriver>(Lifetime.Singleton).AsSelf();
 
         builder.Register<ItemFactory>(Lifetime.Singleton);
+        builder.Register<ConsumableItemUseService>(Lifetime.Singleton);
 
         builder.Register<IRandomSource, UnityRandomSource>(Lifetime.Singleton);
         builder.Register<TurnActorRegistry>(Lifetime.Singleton);

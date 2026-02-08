@@ -8,6 +8,7 @@ public class Entity
     public Cell CurrentCell { get; private set; }
 
     public int Health { get; private set; } = 100;
+    public int MaxHealth { get; private set; } = 100;
     public int Attack { get; private set; } = 50;
     public int Armor { get; private set; } = 5;
 
@@ -34,8 +35,28 @@ public class Entity
 
     public void AddHealth(int value)
     {
-        Health += value;
+        MaxHealth = Mathf.Max(1, MaxHealth + value);
+        Health = Mathf.Clamp(Health + value, 0, MaxHealth);
         StatsChanged?.Invoke();
+    }
+
+    public int RestoreHealth(int value)
+    {
+        if (value <= 0)
+        {
+            return 0;
+        }
+
+        int missingHealth = MaxHealth - Health;
+        if (missingHealth <= 0)
+        {
+            return 0;
+        }
+
+        int restored = Mathf.Min(value, missingHealth);
+        Health += restored;
+        StatsChanged?.Invoke();
+        return restored;
     }
 
     public void AddAttack(int value)
@@ -76,7 +97,7 @@ public class Entity
 
     public void SetHealth(int value)
     {
-        Health = value;
+        Health = Mathf.Clamp(value, 0, MaxHealth);
         StatsChanged?.Invoke();
     }
 
