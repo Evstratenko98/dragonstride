@@ -11,6 +11,7 @@ public class Entity
     public int MaxHealth { get; private set; } = 100;
     public int Attack { get; private set; } = 50;
     public int Armor { get; private set; } = 5;
+    public int Level { get; private set; } = 1;
 
     public float DodgeChance { get; private set; } = 0.10f;
     public int Initiative { get; private set; } = 0;
@@ -134,6 +135,12 @@ public class Entity
     public void SetLuck(float value)
     {
         Luck = value;
+        StatsChanged?.Invoke();
+    }
+
+    public virtual void SetLevel(int value)
+    {
+        Level = Mathf.Max(1, value);
         StatsChanged?.Invoke();
     }
 }

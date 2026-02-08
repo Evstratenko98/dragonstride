@@ -3,16 +3,16 @@ using UnityEngine;
 public class EntityOverheadView : MonoBehaviour
 {
     [Header("Overhead UI")]
-    [SerializeField] private float extraHeightAboveModel = 0.2f;
-    [SerializeField] private float fixedUiWidth = 1.2f;
-    [SerializeField] private float fixedBarHeight = 0.1f;
-    [SerializeField] private float nameOffset = 0.22f;
-    [SerializeField] private int fixedNameFontSize = 36;
-    [SerializeField] private float fixedNameCharacterSize = 0.05f;
+    [SerializeField] private float extraHeightAboveModel = 0.5f;
+    [SerializeField] private float fixedUiWidth = 2.5f;
+    [SerializeField] private float fixedBarHeight = 0.2f;
+    [SerializeField] private float nameOffset = 0.3f;
+    [SerializeField] private int fixedNameFontSize = 64;
+    [SerializeField] private float fixedNameCharacterSize = 0.1f;
     [SerializeField] private Color backgroundColor = new Color(0.14f, 0.14f, 0.14f, 1f);
 
     private Entity _model;
-    private int _maxHealth;
+    private string _displayName;
 
     private Transform _uiRoot;
     private Transform _fillTransform;
@@ -24,20 +24,18 @@ public class EntityOverheadView : MonoBehaviour
     {
         if (_model != null)
         {
-            _model.StatsChanged -= RefreshHealth;
+            _model.StatsChanged -= Refresh;
         }
 
         _model = model;
-        _maxHealth = Mathf.Max(1, model?.Health ?? 1);
+        _displayName = displayName;
 
         EnsureOverheadUi();
-        RefreshFillColor();
-        SetEntityName(string.IsNullOrWhiteSpace(displayName) ? _model?.Name : displayName);
-        RefreshHealth();
+        Refresh();
 
         if (_model != null)
         {
-            _model.StatsChanged += RefreshHealth;
+            _model.StatsChanged += Refresh;
         }
     }
 
@@ -55,7 +53,7 @@ public class EntityOverheadView : MonoBehaviour
     {
         if (_model != null)
         {
-            _model.StatsChanged -= RefreshHealth;
+            _model.StatsChanged -= Refresh;
         }
     }
 
@@ -180,7 +178,17 @@ public class EntityOverheadView : MonoBehaviour
             return;
         }
 
-        _nameText.text = string.IsNullOrWhiteSpace(entityName) ? "Unknown" : entityName;
+        int level = Mathf.Max(1, _model?.Level ?? 1);
+        string fallbackName = _model?.Name;
+        string resolvedName = string.IsNullOrWhiteSpace(entityName) ? fallbackName : entityName;
+        _nameText.text = $"{level} {(string.IsNullOrWhiteSpace(resolvedName) ? "Unknown" : resolvedName)}";
+    }
+
+    private void Refresh()
+    {
+        RefreshFillColor();
+        RefreshHealth();
+        SetEntityName(_displayName);
     }
 
     private void RefreshFillColor()
@@ -195,8 +203,8 @@ public class EntityOverheadView : MonoBehaviour
             return;
         }
 
-        _maxHealth = Mathf.Max(_maxHealth, _model.Health, 1);
-        float normalized = Mathf.Clamp01((float)_model.Health / _maxHealth);
+        int maxHealth = Mathf.Max(1, _model.MaxHealth);
+        float normalized = Mathf.Clamp01((float)_model.Health / maxHealth);
         _fillTransform.localScale = new Vector3(normalized, 1f, 1f);
     }
 

@@ -185,6 +185,15 @@ public class AttackDriver : IPostInitializable, IDisposable
             if (removed)
             {
                 Debug.Log($"[Attack] {DescribeActor(defender)} has been removed from the game.");
+
+                if (attacker is CharacterInstance characterAttacker)
+                {
+                    bool leveledUp = characterAttacker.Model.TryLevelUp();
+                    if (leveledUp)
+                    {
+                        Debug.Log($"[Attack] {DescribeActor(attacker)} reached level {characterAttacker.Model.Level}.");
+                    }
+                }
             }
         }
     }
