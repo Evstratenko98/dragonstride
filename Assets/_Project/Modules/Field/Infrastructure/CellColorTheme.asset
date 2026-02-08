@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3ded04c25a7254b66bac3b12984c45fa, type: 3}
   m_Name: CellColorTheme
   m_EditorClassIdentifier: Assembly-CSharp::CellColorTheme
+  hiddenMaterial: {fileID: 2100000, guid: 9f8e1ee9c52e4f9580b0fd60962f8f1a, type: 2}
   startMaterial: {fileID: 2100000, guid: b2608a0f6f6204e6a84996f912addc3e, type: 2}
   commonMaterial: {fileID: 2100000, guid: b7fd09405cc8a4e62b9dcfcca9de6dfd, type: 2}
   lootMaterial: {fileID: 2100000, guid: a8cdd30a1c647cf42824c39d81d7dc21, type: 2}

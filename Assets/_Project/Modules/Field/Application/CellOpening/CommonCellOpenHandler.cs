@@ -4,6 +4,6 @@ public sealed class CommonCellOpenHandler : ICellOpenHandler
 
     public bool TryOpen(ICellLayoutOccupant actor, Cell cell)
     {
-        return false;
+        return true;
     }
 }

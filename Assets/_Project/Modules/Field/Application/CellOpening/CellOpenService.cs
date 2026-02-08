@@ -44,7 +44,21 @@ public sealed class CellOpenService
             return false;
         }
 
+        cell.RevealType();
         cell.MarkOpened();
+        _fieldPresenter.RefreshCell(cell);
+        return true;
+    }
+
+    public bool TryRevealType(ICellLayoutOccupant actor)
+    {
+        var cell = actor?.Entity?.CurrentCell;
+        if (cell == null || cell.IsTypeRevealed)
+        {
+            return false;
+        }
+
+        cell.RevealType();
         _fieldPresenter.RefreshCell(cell);
         return true;
     }

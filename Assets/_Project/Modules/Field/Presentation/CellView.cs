@@ -2,11 +2,14 @@ using UnityEngine;
 
 public class CellView : MonoBehaviour
 {
+    [SerializeField] private Renderer hiddenOverlayRenderer;
+
     private Renderer _renderer;
     private Cell _model;
     private CellColorTheme _theme;
     private Material _openedLootMaterial;
     private Material _openedFightMaterial;
+    private static Mesh _cachedCylinderMesh;
 
     private void Awake()
     {
@@ -16,6 +19,7 @@ public class CellView : MonoBehaviour
     public void Initialize(CellColorTheme theme)
     {
         _theme = theme;
+        EnsureHiddenVisuals();
         _openedLootMaterial = CreateOpenedMaterial(_theme?.lootMaterial);
         _openedFightMaterial = CreateOpenedMaterial(_theme?.fightMaterial);
     }
@@ -40,6 +44,14 @@ public class CellView : MonoBehaviour
     {
         if (_renderer == null || _theme == null)
         {
+            return;
+        }
+
+        bool isRevealed = _model != null && _model.IsTypeRevealed;
+        SetHiddenVisualsVisible(!isRevealed);
+        if (!isRevealed)
+        {
+            _renderer.material = _theme.hiddenMaterial ?? _theme.commonMaterial;
             return;
         }
 
@@ -70,6 +82,52 @@ public class CellView : MonoBehaviour
         }
     }
 
+    private void EnsureHiddenVisuals()
+    {
+        if (hiddenOverlayRenderer == null)
+        {
+            var overlay = transform.Find("HiddenOverlay");
+            if (overlay == null)
+            {
+                overlay = CreateHiddenOverlay().transform;
+            }
+
+            hiddenOverlayRenderer = overlay.GetComponent<Renderer>();
+            if (hiddenOverlayRenderer == null)
+            {
+                hiddenOverlayRenderer = overlay.gameObject.AddComponent<MeshRenderer>();
+            }
+
+            var meshFilter = overlay.GetComponent<MeshFilter>();
+            if (meshFilter == null)
+            {
+                meshFilter = overlay.gameObject.AddComponent<MeshFilter>();
+            }
+
+            meshFilter.sharedMesh = GetBuiltInCylinderMesh();
+            overlay.localPosition = new Vector3(0f, 0.51f, 0f);
+            overlay.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            overlay.localScale = new Vector3(1f, 0.04f, 1f);
+        }
+
+        if (hiddenOverlayRenderer != null)
+        {
+            hiddenOverlayRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            hiddenOverlayRenderer.receiveShadows = false;
+            hiddenOverlayRenderer.material = _theme?.hiddenMaterial ?? _theme?.commonMaterial;
+        }
+
+    }
+
+    private void SetHiddenVisualsVisible(bool isVisible)
+    {
+        if (hiddenOverlayRenderer != null)
+        {
+            hiddenOverlayRenderer.enabled = isVisible;
+        }
+
+    }
+
     private void OnDestroy()
     {
         if (_openedLootMaterial != null)
@@ -81,6 +139,7 @@ public class CellView : MonoBehaviour
         {
             Destroy(_openedFightMaterial);
         }
+
     }
 
     private static Material CreateOpenedMaterial(Material source)
@@ -115,4 +174,42 @@ public class CellView : MonoBehaviour
         darkened.a = color.a;
         return darkened;
     }
+
+    private static Mesh GetBuiltInCylinderMesh()
+    {
+        if (_cachedCylinderMesh != null)
+        {
+            return _cachedCylinderMesh;
+        }
+
+        var primitive = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        _cachedCylinderMesh = primitive.GetComponent<MeshFilter>()?.sharedMesh;
+        if (primitive.TryGetComponent<Collider>(out var collider))
+        {
+            Destroy(collider);
+        }
+
+        primitive.hideFlags = HideFlags.HideAndDontSave;
+        if (Application.isPlaying)
+        {
+            Destroy(primitive);
+        }
+        else
+        {
+            DestroyImmediate(primitive);
+        }
+
+        return _cachedCylinderMesh;
+    }
+
+    private GameObject CreateHiddenOverlay()
+    {
+        var overlay = new GameObject("HiddenOverlay");
+        overlay.transform.SetParent(transform, false);
+        overlay.transform.localPosition = new Vector3(0f, 0.51f, 0f);
+        overlay.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+        overlay.transform.localScale = new Vector3(1f, 0.04f, 1f);
+        return overlay;
+    }
+
 }

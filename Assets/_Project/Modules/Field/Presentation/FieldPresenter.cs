@@ -85,6 +85,7 @@ public sealed class FieldPresenter
             view.Initialize(_theme);
             view.Bind(cell);
             view.transform.localPosition = new Vector3(cell.X * _config.CELL_SIZE, 0f, cell.Y * _config.CELL_SIZE);
+            view.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
             _views[cell] = view;
         }
     }

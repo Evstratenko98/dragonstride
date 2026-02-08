@@ -31,6 +31,8 @@ public sealed class FieldGenerator
     {
         var startCell = field.GetCell(field.Width / 2, field.Height / 2);
         startCell?.SetType(CellType.Start);
+        startCell?.RevealType();
+        startCell?.MarkOpened();
 
         var finishCell = GetRandomFinishCell(field);
         finishCell?.SetType(CellType.End);
