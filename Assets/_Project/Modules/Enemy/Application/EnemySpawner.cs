@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -10,8 +11,10 @@ public sealed class EnemySpawner
     private readonly CharacterRoster _characterRoster;
     private readonly TurnActorRegistry _turnActorRegistry;
     private readonly IEventBus _eventBus;
+    private readonly IRandomSource _randomSource;
 
     private readonly List<EnemyInstance> _enemies = new();
+    private readonly List<EnemySpawnOption> _spawnOptions = new();
 
     public EnemySpawner(
         ConfigScriptableObject config,
@@ -19,7 +22,8 @@ public sealed class EnemySpawner
         FieldRoot fieldRoot,
         CharacterRoster characterRoster,
         TurnActorRegistry turnActorRegistry,
-        IEventBus eventBus
+        IEventBus eventBus,
+        IRandomSource randomSource
     )
     {
         _config = config;
@@ -28,6 +32,19 @@ public sealed class EnemySpawner
         _characterRoster = characterRoster;
         _turnActorRegistry = turnActorRegistry;
         _eventBus = eventBus;
+        _randomSource = randomSource;
+
+        _spawnOptions.Add(new EnemySpawnOption(
+            "SlimeEnemy",
+            _enemyPrefabs?.SlimeSpawnChancePercent ?? 0,
+            () => new SlimeEnemy(),
+            () => _enemyPrefabs?.SlimePrefab));
+
+        _spawnOptions.Add(new EnemySpawnOption(
+            "WolfEnemy",
+            _enemyPrefabs?.WolfSpawnChancePercent ?? 0,
+            () => new WolfEnemy(),
+            () => _enemyPrefabs?.WolfPrefab));
     }
 
     public EnemyInstance SpawnOnCell(Cell cell)
@@ -37,21 +54,32 @@ public sealed class EnemySpawner
             return null;
         }
 
-        GameObject prefab = _enemyPrefabs?.WolfPrefab != null
-            ? _enemyPrefabs.WolfPrefab
-            : _enemyPrefabs?.SlimePrefab;
-        if (prefab == null)
-        {
-            Debug.LogError("[EnemySpawner] Wolf prefab is not configured in GameScope.");
-            return null;
-        }
-
         if (_enemies.Any(enemy => enemy?.Entity?.CurrentCell == cell))
         {
             return null;
         }
 
-        var model = new WolfEnemy();
+        EnemySpawnOption selectedOption = SelectRandomEnemyOption();
+        if (selectedOption == null)
+        {
+            Debug.LogError("[EnemySpawner] Enemy spawn list is empty or all spawn chances are 0.");
+            return null;
+        }
+
+        GameObject prefab = selectedOption.PrefabFactory?.Invoke();
+        if (prefab == null)
+        {
+            Debug.LogError($"[EnemySpawner] Prefab is not configured for {selectedOption.Name}.");
+            return null;
+        }
+
+        Enemy model = selectedOption.ModelFactory?.Invoke();
+        if (model == null)
+        {
+            Debug.LogError($"[EnemySpawner] Model factory returned null for {selectedOption.Name}.");
+            return null;
+        }
+
         var enemy = new EnemyInstance(_config, model, prefab, _fieldRoot, _eventBus);
         enemy.Spawn(cell);
 
@@ -98,10 +126,53 @@ public sealed class EnemySpawner
         return true;
     }
 
+    private EnemySpawnOption SelectRandomEnemyOption()
+    {
+        var availableOptions = _spawnOptions
+            .Where(option => option != null && option.ChancePercent > 0)
+            .ToList();
+
+        if (availableOptions.Count == 0)
+        {
+            return null;
+        }
+
+        int totalChance = availableOptions.Sum(option => option.ChancePercent);
+        int roll = _randomSource.Range(0, totalChance);
+        int cumulativeChance = 0;
+
+        for (int i = 0; i < availableOptions.Count; i++)
+        {
+            cumulativeChance += availableOptions[i].ChancePercent;
+            if (roll < cumulativeChance)
+            {
+                return availableOptions[i];
+            }
+        }
+
+        return availableOptions[^1];
+    }
+
     private void DespawnEnemy(EnemyInstance enemy)
     {
         _characterRoster.UnregisterLayoutOccupant(enemy);
         _turnActorRegistry.Unregister(enemy);
         enemy.Destroy();
+    }
+
+    private sealed class EnemySpawnOption
+    {
+        public string Name { get; }
+        public int ChancePercent { get; }
+        public Func<Enemy> ModelFactory { get; }
+        public Func<GameObject> PrefabFactory { get; }
+
+        public EnemySpawnOption(string name, int chancePercent, Func<Enemy> modelFactory, Func<GameObject> prefabFactory)
+        {
+            Name = name;
+            ChancePercent = Mathf.Max(0, chancePercent);
+            ModelFactory = modelFactory;
+            PrefabFactory = prefabFactory;
+        }
     }
 }

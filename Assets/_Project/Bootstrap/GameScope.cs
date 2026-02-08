@@ -19,6 +19,10 @@ public class GameScope : LifetimeScope
     [SerializeField] private GameObject slimePrefab;
     [SerializeField] private GameObject wolfPrefab;
 
+    [Header("Enemy Spawn Chances (%)")]
+    [SerializeField] private int slimeSpawnChancePercent = 60;
+    [SerializeField] private int wolfSpawnChancePercent = 40;
+
     protected override void Configure(IContainerBuilder builder)
     {
         builder.RegisterInstance(_config);
@@ -39,7 +43,11 @@ public class GameScope : LifetimeScope
         builder.Register<CharacterLifecycleService>(Lifetime.Singleton);
         builder.Register<CharacterLayout>(Lifetime.Singleton);
         builder.Register<CharacterRoster>(Lifetime.Singleton);
-        builder.RegisterInstance(new EnemyPrefabs(slimePrefab, wolfPrefab));
+        builder.RegisterInstance(new EnemyPrefabs(
+            slimePrefab,
+            wolfPrefab,
+            slimeSpawnChancePercent,
+            wolfSpawnChancePercent));
         builder.Register<EnemySpawner>(Lifetime.Singleton);
         builder.RegisterEntryPoint<EnemyTurnDriver>(Lifetime.Singleton).AsSelf();
 
