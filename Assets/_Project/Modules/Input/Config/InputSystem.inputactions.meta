@@ -11,4 +11,4 @@ ScriptedImporter:
   generateWrapperCode: 1
   wrapperCodePath: Assets/_Project/InputSystem/InputSystem.cs
   wrapperClassName: InputSystem
-  wrapperCodeNamespace: 
+  wrapperCodeNamespace: InputSystem

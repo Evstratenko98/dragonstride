@@ -5,7 +5,7 @@ using UnityEngine;
 public class CharacterInputReader : IDisposable
 {
     private readonly IEventBus _eventBus;
-    private readonly InputSystem _actions;
+    private readonly InputSystem.InputSystem _actions;
     private IDisposable _gameStateSub;
 
     private Vector2Int _dir;
@@ -20,7 +20,7 @@ public class CharacterInputReader : IDisposable
     {
         _eventBus = eventBus;
 
-        _actions = new InputSystem();
+        _actions = new InputSystem.InputSystem();
 
         _actions.Character.Move.performed += OnMove;
         _actions.Character.Move.canceled  += OnMoveCanceled;
