@@ -22,4 +22,7 @@ public class ConfigScriptableObject : ScriptableObject
     [Header("Camera")]
     public float CAMERA_PAN_SPEED = 12f;
     public float CAMERA_EDGE_THRESHOLD = 16f;
+    public float CAMERA_ZOOM_SPEED = 120f;
+    public float CAMERA_ZOOM_MIN_DISTANCE = 10f;
+    public float CAMERA_ZOOM_MAX_DISTANCE = 35f;
 }

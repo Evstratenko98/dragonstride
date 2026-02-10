@@ -15,6 +15,11 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
 
     private float smooth = 3f;
     private Vector3 offset = new Vector3(0, 15, -15);
+    private float _zoomDistance;
+    private Vector3 _zoomDirection;
+    private float _zoomSpeed;
+    private float _zoomMinDistance;
+    private float _zoomMaxDistance;
     private float _minX;
     private float _maxX;
     private float _minZ;
@@ -34,6 +39,7 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
         _gameStateSub = _eventBus.Subscribe<GameStateChanged>(OnStateGame);
         _followToggleSub = _eventBus.Subscribe<CameraFollowToggled>(OnFollowToggled);
 
+        InitializeZoom();
         UpdateFieldBounds();
     }
 
@@ -49,6 +55,8 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
 
     public void Tick()
     {
+        HandleZoomInput();
+
         if (_cameraFocusState.FollowEnabled)
         {
             var target = _cameraFocusState.CurrentTarget;
@@ -132,6 +140,31 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
         nextPosition.x = Mathf.Clamp(nextPosition.x, _minX, _maxX);
         nextPosition.z = Mathf.Clamp(nextPosition.z, _minZ, _maxZ);
         _camera.transform.position = nextPosition;
+    }
+
+    private void HandleZoomInput()
+    {
+        var scrollDelta = Input.mouseScrollDelta.y;
+        if (Mathf.Approximately(scrollDelta, 0f))
+        {
+            return;
+        }
+
+        _zoomDistance -= scrollDelta * _zoomSpeed * Time.deltaTime;
+        _zoomDistance = Mathf.Clamp(_zoomDistance, _zoomMinDistance, _zoomMaxDistance);
+        offset = _zoomDirection * _zoomDistance;
+    }
+
+    private void InitializeZoom()
+    {
+        _zoomDirection = offset.normalized;
+        _zoomDistance = offset.magnitude;
+
+        _zoomSpeed = _config.CAMERA_ZOOM_SPEED > 0f ? _config.CAMERA_ZOOM_SPEED : 120f;
+        _zoomMinDistance = _config.CAMERA_ZOOM_MIN_DISTANCE > 0f ? _config.CAMERA_ZOOM_MIN_DISTANCE : 10f;
+        _zoomMaxDistance = _config.CAMERA_ZOOM_MAX_DISTANCE > _zoomMinDistance ? _config.CAMERA_ZOOM_MAX_DISTANCE : _zoomMinDistance + 1f;
+        _zoomDistance = Mathf.Clamp(_zoomDistance, _zoomMinDistance, _zoomMaxDistance);
+        offset = _zoomDirection * _zoomDistance;
     }
 
     private void UpdateFieldBounds()
