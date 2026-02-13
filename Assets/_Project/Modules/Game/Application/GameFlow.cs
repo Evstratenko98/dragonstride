@@ -7,6 +7,7 @@ using VContainer.Unity;
 public class GameFlow : IPostInitializable, IDisposable, IStartable
 {
     private readonly IEventBus _eventBus;
+    private readonly IRandomSource _randomSource;
     private IDisposable _turnEndSub;
     private IDisposable _gameStateSub;
     private IDisposable _resetButtonSub;
@@ -18,6 +19,8 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
 
     private IReadOnlyList<Entity> _turnEntities = Array.Empty<Entity>();
     private ICellLayoutOccupant _currentTurnActor;
+    private List<ICellLayoutOccupant> _roundActors = new();
+    private int _roundActorIndex;
 
     public GameState GameState { get; private set; } = GameState.Init;
     public GameTurnState GameTurnState { get; private set; } = GameTurnState.Init;
@@ -27,6 +30,7 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
 
     public GameFlow(
         IEventBus eventBus,
+        IRandomSource randomSource,
         TurnFlow turnFlow,
         FieldPresenter fieldPresenter,
         CharacterMovementDriver characterDriver,
@@ -34,6 +38,7 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
     )
     {
         _eventBus = eventBus;
+        _randomSource = randomSource;
         _fieldPresenter = fieldPresenter;
         _characterDriver = characterDriver;
         _turnFlow = turnFlow;
@@ -69,7 +74,9 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
 
         var characters = _characterDriver.SpawnCharacters(startCell);
         _eventBus.Publish(new CharacterRosterUpdated(characters));
-        UpdateTurnEntities();
+        _turnEntities = Array.Empty<Entity>();
+        _roundActors.Clear();
+        _roundActorIndex = 0;
 
         StartGame();
     }
@@ -85,8 +92,8 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
     {
         GameTurnState = GameTurnState.BeginTurn;
         _currentTurnActor = null;
-
-        NextTurnActor();
+        BuildRoundOrder();
+        StartTurnFromRoundOrder();
     }
 
     private void StartTurn()
@@ -102,38 +109,33 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         {
             return;
         }
-        
-        NextTurnActor();
+
+        _roundActorIndex++;
+        StartTurnFromRoundOrder();
     }
 
-    public void NextTurnActor()
+    private void StartTurnFromRoundOrder()
     {
-        var activeActors = _turnActorRegistry.GetActiveActorsSnapshot();
-        _turnEntities = activeActors
-            .Select(actor => actor.Entity)
-            .Where(entity => entity != null)
-            .ToArray();
-
-        if (activeActors.Count == 0)
+        if (_roundActors.Count == 0)
         {
             _currentTurnActor = null;
             return;
         }
 
-        int nextIndex = 0;
-        if (_currentTurnActor != null)
+        while (_roundActorIndex < _roundActors.Count)
         {
-            int currentIndex = activeActors.IndexOf(_currentTurnActor);
-            nextIndex = currentIndex >= 0 ? currentIndex + 1 : 0;
-            if (nextIndex >= activeActors.Count)
+            var actor = _roundActors[_roundActorIndex];
+            if (IsActorActive(actor))
             {
-                GameTurnState = GameTurnState.BeginTurn;
-                nextIndex = 0;
+                _currentTurnActor = actor;
+                StartTurn();
+                return;
             }
+
+            _roundActorIndex++;
         }
 
-        _currentTurnActor = activeActors[nextIndex];
-        StartTurn();
+        StartTurnCycle();
     }
 
     private void OnStateGame(GameStateChanged msg)
@@ -151,6 +153,8 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         _fieldPresenter.Reset();
         _turnEntities = Array.Empty<Entity>();
         _currentTurnActor = null;
+        _roundActors.Clear();
+        _roundActorIndex = 0;
     }
 
     private void SetGameState(GameState newState)
@@ -160,11 +164,50 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         _eventBus.Publish(new GameStateChanged(newState));
     }
 
-    private void UpdateTurnEntities()
+    private void BuildRoundOrder()
     {
-        _turnEntities = _turnActorRegistry.GetActiveActorsSnapshot()
+        var activeActors = _turnActorRegistry.GetActiveActorsSnapshot()
+            .Where(IsActorActive)
+            .ToList();
+
+        _roundActors = BuildInitiativeOrder(activeActors);
+        _roundActorIndex = 0;
+        _turnEntities = _roundActors
             .Select(actor => actor.Entity)
             .Where(entity => entity != null)
             .ToArray();
+    }
+
+    private List<ICellLayoutOccupant> BuildInitiativeOrder(List<ICellLayoutOccupant> activeActors)
+    {
+        if (activeActors == null || activeActors.Count == 0)
+        {
+            return new List<ICellLayoutOccupant>();
+        }
+
+        return activeActors
+            .GroupBy(actor => actor.Entity.Initiative)
+            .OrderByDescending(group => group.Key)
+            .SelectMany(group =>
+            {
+                var shuffled = group.ToList();
+                Shuffle(shuffled);
+                return shuffled;
+            })
+            .ToList();
+    }
+
+    private void Shuffle(List<ICellLayoutOccupant> actors)
+    {
+        for (int i = actors.Count - 1; i > 0; i--)
+        {
+            int j = _randomSource.Range(0, i + 1);
+            (actors[i], actors[j]) = (actors[j], actors[i]);
+        }
+    }
+
+    private static bool IsActorActive(ICellLayoutOccupant actor)
+    {
+        return actor?.Entity?.CurrentCell != null;
     }
 }
