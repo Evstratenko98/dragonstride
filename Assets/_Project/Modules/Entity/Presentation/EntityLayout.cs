@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CharacterLayout
+public class EntityLayout
 {
     private readonly ConfigScriptableObject _config;
 
-    public CharacterLayout(ConfigScriptableObject config)
+    public EntityLayout(ConfigScriptableObject config)
     {
         _config = config;
     }
@@ -18,18 +18,18 @@ public class CharacterLayout
         }
 
         Vector3 cellCenter = new Vector3(
-            cell.X * _config.CELL_SIZE,
+            cell.X * _config.CellDistance,
             _config.CHARACTER_HEIGHT,
-            cell.Y * _config.CELL_SIZE
+            cell.Y * _config.CellDistance
         );
 
         if (occupants.Count == 1)
         {
-            occupants[0].MoveToPosition(cellCenter, _config.CHARACTER_LAYOUT_SPEED);
+            occupants[0].MoveToPosition(cellCenter, _config.ENTITY_LAYOUT_SPEED);
             return;
         }
 
-        float radius = _config.CELL_SIZE * 0.15f;
+        float radius = Mathf.Max(0.1f, _config.ENTITY_LAYOUT_RADIUS);
         float angleStep = Mathf.PI * 2f / occupants.Count;
 
         for (int i = 0; i < occupants.Count; i++)
@@ -38,7 +38,7 @@ public class CharacterLayout
             float offsetX = Mathf.Cos(angle) * radius;
             float offsetZ = Mathf.Sin(angle) * radius;
             Vector3 position = new Vector3(cellCenter.x + offsetX, cellCenter.y, cellCenter.z + offsetZ);
-            occupants[i].MoveToPosition(position, _config.CHARACTER_LAYOUT_SPEED);
+            occupants[i].MoveToPosition(position, _config.ENTITY_LAYOUT_SPEED);
         }
     }
 }

@@ -42,7 +42,7 @@ public class GameScope : LifetimeScope
         builder.Register<CharacterInputReader>(Lifetime.Singleton);
         builder.Register<CharacterFactory>(Lifetime.Singleton);
         builder.Register<CharacterLifecycleService>(Lifetime.Singleton);
-        builder.Register<CharacterLayout>(Lifetime.Singleton);
+        builder.Register<EntityLayout>(Lifetime.Singleton);
         builder.Register<CharacterRoster>(Lifetime.Singleton);
         builder.RegisterInstance(new EnemyPrefabs(
             slimePrefab,

@@ -169,7 +169,7 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
 
     private void UpdateFieldBounds()
     {
-        var cellSize = _config.CELL_SIZE;
+        var cellSize = _config.CellDistance;
         _minX = 0f;
         _minZ = -(_config.FIELD_HEIGHT);
         _maxX = Mathf.Max(0f, (_config.FIELD_WIDTH - 1) * cellSize);

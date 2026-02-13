@@ -11,9 +11,9 @@ public class CharacterRoster
 
     public bool IsMoving => _characters.Any(c => c.IsMoving);
     private readonly CharacterLifecycleService _lifecycleService;
-    private readonly CharacterLayout _layoutService;
+    private readonly EntityLayout _layoutService;
 
-    public CharacterRoster(CharacterLifecycleService lifecycleService, CharacterLayout layoutService)
+    public CharacterRoster(CharacterLifecycleService lifecycleService, EntityLayout layoutService)
     {
         _lifecycleService = lifecycleService;
         _layoutService = layoutService;

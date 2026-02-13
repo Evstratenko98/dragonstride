@@ -72,7 +72,7 @@ public sealed class FogOfWarPresenter : IPostInitializable, IDisposable
             cell.SetVisibility(CellVisibility.Unseen);
         }
 
-        _view.Build(field, _config.CELL_SIZE);
+        _view.Build(field, _config.CellDistance);
         UpdateVisibility();
     }
 

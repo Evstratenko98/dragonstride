@@ -37,7 +37,7 @@ public class CharacterInstance
 
     public Vector3 GetCoordinatesForCellView(int x, int y)
     {
-        return new Vector3(x * _config.CELL_SIZE, _config.CHARACTER_HEIGHT, y * _config.CELL_SIZE);
+        return new Vector3(x * _config.CellDistance, _config.CHARACTER_HEIGHT, y * _config.CellDistance);
     }
 
     public void Spawn(Cell cell)

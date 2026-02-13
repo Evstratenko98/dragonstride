@@ -179,9 +179,9 @@ public sealed class EnemyInstance : ICellLayoutOccupant
     private Vector3 GetPosition(Cell cell)
     {
         return new Vector3(
-            cell.X * _config.CELL_SIZE,
+            cell.X * _config.CellDistance,
             _config.CHARACTER_HEIGHT,
-            cell.Y * _config.CELL_SIZE
+            cell.Y * _config.CellDistance
         );
     }
 }
