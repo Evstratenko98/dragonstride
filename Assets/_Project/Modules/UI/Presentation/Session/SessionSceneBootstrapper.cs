@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -45,13 +46,14 @@ public static class SessionSceneBootstrapper
         var activeScene = SceneManager.GetActiveScene();
         foreach (var root in activeScene.GetRootGameObjects())
         {
-            Object.Destroy(root);
+            UnityEngine.Object.Destroy(root);
         }
 
         var cameraObject = new GameObject("Main Camera");
         cameraObject.tag = "MainCamera";
         cameraObject.AddComponent<Camera>();
         cameraObject.AddComponent<AudioListener>();
+        EnsureUrpCameraData(cameraObject);
 
         var canvasObject = new GameObject("Canvas");
         var canvas = canvasObject.AddComponent<Canvas>();
@@ -98,5 +100,18 @@ public static class SessionSceneBootstrapper
         label.fontSize = 36;
         label.color = Color.white;
         label.font = TMP_Settings.defaultFontAsset;
+    }
+
+    private static void EnsureUrpCameraData(GameObject cameraObject)
+    {
+        var urpCameraDataType = Type.GetType(
+            "UnityEngine.Rendering.Universal.UniversalAdditionalCameraData, Unity.RenderPipelines.Universal.Runtime");
+
+        if (urpCameraDataType == null || cameraObject.GetComponent(urpCameraDataType) != null)
+        {
+            return;
+        }
+
+        cameraObject.AddComponent(urpCameraDataType);
     }
 }
