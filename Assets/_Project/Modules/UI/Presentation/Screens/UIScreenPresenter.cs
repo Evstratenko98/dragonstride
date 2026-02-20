@@ -1,4 +1,5 @@
 using System;
+using UnityEngine.SceneManagement;
 using VContainer.Unity;
 
 public class UIScreenPresenter : IStartable, IDisposable
@@ -29,7 +30,7 @@ public class UIScreenPresenter : IStartable, IDisposable
         switch (msg.State)
         {
             case GameState.Finished:
-                _view.ShowFinishScreen();
+                SceneManager.LoadScene(SessionSceneNames.GameOver);
                 break;
             case GameState.Playing:
             case GameState.Loading:

@@ -1,14 +1,12 @@
-using System;
+using UnityEngine.SceneManagement;
 using VContainer.Unity;
 
-public class FinishScreenPresenter : IStartable, IDisposable
+public class FinishScreenPresenter : IStartable
 {
-    private readonly IEventBus _eventBus;
     private readonly FinishScreenView _view;
     
-    public FinishScreenPresenter(IEventBus eventBus, FinishScreenView view)
+    public FinishScreenPresenter(FinishScreenView view)
     {
-        _eventBus = eventBus;
         _view = view;
     }
     
@@ -17,13 +15,8 @@ public class FinishScreenPresenter : IStartable, IDisposable
         _view.PlayAgainButton.onClick.AddListener(OnFinishClicked);
     }
 
-    public void Dispose()
-    {
-        _view.PlayAgainButton.onClick.RemoveListener(OnFinishClicked);
-    }
-
     private void OnFinishClicked()
     {
-        _eventBus.Publish(new ResetRequested());
+        SceneManager.LoadScene(SessionSceneNames.GameOver);
     }
 }
