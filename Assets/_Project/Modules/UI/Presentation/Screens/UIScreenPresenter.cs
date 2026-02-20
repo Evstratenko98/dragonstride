@@ -1,17 +1,18 @@
 using System;
-using UnityEngine.SceneManagement;
 using VContainer.Unity;
 
 public class UIScreenPresenter : IStartable, IDisposable
 {
     private readonly IEventBus _eventBus;
     private readonly UIScreenView _view;
+    private readonly ISessionSceneRouter _sceneRouter;
     private IDisposable _gameStateSub;
 
-    public UIScreenPresenter(IEventBus eventBus, UIScreenView view)
+    public UIScreenPresenter(IEventBus eventBus, UIScreenView view, ISessionSceneRouter sceneRouter)
     {
         _eventBus = eventBus;
         _view = view;
+        _sceneRouter = sceneRouter;
     }
 
     public void Start()
@@ -30,7 +31,7 @@ public class UIScreenPresenter : IStartable, IDisposable
         switch (msg.State)
         {
             case GameState.Finished:
-                SceneManager.LoadScene(SessionSceneNames.GameOver);
+                _ = _sceneRouter.LoadGameOverAsync();
                 break;
             case GameState.Playing:
             case GameState.Loading:

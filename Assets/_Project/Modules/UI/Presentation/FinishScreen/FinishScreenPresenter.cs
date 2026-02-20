@@ -1,13 +1,14 @@
-using UnityEngine.SceneManagement;
 using VContainer.Unity;
 
 public class FinishScreenPresenter : IStartable
 {
     private readonly FinishScreenView _view;
+    private readonly ISessionSceneRouter _sceneRouter;
     
-    public FinishScreenPresenter(FinishScreenView view)
+    public FinishScreenPresenter(FinishScreenView view, ISessionSceneRouter sceneRouter)
     {
         _view = view;
+        _sceneRouter = sceneRouter;
     }
     
     public void Start()
@@ -17,6 +18,6 @@ public class FinishScreenPresenter : IStartable
 
     private void OnFinishClicked()
     {
-        SceneManager.LoadScene(SessionSceneNames.GameOver);
+        _ = _sceneRouter.LoadGameOverAsync();
     }
 }
