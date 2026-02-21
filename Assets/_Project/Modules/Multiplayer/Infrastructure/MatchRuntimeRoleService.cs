@@ -3,7 +3,19 @@ public sealed class MatchRuntimeRoleService : IMatchRuntimeRoleService
     private readonly IMatchSetupContextService _matchSetupContextService;
     private readonly IMatchNetworkService _matchNetworkService;
 
-    public bool IsOnlineMatch => _matchSetupContextService != null && _matchSetupContextService.IsOnlineMatch;
+    public bool IsOnlineMatch
+    {
+        get
+        {
+            bool contextOnline = _matchSetupContextService != null && _matchSetupContextService.IsOnlineMatch;
+            if (contextOnline)
+            {
+                return true;
+            }
+
+            return _matchNetworkService != null && (_matchNetworkService.IsHost || _matchNetworkService.IsClient);
+        }
+    }
 
     public bool IsHostAuthority
     {

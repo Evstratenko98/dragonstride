@@ -35,4 +35,9 @@ public sealed class MatchSetupContextService : IMatchSetupContextService
         IsOnlineMatch = false;
         MatchSeed = 0;
     }
+
+    public void ClearRoster()
+    {
+        _requests.Clear();
+    }
 }

@@ -144,7 +144,7 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
                 return;
             }
 
-            _matchSetupContextService.Clear();
+            _matchSetupContextService.ClearRoster();
             _eventBus.Publish(new CharacterRosterUpdated(characters));
             _turnEntities = Array.Empty<Entity>();
             _roundActors.Clear();

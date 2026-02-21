@@ -8,5 +8,6 @@ public interface IMatchSetupContextService
 
     IReadOnlyList<CharacterSpawnRequest> GetSpawnRequests();
     void SetRoster(IReadOnlyList<CharacterSpawnRequest> requests, bool isOnlineMatch, int matchSeed = 0);
+    void ClearRoster();
     void Clear();
 }

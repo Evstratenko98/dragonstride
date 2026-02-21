@@ -9,6 +9,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
     private readonly IEventBus _eventBus;
     private readonly IMatchSetupContextService _matchSetupContextService;
     private readonly IMatchNetworkService _matchNetworkService;
+    private readonly IActorIdentityService _actorIdentityService;
     private IDisposable _turnStateSubscription;
     private IDisposable _diceRolledSubscription;
     private IDisposable _characterMovedSubscription;
@@ -27,12 +28,14 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         IEventBus eventBus,
         GameScreenView view,
         IMatchSetupContextService matchSetupContextService,
-        IMatchNetworkService matchNetworkService)
+        IMatchNetworkService matchNetworkService,
+        IActorIdentityService actorIdentityService)
     {
         _eventBus = eventBus;
         _view = view;
         _matchSetupContextService = matchSetupContextService;
         _matchNetworkService = matchNetworkService;
+        _actorIdentityService = actorIdentityService;
     }
 
     public void PostInitialize()
@@ -334,11 +337,11 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _stepsTotal = msg.StepsTotal;
         _stepsRemaining = msg.StepsRemaining;
 
-        string currentPlayerLabel = msg.IsLocalTurn ? "You" : "Opponent";
-        _view.SetCurrentPlayer(currentPlayerLabel);
+        string actorLabel = ResolveOnlineActorLabel(msg);
+        _view.SetCurrentPlayer(actorLabel);
         _view.SetTurnState(msg.IsLocalTurn
-            ? msg.TurnState.ToString()
-            : $"Opponent turn ({msg.TurnState})");
+            ? $"Your turn ({msg.TurnState})"
+            : $"{actorLabel} turn ({msg.TurnState})");
         UpdateStepsText();
 
         bool canAct = msg.IsLocalTurn && CanUseTurnActions(msg.TurnState);
@@ -443,5 +446,29 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         SetEndTurnButtonInteractable(false);
         SetAttackButtonInteractable(false);
         SetOpenCellButtonInteractable(false);
+    }
+
+    private string ResolveOnlineActorLabel(OnlineTurnStateUpdated msg)
+    {
+        if (msg.IsLocalTurn)
+        {
+            return "You";
+        }
+
+        if (_actorIdentityService != null &&
+            msg.CurrentActorId > 0 &&
+            _actorIdentityService.TryGetActor(msg.CurrentActorId, out ICellLayoutOccupant actor) &&
+            actor?.Entity != null &&
+            !string.IsNullOrWhiteSpace(actor.Entity.Name))
+        {
+            return actor.Entity.Name;
+        }
+
+        if (!string.IsNullOrWhiteSpace(msg.OwnerPlayerId))
+        {
+            return $"Player {msg.OwnerPlayerId[..Math.Min(6, msg.OwnerPlayerId.Length)]}";
+        }
+
+        return "Opponent";
     }
 }
