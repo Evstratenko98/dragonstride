@@ -9,7 +9,7 @@ using VContainer.Unity;
 
 public class GameFlow : IPostInitializable, IDisposable, IStartable
 {
-    private const int FieldSnapshotTimeoutMs = 10000;
+    private const int FieldSnapshotTimeoutMs = 20000;
 
     private readonly IEventBus _eventBus;
     private readonly IRandomSource _randomSource;
@@ -369,6 +369,7 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
             return _fieldPresenter.CreateFieldFromSnapshot(_latestFieldSnapshot);
         }
 
+        Debug.Log("[GameFlow] Waiting for host field snapshot...");
         _fieldSnapshotTcs = new TaskCompletionSource<FieldGridSnapshot>(TaskCreationOptions.RunContinuationsAsynchronously);
         Task delayTask = Task.Delay(FieldSnapshotTimeoutMs, cancellationToken);
         Task completed = await Task.WhenAny(_fieldSnapshotTcs.Task, delayTask);
@@ -397,6 +398,7 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
 
         _latestFieldSnapshot = message.Snapshot;
         _hasFieldSnapshot = true;
+        Debug.Log($"[GameFlow] Host field snapshot received. Checksum={message.Snapshot.Checksum}");
         _fieldSnapshotTcs?.TrySetResult(message.Snapshot);
     }
 

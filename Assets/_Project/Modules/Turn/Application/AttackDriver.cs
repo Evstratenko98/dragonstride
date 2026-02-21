@@ -11,6 +11,7 @@ public class AttackDriver : IPostInitializable, IDisposable
     private readonly EnemySpawner _enemySpawner;
     private readonly CrownOwnershipService _crownOwnershipService;
     private readonly IMatchRuntimeRoleService _runtimeRoleService;
+    private readonly IMatchNetworkService _matchNetworkService;
     private readonly IMatchClientTurnStateService _clientTurnStateService;
     private readonly IActorIdentityService _actorIdentityService;
 
@@ -30,6 +31,7 @@ public class AttackDriver : IPostInitializable, IDisposable
         EnemySpawner enemySpawner,
         CrownOwnershipService crownOwnershipService,
         IMatchRuntimeRoleService runtimeRoleService,
+        IMatchNetworkService matchNetworkService,
         IMatchClientTurnStateService clientTurnStateService,
         IActorIdentityService actorIdentityService)
     {
@@ -40,6 +42,7 @@ public class AttackDriver : IPostInitializable, IDisposable
         _enemySpawner = enemySpawner;
         _crownOwnershipService = crownOwnershipService;
         _runtimeRoleService = runtimeRoleService;
+        _matchNetworkService = matchNetworkService;
         _clientTurnStateService = clientTurnStateService;
         _actorIdentityService = actorIdentityService;
     }
@@ -105,6 +108,21 @@ public class AttackDriver : IPostInitializable, IDisposable
         if (_turnFlow.State != TurnState.ActionSelection)
         {
             return;
+        }
+
+        if (_runtimeRoleService != null && _runtimeRoleService.IsOnlineMatch)
+        {
+            if (_currentActor is not CharacterInstance currentCharacter)
+            {
+                return;
+            }
+
+            string localPlayerId = _matchNetworkService != null ? _matchNetworkService.LocalPlayerId : string.Empty;
+            if (string.IsNullOrWhiteSpace(localPlayerId) ||
+                !string.Equals(currentCharacter.PlayerId, localPlayerId, StringComparison.Ordinal))
+            {
+                return;
+            }
         }
 
         _awaitingTarget = true;

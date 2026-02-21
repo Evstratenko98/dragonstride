@@ -31,8 +31,10 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
     private long _serverSequence;
     private long _lastAppliedCommandSequence;
     private bool _isStarted;
+    private bool _handlersRegistered;
     private int _snapshotBroadcastInFlight;
     private int _fieldSnapshotBroadcastInFlight;
+    private CancellationTokenSource _startCts;
 
     private IDisposable _turnPhaseChangedSubscription;
     private IDisposable _gameStateChangedSubscription;
@@ -67,48 +69,32 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
             return;
         }
 
-        NetworkManager networkManager = NetworkManager.Singleton;
-        if (networkManager?.CustomMessagingManager == null)
-        {
-            Debug.LogWarning("[MpsGameCommandGateway] CustomMessagingManager is unavailable.");
-            return;
-        }
-
-        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(ApplyMessageName, OnApplyMessage);
-        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(RejectMessageName, OnRejectMessage);
-        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(SnapshotMessageName, OnSnapshotMessage);
-        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(FieldSnapshotMessageName, OnFieldSnapshotMessage);
-
-        if (_matchNetworkService.IsHost)
-        {
-            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(SubmitMessageName, OnSubmitMessage);
-            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(IdentityMessageName, OnIdentityMessage);
-            networkManager.OnClientDisconnectCallback += OnClientDisconnected;
-            networkManager.OnClientConnectedCallback += OnClientConnected;
-
-            _turnPhaseChangedSubscription = _eventBus.Subscribe<TurnPhaseChanged>(OnTurnPhaseChanged);
-            _gameStateChangedSubscription = _eventBus.Subscribe<GameStateChanged>(OnGameStateChanged);
-            _pauseChangedSubscription = _eventBus.Subscribe<MatchPauseStateChanged>(OnMatchPauseChanged);
-
-            RequestSnapshotBroadcast("gateway_started");
-        }
-        else
-        {
-            _ = SendIdentityToHostAsync();
-        }
-
         _isStarted = true;
+        _startCts = new CancellationTokenSource();
+        _ = StartWhenNetworkReadyAsync(_startCts.Token);
     }
 
     public void Dispose()
     {
+        _startCts?.Cancel();
+        _startCts?.Dispose();
+        _startCts = null;
+
         _turnPhaseChangedSubscription?.Dispose();
         _gameStateChangedSubscription?.Dispose();
         _pauseChangedSubscription?.Dispose();
 
+        if (!_handlersRegistered)
+        {
+            _isStarted = false;
+            return;
+        }
+
         NetworkManager networkManager = NetworkManager.Singleton;
         if (networkManager?.CustomMessagingManager == null)
         {
+            _isStarted = false;
+            _handlersRegistered = false;
             return;
         }
 
@@ -120,7 +106,73 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(FieldSnapshotMessageName);
         networkManager.OnClientDisconnectCallback -= OnClientDisconnected;
         networkManager.OnClientConnectedCallback -= OnClientConnected;
+        _handlersRegistered = false;
         _isStarted = false;
+    }
+
+    private async Task StartWhenNetworkReadyAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            const int maxAttempts = 200;
+            for (int i = 0; i < maxAttempts; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                NetworkManager networkManager = NetworkManager.Singleton;
+                bool isHost = _matchNetworkService.IsHost;
+                bool transportReady = networkManager?.CustomMessagingManager != null;
+                bool roleReady = isHost ? networkManager != null && networkManager.IsServer : networkManager != null && networkManager.IsClient;
+                if (transportReady && roleReady)
+                {
+                    RegisterHandlers(networkManager, isHost);
+                    return;
+                }
+
+                await Task.Delay(100, cancellationToken);
+            }
+
+            Debug.LogWarning("[MpsGameCommandGateway] Network messaging was not ready in time; gateway handlers were not registered.");
+            _isStarted = false;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void RegisterHandlers(NetworkManager networkManager, bool isHost)
+    {
+        if (_handlersRegistered || networkManager?.CustomMessagingManager == null)
+        {
+            return;
+        }
+
+        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(ApplyMessageName, OnApplyMessage);
+        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(RejectMessageName, OnRejectMessage);
+        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(SnapshotMessageName, OnSnapshotMessage);
+        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(FieldSnapshotMessageName, OnFieldSnapshotMessage);
+
+        if (isHost)
+        {
+            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(SubmitMessageName, OnSubmitMessage);
+            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(IdentityMessageName, OnIdentityMessage);
+            networkManager.OnClientDisconnectCallback += OnClientDisconnected;
+            networkManager.OnClientConnectedCallback += OnClientConnected;
+
+            _turnPhaseChangedSubscription = _eventBus.Subscribe<TurnPhaseChanged>(OnTurnPhaseChanged);
+            _gameStateChangedSubscription = _eventBus.Subscribe<GameStateChanged>(OnGameStateChanged);
+            _pauseChangedSubscription = _eventBus.Subscribe<MatchPauseStateChanged>(OnMatchPauseChanged);
+
+            RequestSnapshotBroadcast("gateway_started");
+            RequestFieldSnapshotBroadcast("gateway_started");
+            _ = PushCurrentStateToConnectedClientsAsync("gateway_started");
+        }
+        else
+        {
+            _ = SendIdentityToHostAsync();
+        }
+
+        _handlersRegistered = true;
     }
 
     public Task<CommandSubmitResult> SubmitMoveAsync(Vector2Int direction, CancellationToken ct = default)
@@ -237,6 +289,8 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         }
 
         MapClientToPlayer(senderClientId, playerId);
+        _ = SendFieldSnapshotToClientAsync(senderClientId);
+        _ = SendSnapshotToClientAsync(senderClientId);
     }
 
     private async Task<CommandSubmitResult> ProcessHostCommandAsync(
@@ -626,6 +680,35 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
 
         _ = SendFieldSnapshotToClientAsync(clientId);
         _ = SendSnapshotToClientAsync(clientId);
+    }
+
+    private async Task PushCurrentStateToConnectedClientsAsync(string reason)
+    {
+        try
+        {
+            NetworkManager networkManager = NetworkManager.Singleton;
+            if (!_matchNetworkService.IsHost || networkManager == null || !networkManager.IsServer)
+            {
+                return;
+            }
+
+            IReadOnlyList<ulong> connectedClientIds = networkManager.ConnectedClientsIds;
+            for (int i = 0; i < connectedClientIds.Count; i++)
+            {
+                ulong clientId = connectedClientIds[i];
+                if (clientId == NetworkManager.ServerClientId)
+                {
+                    continue;
+                }
+
+                await SendFieldSnapshotToClientAsync(clientId);
+                await SendSnapshotToClientAsync(clientId);
+            }
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"[MpsGameCommandGateway] Failed to push state to connected clients ({reason}): {exception.Message}");
+        }
     }
 
     private void OnClientDisconnected(ulong clientId)

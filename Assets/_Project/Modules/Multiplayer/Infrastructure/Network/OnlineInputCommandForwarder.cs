@@ -9,6 +9,8 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
 
     private readonly IEventBus _eventBus;
     private readonly IMatchRuntimeRoleService _runtimeRoleService;
+    private readonly IMatchNetworkService _matchNetworkService;
+    private readonly TurnFlow _turnFlow;
     private readonly IGameCommandGateway _commandGateway;
     private readonly IMatchClientTurnStateService _clientTurnStateService;
     private readonly IGameCommandPolicyService _commandPolicyService;
@@ -24,12 +26,16 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
     public OnlineInputCommandForwarder(
         IEventBus eventBus,
         IMatchRuntimeRoleService runtimeRoleService,
+        IMatchNetworkService matchNetworkService,
+        TurnFlow turnFlow,
         IGameCommandGateway commandGateway,
         IMatchClientTurnStateService clientTurnStateService,
         IGameCommandPolicyService commandPolicyService)
     {
         _eventBus = eventBus;
         _runtimeRoleService = runtimeRoleService;
+        _matchNetworkService = matchNetworkService;
+        _turnFlow = turnFlow;
         _commandGateway = commandGateway;
         _clientTurnStateService = clientTurnStateService;
         _commandPolicyService = commandPolicyService;
@@ -116,9 +122,10 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
             return false;
         }
 
+        CommandTiming timing = _commandPolicyService?.GetTiming(commandType) ?? CommandTiming.TurnBound;
         if (!_runtimeRoleService.IsClientReplica)
         {
-            return true;
+            return timing == CommandTiming.Anytime || IsHostTurnBoundCommandAllowed(commandType);
         }
 
         if (_clientTurnStateService == null || !_clientTurnStateService.HasInitialState)
@@ -126,12 +133,40 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
             return false;
         }
 
-        CommandTiming timing = _commandPolicyService?.GetTiming(commandType) ?? CommandTiming.TurnBound;
         if (timing == CommandTiming.TurnBound && !_clientTurnStateService.IsLocalTurn)
         {
             return false;
         }
 
         return true;
+    }
+
+    private bool IsHostTurnBoundCommandAllowed(GameCommandType commandType)
+    {
+        if (_turnFlow?.CurrentActor is not CharacterInstance currentCharacter)
+        {
+            return false;
+        }
+
+        string localPlayerId = _matchNetworkService != null ? _matchNetworkService.LocalPlayerId : string.Empty;
+        if (string.IsNullOrWhiteSpace(localPlayerId) ||
+            !string.Equals(currentCharacter.PlayerId, localPlayerId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return commandType switch
+        {
+            GameCommandType.Move => (_turnFlow.State == TurnState.ActionSelection || _turnFlow.State == TurnState.Movement)
+                                    && _turnFlow.StepsRemaining > 0,
+            GameCommandType.Attack => _turnFlow.State == TurnState.ActionSelection,
+            GameCommandType.OpenCell => _turnFlow.State == TurnState.ActionSelection || _turnFlow.State == TurnState.Movement,
+            GameCommandType.EndTurn => _turnFlow.State == TurnState.ActionSelection ||
+                                       _turnFlow.State == TurnState.Movement ||
+                                       _turnFlow.State == TurnState.Attack ||
+                                       _turnFlow.State == TurnState.OpenCell ||
+                                       _turnFlow.State == TurnState.Trade,
+            _ => false
+        };
     }
 }

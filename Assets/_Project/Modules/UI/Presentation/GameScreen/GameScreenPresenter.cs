@@ -151,7 +151,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
         UpdatePlayerText();
         UpdateTurnStateText();
-        bool isCharacterTurn = _currentActor is CharacterInstance;
+        bool isCharacterTurn = _currentActor is CharacterInstance && IsLocalActorControlAllowedForTurnBound();
         SetCharacterButtonInteractable(isCharacterTurn);
         SetEndTurnButtonInteractable(isCharacterTurn && CanUseTurnActions());
 
@@ -182,7 +182,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
         UpdatePlayerText();
         UpdateStepsText();
-        bool isCharacterTurn = _currentActor is CharacterInstance;
+        bool isCharacterTurn = _currentActor is CharacterInstance && IsLocalActorControlAllowedForTurnBound();
         SetCharacterButtonInteractable(isCharacterTurn);
         SetEndTurnButtonInteractable(isCharacterTurn && CanUseTurnActions());
     }
@@ -289,12 +289,16 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     private void OnAttackAvailabilityChanged(AttackAvailabilityChanged msg)
     {
-        SetAttackButtonInteractable(!_isWaitingForInitialSnapshot && msg.IsAvailable);
+        SetAttackButtonInteractable(!_isWaitingForInitialSnapshot &&
+                                    IsLocalActorControlAllowedForTurnBound() &&
+                                    msg.IsAvailable);
     }
 
     private void OnOpenCellAvailabilityChanged(OpenCellAvailabilityChanged msg)
     {
-        SetOpenCellButtonInteractable(!_isWaitingForInitialSnapshot && msg.IsAvailable);
+        SetOpenCellButtonInteractable(!_isWaitingForInitialSnapshot &&
+                                      IsLocalActorControlAllowedForTurnBound() &&
+                                      msg.IsAvailable);
     }
 
     private void OnMatchSnapshotApplied(MatchSnapshotApplied msg)
@@ -309,7 +313,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         UpdateTurnStateText();
         UpdateStepsText();
 
-        bool isCharacterTurn = _currentActor is CharacterInstance;
+        bool isCharacterTurn = _currentActor is CharacterInstance && IsLocalActorControlAllowedForTurnBound();
         SetCharacterButtonInteractable(isCharacterTurn);
         SetEndTurnButtonInteractable(isCharacterTurn && CanUseTurnActions());
         SetAttackButtonInteractable(false);
@@ -387,6 +391,29 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
     private bool CanUseTurnActions()
     {
         return CanUseTurnActions(_currentTurnState);
+    }
+
+    private bool IsLocalActorControlAllowedForTurnBound()
+    {
+        bool isOnlineMatch = _matchSetupContextService != null && _matchSetupContextService.IsOnlineMatch;
+        if (!isOnlineMatch)
+        {
+            return true;
+        }
+
+        if (_matchNetworkService == null || !_matchNetworkService.IsHost)
+        {
+            return true;
+        }
+
+        if (_currentActor is not CharacterInstance currentCharacter)
+        {
+            return false;
+        }
+
+        string localPlayerId = _matchNetworkService.LocalPlayerId;
+        return !string.IsNullOrWhiteSpace(localPlayerId) &&
+               string.Equals(currentCharacter.PlayerId, localPlayerId, StringComparison.Ordinal);
     }
 
     private static bool CanUseTurnActions(TurnState turnState)
