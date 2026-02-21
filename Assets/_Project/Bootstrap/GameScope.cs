@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.Serialization;
 using VContainer;
@@ -74,5 +75,17 @@ public class GameScope : LifetimeScope
         builder.RegisterEntryPoint<AttackDriver>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<TurnFlow>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<GameFlow>();
+    }
+
+    protected override LifetimeScope FindParent()
+    {
+        LifetimeScope parent = AppScope.Instance;
+        if (parent != null)
+        {
+            return parent;
+        }
+
+        throw new InvalidOperationException(
+            "[GameScope] AppScope parent was not found. Ensure AppScopeRuntimeBootstrap is active and AppScope exists before loading GameScene.");
     }
 }

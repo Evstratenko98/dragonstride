@@ -5,13 +5,13 @@ public class Character : Entity
     private const int MaxLevel = 10;
     private const int LevelStatBonus = 10;
 
-    public CharacterClass Class { get; }
+    public CharacterDefinition Definition { get; }
     public Inventory Inventory { get; private set; }
     public CharacterEquipment Equipment { get; private set; }
 
-    public Character(CharacterClass characterClass)
+    public Character(CharacterDefinition definition)
     {
-        Class = characterClass;
+        Definition = definition;
     }
 
     public void InitializeInventory(int capacity)

@@ -45,15 +45,21 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         _input.StartListening();
     }
 
-    public IReadOnlyList<CharacterInstance> SpawnCharacters(Cell startCell)
-    {   
-        _characterRoster.CreateCharacter(startCell, "Arnoldo", 0, new SamuraiClass());
-        _characterRoster.CreateCharacter(startCell, "Patrick", 1, new RunnerClass());
-        _characterRoster.CreateCharacter(startCell, "Jonh", 2, new RunnerClass());
-
-        foreach (var character in _characterRoster.AllCharacters)
+    public IReadOnlyList<CharacterInstance> SpawnCharacters(Cell startCell, IReadOnlyList<CharacterSpawnRequest> spawnRequests)
+    {
+        if (spawnRequests == null || spawnRequests.Count == 0)
         {
-            _turnActorRegistry.Register(character);
+            return _characterRoster.AllCharacters;
+        }
+
+        for (int i = 0; i < spawnRequests.Count; i++)
+        {
+            CharacterSpawnRequest request = spawnRequests[i];
+            CharacterInstance character = _characterRoster.CreateCharacter(startCell, request);
+            if (character != null)
+            {
+                _turnActorRegistry.Register(character);
+            }
         }
 
         return _characterRoster.AllCharacters;

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,6 +13,7 @@ public sealed class GameOverSceneView : MonoBehaviour
     {
         returnToMainMenuButton ??= FindButton("ReturnToMainMenuButton");
         resultText ??= FindText("ResultText");
+        EnsureRequiredReferences();
     }
 
     public void SetResultText(string text)
@@ -50,5 +52,16 @@ public sealed class GameOverSceneView : MonoBehaviour
 
         Debug.LogError($"[GameOverSceneView] Text '{objectName}' was not found in scene hierarchy.");
         return null;
+    }
+
+    private void EnsureRequiredReferences()
+    {
+        if (returnToMainMenuButton != null && resultText != null)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            "[GameOverSceneView] Required UI references are missing. Check GameOver scene bindings.");
     }
 }

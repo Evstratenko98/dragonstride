@@ -8,13 +8,19 @@ public sealed class MainMenuPresenter : IStartable, IDisposable
     private readonly MainMenuView _view;
     private readonly ISessionSceneRouter _sceneRouter;
     private readonly MultiplayerConfig _multiplayerConfig;
+    private readonly IMatchSetupContextService _matchSetupContextService;
     private bool _isNavigating;
 
-    public MainMenuPresenter(MainMenuView view, ISessionSceneRouter sceneRouter, MultiplayerConfig multiplayerConfig)
+    public MainMenuPresenter(
+        MainMenuView view,
+        ISessionSceneRouter sceneRouter,
+        MultiplayerConfig multiplayerConfig,
+        IMatchSetupContextService matchSetupContextService)
     {
         _view = view;
         _sceneRouter = sceneRouter;
         _multiplayerConfig = multiplayerConfig;
+        _matchSetupContextService = matchSetupContextService;
     }
 
     public void Start()
@@ -85,23 +91,25 @@ public sealed class MainMenuPresenter : IStartable, IDisposable
         _view.SetExitInteractable(true);
 
         _view.SetStatus(multiplayerEnabled
-            ? "Online mode is available. Lobby actions are still placeholder until Phase 2."
+            ? "Online mode is available. Character draft scene is enabled in Phase 3.1."
             : "Multiplayer disabled in config. Offline training is available.");
     }
 
     private async void OnPlayOnlineClicked()
     {
+        _matchSetupContextService?.Clear();
         await TryNavigateAsync(_sceneRouter.LoadLobbyAsync);
     }
 
     private async void OnOfflineTrainingClicked()
     {
-        await TryNavigateAsync(_sceneRouter.LoadGameSceneAsync);
+        _matchSetupContextService?.Clear();
+        await TryNavigateAsync(_sceneRouter.LoadCharacterSelectAsync);
     }
 
     private void OnReconnectClicked()
     {
-        _view.SetStatus("Reconnect flow will be implemented in Phase 2.");
+        _view.SetStatus("Reconnect flow will be implemented in Phase 3.");
     }
 
     private void OnSettingsClicked()

@@ -19,9 +19,9 @@ public class CharacterRoster
         _layoutService = layoutService;
     }
 
-    public CharacterInstance CreateCharacter(Cell startCell, string name, int prefabIndex, CharacterClass characterClass)
+    public CharacterInstance CreateCharacter(Cell startCell, CharacterSpawnRequest request)
     {
-        CharacterInstance character = _lifecycleService.CreateCharacter(startCell, name, prefabIndex, characterClass);
+        CharacterInstance character = _lifecycleService.CreateCharacter(startCell, request);
         if (character == null)
         {
             return null;

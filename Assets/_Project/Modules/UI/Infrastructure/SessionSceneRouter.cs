@@ -25,6 +25,11 @@ public sealed class SessionSceneRouter : ISessionSceneRouter
         return LoadSceneAsync(SessionSceneNames.GameScene);
     }
 
+    public Task<bool> LoadCharacterSelectAsync()
+    {
+        return LoadSceneAsync(SessionSceneNames.CharacterSelect);
+    }
+
     public Task<bool> LoadGameOverAsync()
     {
         return LoadSceneAsync(SessionSceneNames.GameOver);

@@ -6,10 +6,16 @@ public static class AppScopeRuntimeBootstrap
     private static void EnsureAppScopeExists()
     {
 #if UNITY_2022_1_OR_NEWER
-        var existingScope = Object.FindAnyObjectByType<AppScope>();
+        var existingScope = Object.FindAnyObjectByType<AppScope>(FindObjectsInactive.Include);
 #else
         var existingScope = Object.FindObjectOfType<AppScope>();
 #endif
+
+        if (existingScope == null && AppScope.Instance != null)
+        {
+            existingScope = AppScope.Instance;
+        }
+
         if (existingScope != null)
         {
             return;

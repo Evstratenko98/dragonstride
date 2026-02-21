@@ -19,4 +19,16 @@ public class CameraScope : LifetimeScope
         builder.Register<CameraFocusState>(Lifetime.Singleton);
         builder.RegisterEntryPoint<CameraFollowDriver>();
     }
+
+    protected override LifetimeScope FindParent()
+    {
+        LifetimeScope parent = AppScope.Instance;
+        if (parent != null)
+        {
+            return parent;
+        }
+
+        throw new InvalidOperationException(
+            "[CameraScope] AppScope parent was not found. Ensure AppScopeRuntimeBootstrap is active and AppScope exists before loading GameScene.");
+    }
 } 

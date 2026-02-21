@@ -24,10 +24,26 @@ public class UIScope : LifetimeScope
         builder.RegisterInstance(config);
         builder.RegisterComponent(EnsureComponent(gameScreenView, nameof(gameScreenView)));
         builder.RegisterComponent(EnsureComponent(finishScreenView, nameof(finishScreenView)));
-        builder.RegisterComponent(EnsureComponent(screenView, nameof(screenView)));
-        builder.RegisterComponent(EnsureComponent(characterScreenView, nameof(characterScreenView)));
-        builder.RegisterComponent(EnsureComponent(chestLootView, nameof(chestLootView)));
+        UIScreenView resolvedScreenView = EnsureComponent(screenView, nameof(screenView));
+        builder.RegisterComponent(resolvedScreenView);
+        CharacterScreenView resolvedCharacterScreenView = EnsureComponent(characterScreenView, nameof(characterScreenView));
+        ChestLootView resolvedChestLootView = EnsureComponent(chestLootView, nameof(chestLootView));
+        builder.RegisterComponent(resolvedCharacterScreenView);
+        builder.RegisterComponent(resolvedChestLootView);
         builder.RegisterComponent(EnsureComponent(characterRosterPanelView, nameof(characterRosterPanelView)));
+
+        // Fail-safe baseline for GameScene startup: extra windows start hidden even if presenters init late.
+        resolvedScreenView.ShowGameScreen();
+
+        if (resolvedCharacterScreenView.gameObject.activeSelf)
+        {
+            resolvedCharacterScreenView.Hide();
+        }
+
+        if (resolvedChestLootView.gameObject.activeSelf)
+        {
+            resolvedChestLootView.Hide();
+        }
 
         builder.RegisterEntryPoint<GameScreenPresenter>();
         builder.RegisterEntryPoint<FinishScreenPresenter>();
@@ -35,6 +51,18 @@ public class UIScope : LifetimeScope
         builder.RegisterEntryPoint<CharacterScreenPresenter>();
         builder.RegisterEntryPoint<ChestLootPresenter>();
         builder.RegisterEntryPoint<CharacterRosterPanelPresenter>();
+    }
+
+    protected override LifetimeScope FindParent()
+    {
+        LifetimeScope parent = AppScope.Instance;
+        if (parent != null)
+        {
+            return parent;
+        }
+
+        throw new InvalidOperationException(
+            "[UIScope] AppScope parent was not found. Ensure AppScopeRuntimeBootstrap is active and AppScope exists before loading GameScene.");
     }
 
     private T EnsureComponent<T>(T field, string fieldName) where T : Component

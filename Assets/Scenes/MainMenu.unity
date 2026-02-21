@@ -512,6 +512,7 @@ MonoBehaviour:
   autoInjectGameObjects: []
   mainMenuView: {fileID: 300000005}
   lobbyView: {fileID: 0}
+  characterSelectView: {fileID: 0}
   gameOverSceneView: {fileID: 0}
 --- !u!1 &300020000
 GameObject:

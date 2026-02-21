@@ -8,9 +8,10 @@ public class CharacterInstance
     public Character Model { get; private set; }
     public Entity Entity => Model;
     public CharacterView View { get; private set; }
-    public CharacterClass CharacterClass => Model?.Class;
+    public CharacterDefinition CharacterDefinition => Model?.Definition;
     public bool IsMoving { get; private set; }
     public string Name { get; private set; }
+    public string PlayerId { get; }
 
     private readonly IEventBus _eventBus;
     private readonly FieldRoot _fieldRootService;
@@ -21,6 +22,7 @@ public class CharacterInstance
         ConfigScriptableObject config,
         Character model,
         CharacterView prefab,
+        string playerId,
         string name,
         IEventBus eventBus,
         FieldRoot fieldRootService
@@ -32,6 +34,7 @@ public class CharacterInstance
         _fieldRootService = fieldRootService;
 
         Model = model;
+        PlayerId = playerId;
         Name = name;
     }
 

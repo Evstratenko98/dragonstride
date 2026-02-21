@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -24,6 +25,7 @@ public sealed class MainMenuView : MonoBehaviour
         settingsButton ??= FindButton("SettingsButton");
         exitButton ??= FindButton("ExitButton");
         statusText ??= FindText("StatusText");
+        EnsureRequiredReferences();
     }
 
     public void SetStatus(string message)
@@ -102,5 +104,21 @@ public sealed class MainMenuView : MonoBehaviour
 
         Debug.LogError($"[MainMenuView] Text '{objectName}' was not found in scene hierarchy.");
         return null;
+    }
+
+    private void EnsureRequiredReferences()
+    {
+        if (playOnlineButton != null &&
+            offlineTrainingButton != null &&
+            reconnectButton != null &&
+            settingsButton != null &&
+            exitButton != null &&
+            statusText != null)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            "[MainMenuView] Required UI references are missing. Check MainMenu scene bindings for buttons and status text.");
     }
 }

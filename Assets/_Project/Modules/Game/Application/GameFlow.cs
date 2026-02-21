@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
@@ -16,6 +17,10 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
     private readonly CharacterMovementDriver _characterDriver;
     private readonly TurnFlow _turnFlow;
     private readonly TurnActorRegistry _turnActorRegistry;
+    private readonly IMultiplayerSessionService _sessionService;
+    private readonly IMatchSetupContextService _matchSetupContextService;
+    private readonly CharacterCatalog _characterCatalog;
+    private readonly ISessionSceneRouter _sceneRouter;
 
     private IReadOnlyList<Entity> _turnEntities = Array.Empty<Entity>();
     private ICellLayoutOccupant _currentTurnActor;
@@ -34,7 +39,11 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         TurnFlow turnFlow,
         FieldPresenter fieldPresenter,
         CharacterMovementDriver characterDriver,
-        TurnActorRegistry turnActorRegistry
+        TurnActorRegistry turnActorRegistry,
+        IMultiplayerSessionService sessionService,
+        IMatchSetupContextService matchSetupContextService,
+        CharacterCatalog characterCatalog,
+        ISessionSceneRouter sceneRouter
     )
     {
         _eventBus = eventBus;
@@ -43,6 +52,10 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         _characterDriver = characterDriver;
         _turnFlow = turnFlow;
         _turnActorRegistry = turnActorRegistry;
+        _sessionService = sessionService;
+        _matchSetupContextService = matchSetupContextService;
+        _characterCatalog = characterCatalog;
+        _sceneRouter = sceneRouter;
     }
 
     public void PostInitialize()
@@ -72,7 +85,24 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         _fieldPresenter.CreateField();
         Cell startCell = _fieldPresenter.StartCell;
 
-        var characters = _characterDriver.SpawnCharacters(startCell);
+        IReadOnlyList<CharacterSpawnRequest> spawnRequests = ResolveSpawnRequests();
+        if (spawnRequests == null || spawnRequests.Count == 0)
+        {
+            Debug.LogError("[GameFlow] Match setup context has no spawn requests. Returning to MainMenu.");
+            _ = _sceneRouter.LoadMainMenuAsync();
+            return;
+        }
+
+        var characters = _characterDriver.SpawnCharacters(startCell, spawnRequests);
+        if (characters == null || characters.Count == 0)
+        {
+            Debug.LogError("[GameFlow] Character roster is empty after spawn. Returning to MainMenu.");
+            _matchSetupContextService.Clear();
+            _ = _sceneRouter.LoadMainMenuAsync();
+            return;
+        }
+
+        _matchSetupContextService.Clear();
         _eventBus.Publish(new CharacterRosterUpdated(characters));
         _turnEntities = Array.Empty<Entity>();
         _roundActors.Clear();
@@ -209,5 +239,29 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
     private static bool IsActorActive(ICellLayoutOccupant actor)
     {
         return actor?.Entity?.CurrentCell != null;
+    }
+
+    private IReadOnlyList<CharacterSpawnRequest> ResolveSpawnRequests()
+    {
+        if (_matchSetupContextService != null && _matchSetupContextService.HasPreparedRoster)
+        {
+            return _matchSetupContextService.GetSpawnRequests();
+        }
+
+        if (_sessionService != null && _sessionService.HasActiveSession)
+        {
+            return Array.Empty<CharacterSpawnRequest>();
+        }
+
+        CharacterDefinition fallbackDefinition = _characterCatalog?.GetFirstOrDefault();
+        if (fallbackDefinition == null)
+        {
+            return Array.Empty<CharacterSpawnRequest>();
+        }
+
+        return new[]
+        {
+            new CharacterSpawnRequest("offline_local", fallbackDefinition.Id, "Player")
+        };
     }
 }

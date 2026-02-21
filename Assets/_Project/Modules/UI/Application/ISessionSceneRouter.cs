@@ -6,6 +6,7 @@ public interface ISessionSceneRouter
 
     Task<bool> LoadMainMenuAsync();
     Task<bool> LoadLobbyAsync();
+    Task<bool> LoadCharacterSelectAsync();
     Task<bool> LoadGameSceneAsync();
     Task<bool> LoadGameOverAsync();
 }
