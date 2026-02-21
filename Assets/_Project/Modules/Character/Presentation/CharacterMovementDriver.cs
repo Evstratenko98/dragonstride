@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -11,6 +12,8 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
     private readonly CharacterInputReader _input;
     private readonly TurnActorRegistry _turnActorRegistry;
     private readonly EnemySpawner _enemySpawner;
+    private readonly IMatchRuntimeRoleService _runtimeRoleService;
+    private readonly IActorIdentityService _actorIdentityService;
 
     private IDisposable _turnStateSubscription;
     private IDisposable _diceRolledSubscription;
@@ -27,7 +30,9 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         IEventBus eventBus,
         CharacterInputReader input,
         TurnActorRegistry turnActorRegistry,
-        EnemySpawner enemySpawner
+        EnemySpawner enemySpawner,
+        IMatchRuntimeRoleService runtimeRoleService,
+        IActorIdentityService actorIdentityService
     )
     {
         _characterRoster = characterRoster;
@@ -35,6 +40,8 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         _input = input;
         _turnActorRegistry = turnActorRegistry;
         _enemySpawner = enemySpawner;
+        _runtimeRoleService = runtimeRoleService;
+        _actorIdentityService = actorIdentityService;
     }
 
     public void PostInitialize()
@@ -59,6 +66,7 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
             if (character != null)
             {
                 _turnActorRegistry.Register(character);
+                _actorIdentityService?.GetOrAssign(character);
             }
         }
 
@@ -88,6 +96,11 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
 
     public async void Tick()
     {
+        if (_runtimeRoleService != null && _runtimeRoleService.IsOnlineMatch)
+        {
+            return;
+        }
+
         if (_currentCharacter == null)
             return;
 
@@ -107,6 +120,32 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         await _characterRoster.TryMove(_currentCharacter, dir);
     }
 
+    public async Task<bool> TryExecuteCommandMoveAsync(Vector2Int direction)
+    {
+        if (_currentCharacter == null)
+        {
+            return false;
+        }
+
+        if (_currentTurnState != TurnState.ActionSelection && _currentTurnState != TurnState.Movement)
+        {
+            return false;
+        }
+
+        if (_movementBlocked || _stepsRemaining <= 0)
+        {
+            return false;
+        }
+
+        if (_characterRoster.IsMoving || direction == Vector2Int.zero)
+        {
+            return false;
+        }
+
+        await _characterRoster.TryMove(_currentCharacter, direction);
+        return true;
+    }
+
     public void Reset()
     {
         _currentActor = null;
@@ -117,6 +156,7 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
         _enemySpawner.Reset();
         _characterRoster.RemoveAllCharacters();
         _turnActorRegistry.Clear();
+        _actorIdentityService?.Clear();
     }
 
     private void OnDiceRolled(DiceRolled msg)

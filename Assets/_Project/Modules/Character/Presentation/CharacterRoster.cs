@@ -76,6 +76,45 @@ public class CharacterRoster
         _characters.Clear();
     }
 
+    public bool TryGetCharacterByPlayerId(string playerId, out CharacterInstance character)
+    {
+        character = null;
+        if (string.IsNullOrWhiteSpace(playerId))
+        {
+            return false;
+        }
+
+        for (int i = 0; i < _characters.Count; i++)
+        {
+            CharacterInstance current = _characters[i];
+            if (current != null && current.PlayerId == playerId)
+            {
+                character = current;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public bool RemoveCharacter(CharacterInstance character)
+    {
+        if (character == null)
+        {
+            return false;
+        }
+
+        Cell previousCell = character.Model?.CurrentCell;
+        if (!_characters.Remove(character))
+        {
+            return false;
+        }
+
+        character.Destroy();
+        UpdateCellLayout(previousCell);
+        return true;
+    }
+
     public void RegisterLayoutOccupant(ICellLayoutOccupant occupant)
     {
         if (occupant == null || _extraLayoutOccupants.Contains(occupant))

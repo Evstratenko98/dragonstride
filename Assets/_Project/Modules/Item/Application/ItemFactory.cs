@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -6,14 +5,14 @@ using System.Linq;
 public class ItemFactory
 {
     private readonly ItemConfig _config;
-    private readonly Random _random;
+    private readonly IRandomSource _random;
 
     private readonly HashSet<string> _spawnedUniqueIds = new();
 
-    public ItemFactory(ItemConfig config)
+    public ItemFactory(ItemConfig config, IRandomSource random)
     {
         _config = config;
-        _random = new Random();
+        _random = random;
     }
 
     public Item CreateItem(string id)
@@ -60,7 +59,7 @@ public class ItemFactory
             return CreateRandomItemByRarity(ItemRarity.Common);
         }
 
-        var def = items[_random.Next(items.Count)];
+        var def = items[_random.Range(0, items.Count)];
         return CreateItem(def.Id);
     }
 
@@ -80,7 +79,7 @@ public class ItemFactory
     private ItemRarity RollRarity()
     {
         float totalWeight = _config.ChestDropTable.Sum(r => r.Weight);
-        float roll = (float)(_random.NextDouble() * totalWeight);
+        float roll = _random.Value01() * totalWeight;
         float current = 0f;
 
         foreach (var entry in _config.ChestDropTable)

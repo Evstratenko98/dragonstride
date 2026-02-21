@@ -109,7 +109,7 @@ public sealed class MainMenuPresenter : IStartable, IDisposable
 
     private void OnReconnectClicked()
     {
-        _view.SetStatus("Reconnect flow will be implemented in Phase 3.");
+        _view.SetStatus("Reconnect flow will be implemented in Phase 5+.");
     }
 
     private void OnSettingsClicked()

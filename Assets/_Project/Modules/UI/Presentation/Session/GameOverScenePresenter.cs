@@ -6,12 +6,20 @@ public sealed class GameOverScenePresenter : IStartable, IDisposable
 {
     private readonly GameOverSceneView _view;
     private readonly ISessionSceneRouter _sceneRouter;
+    private readonly IMultiplayerSessionService _sessionService;
+    private readonly IMatchNetworkService _matchNetworkService;
     private bool _isNavigating;
 
-    public GameOverScenePresenter(GameOverSceneView view, ISessionSceneRouter sceneRouter)
+    public GameOverScenePresenter(
+        GameOverSceneView view,
+        ISessionSceneRouter sceneRouter,
+        IMultiplayerSessionService sessionService,
+        IMatchNetworkService matchNetworkService)
     {
         _view = view;
         _sceneRouter = sceneRouter;
+        _sessionService = sessionService;
+        _matchNetworkService = matchNetworkService;
     }
 
     public void Start()
@@ -48,6 +56,8 @@ public sealed class GameOverScenePresenter : IStartable, IDisposable
 
         try
         {
+            await _matchNetworkService.ShutdownAsync();
+            await _sessionService.LeaveActiveSessionAsync();
             await _sceneRouter.LoadMainMenuAsync();
         }
         finally

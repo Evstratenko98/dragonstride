@@ -80,6 +80,7 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
     public void Start()
     {
         SetGameState(GameState.Loading);
+        _randomSource.ResetSeed(ResolveMatchSeed());
 
         _characterDriver.Reset();
         _fieldPresenter.CreateField();
@@ -263,5 +264,24 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         {
             new CharacterSpawnRequest("offline_local", fallbackDefinition.Id, "Player")
         };
+    }
+
+    private int ResolveMatchSeed()
+    {
+        if (_matchSetupContextService != null && _matchSetupContextService.MatchSeed != 0)
+        {
+            return _matchSetupContextService.MatchSeed;
+        }
+
+        if (_sessionService != null && _sessionService.HasActiveSession)
+        {
+            string sessionId = _sessionService.ActiveSession.SessionId;
+            if (!string.IsNullOrWhiteSpace(sessionId))
+            {
+                return sessionId.GetHashCode();
+            }
+        }
+
+        return DateTime.UtcNow.GetHashCode();
     }
 }

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 public sealed class FieldGenerator
@@ -9,11 +8,11 @@ public sealed class FieldGenerator
         (CellType.Fight, 0.25f)
     };
 
-    private readonly Random _random = new Random();
-    
-    public FieldGenerator()
+    private readonly IRandomSource _randomSource;
+
+    public FieldGenerator(IRandomSource randomSource)
     {
-        _random = new Random();
+        _randomSource = randomSource;
     }
 
     public FieldGrid Create(int width, int height, float extraConnectionChance)
@@ -63,7 +62,7 @@ public sealed class FieldGenerator
 
     private CellType RollRandomCellType()
     {
-        float roll = (float)_random.NextDouble();
+        float roll = _randomSource.Value01();
         float cumulative = 0f;
 
         for (int i = 0; i < RandomCellTypeWeights.Length; i++)
@@ -110,7 +109,7 @@ public sealed class FieldGenerator
             return field.GetCell(field.Width - 1, field.Height - 1);
         }
 
-        return candidates[_random.Next(candidates.Count)];
+        return candidates[_randomSource.Range(0, candidates.Count)];
     }
 
     private static bool IsEdge(FieldGrid field, int x, int y)
@@ -137,7 +136,7 @@ public sealed class FieldGenerator
                 continue;
             }
 
-            var next = unvisited[_random.Next(unvisited.Count)];
+            var next = unvisited[_randomSource.Range(0, unvisited.Count)];
             var a = field.GetCell(current.x, current.y);
             var b = field.GetCell(next.x, next.y);
             field.CreateLink(a, b);
@@ -165,7 +164,7 @@ public sealed class FieldGenerator
         {
             for (int y = 0; y < field.Height; y++)
             {
-                if (_random.NextDouble() > chance)
+                if (_randomSource.Value01() > chance)
                 {
                     continue;
                 }
@@ -176,7 +175,7 @@ public sealed class FieldGenerator
                     continue;
                 }
 
-                var to = neighbors[_random.Next(neighbors.Count)];
+                var to = neighbors[_randomSource.Range(0, neighbors.Count)];
                 var a = field.GetCell(x, y);
                 var b = field.GetCell(to.x, to.y);
                 field.CreateLink(a, b);

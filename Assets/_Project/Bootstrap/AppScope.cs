@@ -47,6 +47,7 @@ public class AppScope : LifetimeScope
         builder.Register<IMultiplayerSessionService, MpsSessionService>(Lifetime.Singleton);
         builder.Register<ICharacterDraftService, MpsCharacterDraftService>(Lifetime.Singleton);
         builder.Register<IMatchSetupContextService, MatchSetupContextService>(Lifetime.Singleton);
+        builder.Register<IMatchNetworkService, MpsMatchNetworkService>(Lifetime.Singleton);
         builder.RegisterEntryPoint<MultiplayerBootstrapEntryPoint>(Lifetime.Singleton).AsSelf();
     }
 

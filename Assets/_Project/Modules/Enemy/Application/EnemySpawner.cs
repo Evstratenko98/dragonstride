@@ -12,6 +12,7 @@ public sealed class EnemySpawner
     private readonly TurnActorRegistry _turnActorRegistry;
     private readonly IEventBus _eventBus;
     private readonly IRandomSource _randomSource;
+    private readonly IActorIdentityService _actorIdentityService;
 
     private readonly List<EnemyInstance> _enemies = new();
     private readonly List<EnemySpawnOption> _spawnOptions = new();
@@ -24,7 +25,8 @@ public sealed class EnemySpawner
         CharacterRoster characterRoster,
         TurnActorRegistry turnActorRegistry,
         IEventBus eventBus,
-        IRandomSource randomSource
+        IRandomSource randomSource,
+        IActorIdentityService actorIdentityService
     )
     {
         _config = config;
@@ -34,6 +36,7 @@ public sealed class EnemySpawner
         _turnActorRegistry = turnActorRegistry;
         _eventBus = eventBus;
         _randomSource = randomSource;
+        _actorIdentityService = actorIdentityService;
 
         _spawnOptions.Add(new EnemySpawnOption(
             "SlimeEnemy",
@@ -170,6 +173,7 @@ public sealed class EnemySpawner
         _enemies.Add(enemy);
         _characterRoster.RegisterLayoutOccupant(enemy);
         _turnActorRegistry.Register(enemy);
+        _actorIdentityService?.GetOrAssign(enemy);
         return enemy;
     }
 
@@ -204,6 +208,7 @@ public sealed class EnemySpawner
     {
         _characterRoster.UnregisterLayoutOccupant(enemy);
         _turnActorRegistry.Unregister(enemy);
+        _actorIdentityService?.Remove(enemy);
         enemy.Destroy();
     }
 

@@ -6,13 +6,14 @@ public sealed class MatchSetupContextService : IMatchSetupContextService
 
     public bool HasPreparedRoster => _requests.Count > 0;
     public bool IsOnlineMatch { get; private set; }
+    public int MatchSeed { get; private set; }
 
     public IReadOnlyList<CharacterSpawnRequest> GetSpawnRequests()
     {
         return _requests;
     }
 
-    public void SetRoster(IReadOnlyList<CharacterSpawnRequest> requests, bool isOnlineMatch)
+    public void SetRoster(IReadOnlyList<CharacterSpawnRequest> requests, bool isOnlineMatch, int matchSeed = 0)
     {
         _requests.Clear();
 
@@ -25,11 +26,13 @@ public sealed class MatchSetupContextService : IMatchSetupContextService
         }
 
         IsOnlineMatch = isOnlineMatch;
+        MatchSeed = matchSeed;
     }
 
     public void Clear()
     {
         _requests.Clear();
         IsOnlineMatch = false;
+        MatchSeed = 0;
     }
 }

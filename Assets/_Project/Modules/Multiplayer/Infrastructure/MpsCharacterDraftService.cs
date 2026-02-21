@@ -14,6 +14,7 @@ public sealed class MpsCharacterDraftService : ICharacterDraftService
     public const string PhaseInGame = "in_game";
 
     private const string SessionPhaseKey = "ds3_phase";
+    private const string SessionMatchSeedKey = "ds3_match_seed";
     private const string PlayerPickCharacterIdKey = "ds3_pick_character_id";
     private const string PlayerPickNameKey = "ds3_pick_name";
     private const string PlayerPickConfirmedKey = "ds3_pick_confirmed";
@@ -21,11 +22,13 @@ public sealed class MpsCharacterDraftService : ICharacterDraftService
 
     private const int MinNameLength = 3;
     private const int MaxNameLength = 16;
+    private static readonly TimeSpan SnapshotRefreshThrottle = TimeSpan.FromSeconds(3);
 
     private readonly IMultiplayerSessionService _sessionService;
     private readonly SemaphoreSlim _operationLock = new(1, 1);
 
     private bool _isOperationInProgress;
+    private DateTime _lastSessionRefreshUtc = DateTime.MinValue;
 
     public bool IsOperationInProgress => _isOperationInProgress;
 
@@ -39,13 +42,19 @@ public sealed class MpsCharacterDraftService : ICharacterDraftService
     {
         return ExecuteLockedAsync(async token =>
         {
+            bool needsRefresh = DateTime.UtcNow - _lastSessionRefreshUtc >= SnapshotRefreshThrottle;
             MultiplayerOperationResult<ISession> sessionResult =
-                await ResolveSessionAsync(refreshSession: true, token);
+                await ResolveSessionAsync(refreshSession: needsRefresh, token);
             if (!sessionResult.IsSuccess)
             {
                 return MultiplayerOperationResult<CharacterDraftSnapshot>.Failure(
                     sessionResult.ErrorCode,
                     sessionResult.ErrorMessage);
+            }
+
+            if (needsRefresh)
+            {
+                _lastSessionRefreshUtc = DateTime.UtcNow;
             }
 
             return MultiplayerOperationResult<CharacterDraftSnapshot>.Success(ToSnapshot(sessionResult.Value));
@@ -86,9 +95,18 @@ public sealed class MpsCharacterDraftService : ICharacterDraftService
             try
             {
                 IHostSession hostSession = session.AsHost();
+                hostSession.IsLocked = normalizedPhase == PhaseInGame;
                 hostSession.SetProperty(SessionPhaseKey, new SessionProperty(normalizedPhase, VisibilityPropertyOptions.Member));
+                if (normalizedPhase == PhaseInGame)
+                {
+                    int matchSeed = ResolveMatchSeed(session);
+                    hostSession.SetProperty(
+                        SessionMatchSeedKey,
+                        new SessionProperty(matchSeed.ToString(CultureInfo.InvariantCulture), VisibilityPropertyOptions.Member));
+                }
                 await hostSession.SavePropertiesAsync();
                 await session.RefreshAsync();
+                _lastSessionRefreshUtc = DateTime.UtcNow;
                 return MultiplayerOperationResult<CharacterDraftSnapshot>.Success(ToSnapshot(session));
             }
             catch (Exception exception)
@@ -150,6 +168,7 @@ public sealed class MpsCharacterDraftService : ICharacterDraftService
 
                 await session.SaveCurrentPlayerDataAsync();
                 await session.RefreshAsync();
+                _lastSessionRefreshUtc = DateTime.UtcNow;
                 return MultiplayerOperationResult<CharacterDraftSnapshot>.Success(ToSnapshot(session));
             }
             catch (Exception exception)
@@ -191,6 +210,7 @@ public sealed class MpsCharacterDraftService : ICharacterDraftService
                 currentPlayer.SetProperty(PlayerPickUpdatedAtKey, new PlayerProperty(updatedAt.ToString(CultureInfo.InvariantCulture), VisibilityPropertyOptions.Member));
                 await session.SaveCurrentPlayerDataAsync();
                 await session.RefreshAsync();
+                _lastSessionRefreshUtc = DateTime.UtcNow;
                 return MultiplayerOperationResult<CharacterDraftSnapshot>.Success(ToSnapshot(session));
             }
             catch (Exception exception)
@@ -274,6 +294,7 @@ public sealed class MpsCharacterDraftService : ICharacterDraftService
     {
         string sessionId = session?.Id ?? string.Empty;
         string phase = GetSessionPropertyValue(session, SessionPhaseKey, PhaseLobby);
+        int matchSeed = ParseInt(GetSessionPropertyValue(session, SessionMatchSeedKey, string.Empty));
         string localPlayerId = session?.CurrentPlayer?.Id ?? string.Empty;
         bool isLocalHost = session != null && session.IsHost;
 
@@ -355,6 +376,7 @@ public sealed class MpsCharacterDraftService : ICharacterDraftService
             phase,
             isLocalHost,
             localPlayerId,
+            matchSeed,
             localCharacterId,
             localCharacterName,
             localConfirmed,
@@ -487,5 +509,34 @@ public sealed class MpsCharacterDraftService : ICharacterDraftService
         return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed)
             ? parsed
             : 0L;
+    }
+
+    private static int ParseInt(string value)
+    {
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
+            ? parsed
+            : 0;
+    }
+
+    private static int ResolveMatchSeed(ISession session)
+    {
+        int existingSeed = ParseInt(GetSessionPropertyValue(session, SessionMatchSeedKey, string.Empty));
+        if (existingSeed != 0)
+        {
+            return existingSeed;
+        }
+
+        int seed = DateTime.UtcNow.GetHashCode();
+        if (!string.IsNullOrWhiteSpace(session?.Id))
+        {
+            seed ^= session.Id.GetHashCode();
+        }
+
+        if (seed == 0)
+        {
+            seed = 1;
+        }
+
+        return seed;
     }
 }

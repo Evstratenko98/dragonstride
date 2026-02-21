@@ -12,6 +12,7 @@ public sealed class MpsSessionService : IMultiplayerSessionService
     private const string OperationInProgressErrorCode = "operation_in_progress";
     private const string GameTagPropertyKey = "game";
     private const string GameTagPropertyValue = "dragonstride3";
+    private const string SessionType = "dragonstride3_session";
     private const int DefaultQueryCount = 20;
 
     private readonly IMultiplayerBootstrapService _bootstrapService;
@@ -68,6 +69,7 @@ public sealed class MpsSessionService : IMultiplayerSessionService
             int maxPlayers = Math.Max(2, request.MaxPlayers);
             var createOptions = new SessionOptions
             {
+                Type = SessionType,
                 Name = name,
                 MaxPlayers = maxPlayers,
                 IsPrivate = request.IsPrivate,
@@ -80,6 +82,15 @@ public sealed class MpsSessionService : IMultiplayerSessionService
                     }
                 }
             };
+
+            if (request.EnableRelayPreconnect)
+            {
+                string region = string.IsNullOrWhiteSpace(request.Region)
+                    ? _config?.DefaultRegion
+                    : request.Region.Trim();
+                region = string.Equals(region, "auto", StringComparison.OrdinalIgnoreCase) ? null : region;
+                createOptions.WithRelayNetwork(region);
+            }
 
             try
             {
@@ -211,7 +222,12 @@ public sealed class MpsSessionService : IMultiplayerSessionService
 
             try
             {
-                ISession joinedSession = await multiplayer.JoinSessionByCodeAsync(sessionCode.Trim());
+                var joinOptions = new JoinSessionOptions
+                {
+                    Type = SessionType
+                };
+
+                ISession joinedSession = await multiplayer.JoinSessionByCodeAsync(sessionCode.Trim(), joinOptions);
                 SetActiveSession(joinedSession);
                 return MultiplayerOperationResult<MultiplayerSessionSnapshot>.Success(_activeSnapshot);
             }
@@ -260,7 +276,12 @@ public sealed class MpsSessionService : IMultiplayerSessionService
 
             try
             {
-                ISession joinedSession = await multiplayer.JoinSessionByIdAsync(sessionId.Trim());
+                var joinOptions = new JoinSessionOptions
+                {
+                    Type = SessionType
+                };
+
+                ISession joinedSession = await multiplayer.JoinSessionByIdAsync(sessionId.Trim(), joinOptions);
                 SetActiveSession(joinedSession);
                 return MultiplayerOperationResult<MultiplayerSessionSnapshot>.Success(_activeSnapshot);
             }

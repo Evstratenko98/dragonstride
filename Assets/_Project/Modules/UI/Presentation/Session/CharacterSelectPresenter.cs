@@ -7,7 +7,7 @@ using VContainer.Unity;
 public sealed class CharacterSelectPresenter : IStartable, IDisposable
 {
     private const string OfflinePlayerId = "offline_local";
-    private const float MinDraftPollingIntervalSeconds = 1.5f;
+    private const float MinDraftPollingIntervalSeconds = 3f;
     private const int MaxRateLimitBackoffStep = 3;
     private const int OperationRetryAttempts = 3;
     private const int RateLimitRetryBaseDelayMs = 1000;
@@ -19,6 +19,7 @@ public sealed class CharacterSelectPresenter : IStartable, IDisposable
     private readonly IMultiplayerSessionService _sessionService;
     private readonly ICharacterDraftService _draftService;
     private readonly IMatchSetupContextService _matchSetupContextService;
+    private readonly IMatchNetworkService _matchNetworkService;
     private readonly ISessionSceneRouter _sceneRouter;
     private readonly MultiplayerConfig _multiplayerConfig;
     private readonly CancellationTokenSource _pollingCts = new();
@@ -46,6 +47,7 @@ public sealed class CharacterSelectPresenter : IStartable, IDisposable
         IMultiplayerSessionService sessionService,
         ICharacterDraftService draftService,
         IMatchSetupContextService matchSetupContextService,
+        IMatchNetworkService matchNetworkService,
         ISessionSceneRouter sceneRouter,
         MultiplayerConfig multiplayerConfig)
     {
@@ -54,6 +56,7 @@ public sealed class CharacterSelectPresenter : IStartable, IDisposable
         _sessionService = sessionService;
         _draftService = draftService;
         _matchSetupContextService = matchSetupContextService;
+        _matchNetworkService = matchNetworkService;
         _sceneRouter = sceneRouter;
         _multiplayerConfig = multiplayerConfig;
     }
@@ -459,6 +462,14 @@ public sealed class CharacterSelectPresenter : IStartable, IDisposable
                 return;
             }
 
+            MultiplayerOperationResult<bool> connectivityResult =
+                await _matchNetworkService.WaitForMatchConnectivityAsync(cancellationToken);
+            if (!connectivityResult.IsSuccess)
+            {
+                _view.SetStatus(FormatError("Network is not ready for match start", connectivityResult));
+                return;
+            }
+
             MultiplayerOperationResult<CharacterDraftSnapshot> phaseResult =
                 await ExecuteWithRateLimitRetryAsync(
                     () => _draftService.SetPhaseAsync(MpsCharacterDraftService.PhaseInGame, cancellationToken),
@@ -561,7 +572,10 @@ public sealed class CharacterSelectPresenter : IStartable, IDisposable
             new(OfflinePlayerId, characterId, playerName)
         };
 
-        _matchSetupContextService.SetRoster(roster, isOnlineMatch: false);
+        _matchSetupContextService.SetRoster(
+            roster,
+            isOnlineMatch: false,
+            matchSeed: DateTime.UtcNow.GetHashCode());
         bool loaded = await _sceneRouter.LoadGameSceneAsync();
         if (!loaded)
         {
@@ -765,7 +779,10 @@ public sealed class CharacterSelectPresenter : IStartable, IDisposable
             return false;
         }
 
-        _matchSetupContextService.SetRoster(roster, isOnlineMatch: true);
+        _matchSetupContextService.SetRoster(
+            roster,
+            isOnlineMatch: true,
+            matchSeed: snapshot.MatchSeed);
         return true;
     }
 

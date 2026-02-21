@@ -32,6 +32,7 @@ public readonly struct CharacterDraftSnapshot
     public string Phase { get; }
     public bool IsHost { get; }
     public string LocalPlayerId { get; }
+    public int MatchSeed { get; }
     public string SelectedCharacterId { get; }
     public string SelectedCharacterName { get; }
     public bool IsLocalConfirmed { get; }
@@ -46,6 +47,7 @@ public readonly struct CharacterDraftSnapshot
         string phase,
         bool isHost,
         string localPlayerId,
+        int matchSeed,
         string selectedCharacterId,
         string selectedCharacterName,
         bool isLocalConfirmed,
@@ -58,6 +60,7 @@ public readonly struct CharacterDraftSnapshot
         Phase = phase;
         IsHost = isHost;
         LocalPlayerId = localPlayerId;
+        MatchSeed = matchSeed;
         SelectedCharacterId = selectedCharacterId;
         SelectedCharacterName = selectedCharacterName;
         IsLocalConfirmed = isLocalConfirmed;

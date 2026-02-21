@@ -40,6 +40,8 @@ public class GameScope : LifetimeScope
         builder.Register<FieldGenerator>(Lifetime.Singleton);
 
         builder.RegisterInstance(characterPrefabs).As<CharacterView[]>();
+        builder.Register<IMatchRuntimeRoleService, MatchRuntimeRoleService>(Lifetime.Singleton);
+        builder.Register<IActorIdentityService, ActorIdentityService>(Lifetime.Singleton);
         builder.Register<CharacterInputReader>(Lifetime.Singleton);
         builder.Register<CharacterFactory>(Lifetime.Singleton);
         builder.Register<CharacterLifecycleService>(Lifetime.Singleton);
@@ -66,15 +68,26 @@ public class GameScope : LifetimeScope
         builder.Register<CrownOwnershipService>(Lifetime.Singleton);
 
         builder.Register<IRandomSource, UnityRandomSource>(Lifetime.Singleton);
+        builder.Register<IGameCommandExecutionService, GameCommandExecutionService>(Lifetime.Singleton);
+        builder.Register<IMatchPauseService, MatchPauseService>(Lifetime.Singleton);
+        builder.Register<ITurnAuthorityService, TurnAuthorityService>(Lifetime.Singleton);
+        builder.Register<IMatchStatePublisher, MatchStatePublisher>(Lifetime.Singleton);
+        builder.Register<IMatchStateApplier, MatchStateApplier>(Lifetime.Singleton);
+        builder.Register<MpsGameCommandGateway>(Lifetime.Singleton);
+        builder.Register<IGameCommandGateway, GameCommandGatewayFacade>(Lifetime.Singleton);
         builder.Register<TurnActorRegistry>(Lifetime.Singleton);
         builder.Register<FieldPresenter>(Lifetime.Singleton);
         builder.RegisterEntryPoint<FogOfWarPresenter>(Lifetime.Singleton).AsSelf();
+        builder.RegisterEntryPoint<MpsGameCommandGatewayRunner>(Lifetime.Singleton).AsSelf();
+        builder.RegisterEntryPoint<OnlineInputCommandForwarder>(Lifetime.Singleton).AsSelf();
+        builder.RegisterEntryPoint<HostDisconnectRecoveryEntryPoint>(Lifetime.Singleton).AsSelf();
+        builder.RegisterEntryPoint<DisconnectGraceDriver>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<CharacterMovementDriver>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<CellOpenDriver>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<ActionPanelAvailabilityDriver>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<AttackDriver>(Lifetime.Singleton).AsSelf();
         builder.RegisterEntryPoint<TurnFlow>(Lifetime.Singleton).AsSelf();
-        builder.RegisterEntryPoint<GameFlow>();
+        builder.RegisterEntryPoint<GameFlow>(Lifetime.Singleton).AsSelf();
     }
 
     protected override LifetimeScope FindParent()

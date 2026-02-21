@@ -4,25 +4,34 @@ using VContainer.Unity;
 public class GameScreenPresenter : IPostInitializable, IDisposable
 {
     private const string FallbackValue = "—";
+    private const string WaitingForHostStateLabel = "Waiting for host state...";
     private readonly GameScreenView _view;
     private readonly IEventBus _eventBus;
+    private readonly IMatchSetupContextService _matchSetupContextService;
+    private readonly IMatchNetworkService _matchNetworkService;
     private IDisposable _turnStateSubscription;
     private IDisposable _diceRolledSubscription;
     private IDisposable _characterMovedSubscription;
     private IDisposable _attackAvailabilitySubscription;
     private IDisposable _openCellAvailabilitySubscription;
+    private IDisposable _snapshotAppliedSubscription;
 
     private ICellLayoutOccupant _currentActor;
     private TurnState _currentTurnState = TurnState.None;
     private int _stepsTotal;
     private int _stepsRemaining;
+    private bool _isWaitingForInitialSnapshot;
 
     public GameScreenPresenter(
         IEventBus eventBus,
-        GameScreenView view)
+        GameScreenView view,
+        IMatchSetupContextService matchSetupContextService,
+        IMatchNetworkService matchNetworkService)
     {
         _eventBus = eventBus;
         _view = view;
+        _matchSetupContextService = matchSetupContextService;
+        _matchNetworkService = matchNetworkService;
     }
 
     public void PostInitialize()
@@ -32,6 +41,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _characterMovedSubscription = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
         _attackAvailabilitySubscription = _eventBus.Subscribe<AttackAvailabilityChanged>(OnAttackAvailabilityChanged);
         _openCellAvailabilitySubscription = _eventBus.Subscribe<OpenCellAvailabilityChanged>(OnOpenCellAvailabilityChanged);
+        _snapshotAppliedSubscription = _eventBus.Subscribe<MatchSnapshotApplied>(OnMatchSnapshotApplied);
 
         if (_view.CharacaterButton != null)
         {
@@ -75,8 +85,10 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         UpdateTurnStateText();
         UpdateStepsText();
         SetCharacterButtonInteractable(false);
+        SetEndTurnButtonInteractable(false);
         SetAttackButtonInteractable(false);
         SetOpenCellButtonInteractable(false);
+        ApplyInitialSnapshotWaitingState();
     }
 
     public void Dispose()
@@ -86,6 +98,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _characterMovedSubscription?.Dispose();
         _attackAvailabilitySubscription?.Dispose();
         _openCellAvailabilitySubscription?.Dispose();
+        _snapshotAppliedSubscription?.Dispose();
 
         if (_view.CharacaterButton != null)
         {
@@ -128,9 +141,16 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _currentActor = msg.Actor;
 
         _currentTurnState = msg.State;
+        if (_isWaitingForInitialSnapshot)
+        {
+            return;
+        }
+
         UpdatePlayerText();
         UpdateTurnStateText();
-        SetCharacterButtonInteractable(_currentActor is CharacterInstance);
+        bool isCharacterTurn = _currentActor is CharacterInstance;
+        SetCharacterButtonInteractable(isCharacterTurn);
+        SetEndTurnButtonInteractable(isCharacterTurn && CanUseTurnActions());
 
         if (msg.State == TurnState.End || msg.State == TurnState.None)
         {
@@ -143,6 +163,11 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     private void OnDiceRolled(DiceRolled msg)
     {
+        if (_isWaitingForInitialSnapshot)
+        {
+            return;
+        }
+
         if (_currentActor != null && msg.Actor != _currentActor)
         {
             return;
@@ -154,11 +179,18 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
         UpdatePlayerText();
         UpdateStepsText();
-        SetCharacterButtonInteractable(_currentActor is CharacterInstance);
+        bool isCharacterTurn = _currentActor is CharacterInstance;
+        SetCharacterButtonInteractable(isCharacterTurn);
+        SetEndTurnButtonInteractable(isCharacterTurn && CanUseTurnActions());
     }
 
     private void OnCharacterMoved(CharacterMoved msg)
     {
+        if (_isWaitingForInitialSnapshot)
+        {
+            return;
+        }
+
         if (_currentActor == null || msg.Actor != _currentActor)
         {
             return;
@@ -194,6 +226,11 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     private void OnCharacterButtonClicked()
     {
+        if (_isWaitingForInitialSnapshot)
+        {
+            return;
+        }
+
         if (_currentActor is not CharacterInstance)
         {
             return;
@@ -204,16 +241,31 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     private void OnOpenCellClicked()
     {
+        if (_isWaitingForInitialSnapshot)
+        {
+            return;
+        }
+
         _eventBus.Publish(new OpenCellRequested());
     }
 
     private void OnEndTurnClicked()
     {
+        if (_isWaitingForInitialSnapshot)
+        {
+            return;
+        }
+
         _eventBus.Publish(new EndTurnRequested());
     }
 
     private void OnAttackClicked()
     {
+        if (_isWaitingForInitialSnapshot)
+        {
+            return;
+        }
+
         _eventBus.Publish(new AttackRequested());
     }
 
@@ -234,12 +286,31 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     private void OnAttackAvailabilityChanged(AttackAvailabilityChanged msg)
     {
-        SetAttackButtonInteractable(msg.IsAvailable);
+        SetAttackButtonInteractable(!_isWaitingForInitialSnapshot && msg.IsAvailable);
     }
 
     private void OnOpenCellAvailabilityChanged(OpenCellAvailabilityChanged msg)
     {
-        SetOpenCellButtonInteractable(msg.IsAvailable);
+        SetOpenCellButtonInteractable(!_isWaitingForInitialSnapshot && msg.IsAvailable);
+    }
+
+    private void OnMatchSnapshotApplied(MatchSnapshotApplied msg)
+    {
+        if (!_isWaitingForInitialSnapshot || !msg.IsInitial)
+        {
+            return;
+        }
+
+        _isWaitingForInitialSnapshot = false;
+        UpdatePlayerText();
+        UpdateTurnStateText();
+        UpdateStepsText();
+
+        bool isCharacterTurn = _currentActor is CharacterInstance;
+        SetCharacterButtonInteractable(isCharacterTurn);
+        SetEndTurnButtonInteractable(isCharacterTurn && CanUseTurnActions());
+        SetAttackButtonInteractable(false);
+        SetOpenCellButtonInteractable(false);
     }
 
     private void SetAttackButtonInteractable(bool isInteractable)
@@ -270,5 +341,44 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         }
 
         _view.CharacaterButton.interactable = isInteractable;
+    }
+
+    private void SetEndTurnButtonInteractable(bool isInteractable)
+    {
+        if (_view.EndTurnButton == null)
+        {
+            return;
+        }
+
+        _view.EndTurnButton.interactable = isInteractable;
+    }
+
+    private bool CanUseTurnActions()
+    {
+        return _currentTurnState == TurnState.ActionSelection ||
+               _currentTurnState == TurnState.Movement ||
+               _currentTurnState == TurnState.Attack ||
+               _currentTurnState == TurnState.OpenCell ||
+               _currentTurnState == TurnState.Trade;
+    }
+
+    private void ApplyInitialSnapshotWaitingState()
+    {
+        bool isOnlineMatch = _matchSetupContextService != null && _matchSetupContextService.IsOnlineMatch;
+        bool isHost = _matchNetworkService != null && _matchNetworkService.IsHost;
+        _isWaitingForInitialSnapshot = isOnlineMatch && !isHost;
+
+        if (!_isWaitingForInitialSnapshot)
+        {
+            return;
+        }
+
+        _view.SetCurrentPlayer(FallbackValue);
+        _view.SetTurnState(WaitingForHostStateLabel);
+        _view.SetSteps(0, 0);
+        SetCharacterButtonInteractable(false);
+        SetEndTurnButtonInteractable(false);
+        SetAttackButtonInteractable(false);
+        SetOpenCellButtonInteractable(false);
     }
 }

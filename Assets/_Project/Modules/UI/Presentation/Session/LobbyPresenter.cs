@@ -12,6 +12,7 @@ public sealed class LobbyPresenter : IStartable, IDisposable
     private readonly IMultiplayerSessionService _sessionService;
     private readonly ICharacterDraftService _draftService;
     private readonly IMatchSetupContextService _matchSetupContextService;
+    private readonly IMatchNetworkService _matchNetworkService;
     private readonly MultiplayerConfig _multiplayerConfig;
     private readonly ISessionSceneRouter _sceneRouter;
     private readonly CancellationTokenSource _pollingCts = new();
@@ -23,6 +24,7 @@ public sealed class LobbyPresenter : IStartable, IDisposable
         IMultiplayerSessionService sessionService,
         ICharacterDraftService draftService,
         IMatchSetupContextService matchSetupContextService,
+        IMatchNetworkService matchNetworkService,
         MultiplayerConfig multiplayerConfig,
         ISessionSceneRouter sceneRouter)
     {
@@ -30,6 +32,7 @@ public sealed class LobbyPresenter : IStartable, IDisposable
         _sessionService = sessionService;
         _draftService = draftService;
         _matchSetupContextService = matchSetupContextService;
+        _matchNetworkService = matchNetworkService;
         _multiplayerConfig = multiplayerConfig;
         _sceneRouter = sceneRouter;
     }
@@ -155,7 +158,9 @@ public sealed class LobbyPresenter : IStartable, IDisposable
                 $"DragonStride Lobby {DateTime.Now:HH:mm:ss}",
                 maxPlayers,
                 isPrivate: false,
-                isLocked: false);
+                isLocked: false,
+                enableRelayPreconnect: true,
+                region: _multiplayerConfig != null ? _multiplayerConfig.DefaultRegion : "auto");
 
             _view.SetStatus("Creating lobby...");
             MultiplayerOperationResult<MultiplayerSessionSnapshot> result =
@@ -166,6 +171,13 @@ public sealed class LobbyPresenter : IStartable, IDisposable
                 _view.SetStatus(FormatError("Create lobby failed", result));
                 UpdateActiveSessionBlock();
                 return;
+            }
+
+            MultiplayerOperationResult<bool> networkReadyResult =
+                await _matchNetworkService.EnsurePreconnectedAsync(cancellationToken);
+            if (!networkReadyResult.IsSuccess)
+            {
+                _view.SetStatus(FormatError("Lobby created, but network preconnect failed", networkReadyResult));
             }
 
             UpdateActiveSessionBlock();
@@ -249,6 +261,13 @@ public sealed class LobbyPresenter : IStartable, IDisposable
                 return;
             }
 
+            MultiplayerOperationResult<bool> networkReadyResult =
+                await _matchNetworkService.EnsurePreconnectedAsync(cancellationToken);
+            if (!networkReadyResult.IsSuccess)
+            {
+                _view.SetStatus(FormatError("Joined session, but network preconnect failed", networkReadyResult));
+            }
+
             _view.ClearJoinCode();
             UpdateActiveSessionBlock();
             MultiplayerOperationResult<IReadOnlyList<MultiplayerSessionSummary>> refreshResult =
@@ -297,6 +316,13 @@ public sealed class LobbyPresenter : IStartable, IDisposable
             {
                 _view.SetStatus(FormatError("Join session failed", joinResult));
                 return;
+            }
+
+            MultiplayerOperationResult<bool> networkReadyResult =
+                await _matchNetworkService.EnsurePreconnectedAsync(cancellationToken);
+            if (!networkReadyResult.IsSuccess)
+            {
+                _view.SetStatus(FormatError("Joined session, but network preconnect failed", networkReadyResult));
             }
 
             UpdateActiveSessionBlock();
@@ -383,6 +409,7 @@ public sealed class LobbyPresenter : IStartable, IDisposable
 
             MultiplayerOperationResult<bool> leaveResult =
                 await _sessionService.LeaveActiveSessionAsync(cancellationToken);
+            await _matchNetworkService.ShutdownAsync(cancellationToken);
 
             if (!leaveResult.IsSuccess)
             {
@@ -411,7 +438,7 @@ public sealed class LobbyPresenter : IStartable, IDisposable
     private async Task PollLoopAsync(CancellationToken cancellationToken)
     {
         float interval = _multiplayerConfig != null ? _multiplayerConfig.LobbyRefreshIntervalSeconds : 2f;
-        interval = Math.Max(0.2f, interval);
+        interval = Math.Max(3f, interval);
         int delayMs = (int)Math.Round(interval * 1000f);
 
         while (!cancellationToken.IsCancellationRequested)
@@ -642,7 +669,10 @@ public sealed class LobbyPresenter : IStartable, IDisposable
             return false;
         }
 
-        _matchSetupContextService.SetRoster(roster, isOnlineMatch: true);
+        _matchSetupContextService.SetRoster(
+            roster,
+            isOnlineMatch: true,
+            matchSeed: snapshot.MatchSeed);
         return true;
     }
 

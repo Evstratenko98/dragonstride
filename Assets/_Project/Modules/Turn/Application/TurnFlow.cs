@@ -7,6 +7,7 @@ public class TurnFlow : IPostInitializable, IDisposable
     private readonly IEventBus _eventBus;
     private readonly IRandomSource _randomSource;
     private readonly CrownOwnershipService _crownOwnershipService;
+    private readonly IMatchRuntimeRoleService _runtimeRoleService;
 
     private IDisposable _stepSubscription;
     private IDisposable _endTurnSubscription;
@@ -22,11 +23,16 @@ public class TurnFlow : IPostInitializable, IDisposable
     private bool _hasAttacked = false;
     private bool _hasOpenedCell = false;
 
-    public TurnFlow(IEventBus eventBus, IRandomSource randomSource, CrownOwnershipService crownOwnershipService)
+    public TurnFlow(
+        IEventBus eventBus,
+        IRandomSource randomSource,
+        CrownOwnershipService crownOwnershipService,
+        IMatchRuntimeRoleService runtimeRoleService)
     {
         _eventBus = eventBus;
         _randomSource = randomSource;
         _crownOwnershipService = crownOwnershipService;
+        _runtimeRoleService = runtimeRoleService;
     }
 
     public void PostInitialize()
@@ -127,6 +133,11 @@ public class TurnFlow : IPostInitializable, IDisposable
 
     private void OnEndTurnKeyPressed(EndTurnRequested msg)
     {
+        if (_runtimeRoleService != null && _runtimeRoleService.IsOnlineMatch)
+        {
+            return;
+        }
+
         if (!_allowEndTurn)
         {
             return;
@@ -148,7 +159,33 @@ public class TurnFlow : IPostInitializable, IDisposable
 
     private void OnOpenCellRequested(OpenCellRequested msg)
     {
+        if (_runtimeRoleService != null && _runtimeRoleService.IsOnlineMatch)
+        {
+            return;
+        }
+
         TryOpenCell();
+    }
+
+    public bool TryEndTurnByAuthority()
+    {
+        if (!_allowEndTurn || CurrentActor == null)
+        {
+            return false;
+        }
+
+        if (State != TurnState.ActionSelection &&
+            State != TurnState.Movement &&
+            State != TurnState.Attack &&
+            State != TurnState.OpenCell &&
+            State != TurnState.Trade)
+        {
+            return false;
+        }
+
+        _allowEndTurn = false;
+        EndTurn();
+        return true;
     }
 
     public bool TryAttack()

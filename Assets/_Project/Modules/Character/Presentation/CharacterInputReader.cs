@@ -50,6 +50,11 @@ public class CharacterInputReader : IDisposable
         else if (_move.x < -0.5f) _dir = Vector2Int.left;
         else if (_move.x >  0.5f) _dir = Vector2Int.right;
         else                      _dir = Vector2Int.zero;
+
+        if (ctx.performed && _dir != Vector2Int.zero)
+        {
+            _eventBus.Publish(new MoveCommandRequested(_dir));
+        }
     }
 
     private void OnMoveCanceled(InputAction.CallbackContext ctx)

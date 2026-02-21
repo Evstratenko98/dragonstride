@@ -1,0 +1,672 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Unity.Collections;
+using Unity.Netcode;
+using UnityEngine;
+using VContainer.Unity;
+
+public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDisposable
+{
+    private const string SubmitMessageName = "ds3_cmd_submit";
+    private const string ApplyMessageName = "ds3_cmd_apply";
+    private const string RejectMessageName = "ds3_cmd_reject";
+    private const string IdentityMessageName = "ds3_client_identity";
+    private const string SnapshotMessageName = "ds3_match_snapshot";
+
+    private readonly IMatchNetworkService _matchNetworkService;
+    private readonly IMatchRuntimeRoleService _runtimeRoleService;
+    private readonly ITurnAuthorityService _turnAuthorityService;
+    private readonly IGameCommandExecutionService _commandExecutionService;
+    private readonly IMatchStatePublisher _matchStatePublisher;
+    private readonly IMatchStateApplier _matchStateApplier;
+    private readonly IEventBus _eventBus;
+
+    private readonly Dictionary<ulong, string> _playerByClientId = new();
+    private long _localCommandId;
+    private long _serverSequence;
+    private long _lastAppliedCommandSequence;
+    private bool _isStarted;
+    private int _snapshotBroadcastInFlight;
+
+    private IDisposable _turnPhaseChangedSubscription;
+    private IDisposable _gameStateChangedSubscription;
+    private IDisposable _pauseChangedSubscription;
+
+    public MpsGameCommandGateway(
+        IMatchNetworkService matchNetworkService,
+        IMatchRuntimeRoleService runtimeRoleService,
+        ITurnAuthorityService turnAuthorityService,
+        IGameCommandExecutionService commandExecutionService,
+        IMatchStatePublisher matchStatePublisher,
+        IMatchStateApplier matchStateApplier,
+        IEventBus eventBus)
+    {
+        _matchNetworkService = matchNetworkService;
+        _runtimeRoleService = runtimeRoleService;
+        _turnAuthorityService = turnAuthorityService;
+        _commandExecutionService = commandExecutionService;
+        _matchStatePublisher = matchStatePublisher;
+        _matchStateApplier = matchStateApplier;
+        _eventBus = eventBus;
+    }
+
+    public void Start()
+    {
+        if (_isStarted || _runtimeRoleService == null || !_runtimeRoleService.IsOnlineMatch)
+        {
+            return;
+        }
+
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager?.CustomMessagingManager == null)
+        {
+            Debug.LogWarning("[MpsGameCommandGateway] CustomMessagingManager is unavailable.");
+            return;
+        }
+
+        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(ApplyMessageName, OnApplyMessage);
+        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(RejectMessageName, OnRejectMessage);
+        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(SnapshotMessageName, OnSnapshotMessage);
+
+        if (_matchNetworkService.IsHost)
+        {
+            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(SubmitMessageName, OnSubmitMessage);
+            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(IdentityMessageName, OnIdentityMessage);
+            networkManager.OnClientDisconnectCallback += OnClientDisconnected;
+            networkManager.OnClientConnectedCallback += OnClientConnected;
+
+            _turnPhaseChangedSubscription = _eventBus.Subscribe<TurnPhaseChanged>(OnTurnPhaseChanged);
+            _gameStateChangedSubscription = _eventBus.Subscribe<GameStateChanged>(OnGameStateChanged);
+            _pauseChangedSubscription = _eventBus.Subscribe<MatchPauseStateChanged>(OnMatchPauseChanged);
+
+            RequestSnapshotBroadcast("gateway_started");
+        }
+        else
+        {
+            _ = SendIdentityToHostAsync();
+        }
+
+        _isStarted = true;
+    }
+
+    public void Dispose()
+    {
+        _turnPhaseChangedSubscription?.Dispose();
+        _gameStateChangedSubscription?.Dispose();
+        _pauseChangedSubscription?.Dispose();
+
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager?.CustomMessagingManager == null)
+        {
+            return;
+        }
+
+        networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(ApplyMessageName);
+        networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(RejectMessageName);
+        networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(SubmitMessageName);
+        networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(IdentityMessageName);
+        networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(SnapshotMessageName);
+        networkManager.OnClientDisconnectCallback -= OnClientDisconnected;
+        networkManager.OnClientConnectedCallback -= OnClientConnected;
+        _isStarted = false;
+    }
+
+    public Task<CommandSubmitResult> SubmitMoveAsync(Vector2Int direction, CancellationToken ct = default)
+    {
+        return SubmitAsync(GameCommandType.Move, direction, 0, ct);
+    }
+
+    public Task<CommandSubmitResult> SubmitAttackAsync(int targetActorId, CancellationToken ct = default)
+    {
+        return SubmitAsync(GameCommandType.Attack, Vector2Int.zero, targetActorId, ct);
+    }
+
+    public Task<CommandSubmitResult> SubmitOpenCellAsync(CancellationToken ct = default)
+    {
+        return SubmitAsync(GameCommandType.OpenCell, Vector2Int.zero, 0, ct);
+    }
+
+    public Task<CommandSubmitResult> SubmitEndTurnAsync(CancellationToken ct = default)
+    {
+        return SubmitAsync(GameCommandType.EndTurn, Vector2Int.zero, 0, ct);
+    }
+
+    private async Task<CommandSubmitResult> SubmitAsync(
+        GameCommandType commandType,
+        Vector2Int direction,
+        int targetActorId,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var command = new GameCommandEnvelope(
+            Interlocked.Increment(ref _localCommandId),
+            commandType,
+            _matchNetworkService.LocalPlayerId,
+            direction,
+            targetActorId,
+            Environment.TickCount);
+
+        if (_runtimeRoleService == null || !_runtimeRoleService.IsOnlineMatch)
+        {
+            return await _commandExecutionService.ExecuteAsync(command, cancellationToken);
+        }
+
+        if (_matchNetworkService.IsHost)
+        {
+            return await ProcessHostCommandAsync(NetworkManager.ServerClientId, command, cancellationToken);
+        }
+
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager?.CustomMessagingManager == null || !networkManager.IsClient)
+        {
+            return CommandSubmitResult.Rejected("network_not_ready", "Client network transport is not ready.");
+        }
+
+        using (var writer = new FastBufferWriter(256, Allocator.Temp))
+        {
+            WriteCommand(writer, command);
+            networkManager.CustomMessagingManager.SendNamedMessage(
+                SubmitMessageName,
+                NetworkManager.ServerClientId,
+                writer,
+                NetworkDelivery.ReliableSequenced);
+        }
+
+        return CommandSubmitResult.Accepted();
+    }
+
+    private async void OnSubmitMessage(ulong senderClientId, FastBufferReader reader)
+    {
+        if (!_matchNetworkService.IsHost)
+        {
+            return;
+        }
+
+        GameCommandEnvelope command = ReadCommand(ref reader);
+        if (string.IsNullOrWhiteSpace(command.PlayerId))
+        {
+            await SendRejectAsync(senderClientId, command.CommandId, "missing_player", "PlayerId is required.");
+            return;
+        }
+
+        if (_playerByClientId.TryGetValue(senderClientId, out string mappedPlayerId))
+        {
+            if (!string.Equals(mappedPlayerId, command.PlayerId, StringComparison.Ordinal))
+            {
+                await SendRejectAsync(senderClientId, command.CommandId, "player_id_mismatch", "Sender player id mismatch.");
+                return;
+            }
+        }
+        else
+        {
+            MapClientToPlayer(senderClientId, command.PlayerId);
+        }
+
+        CommandSubmitResult result = await ProcessHostCommandAsync(senderClientId, command, CancellationToken.None);
+        if (!result.IsAccepted)
+        {
+            await SendRejectAsync(senderClientId, command.CommandId, result.ErrorCode, result.ErrorMessage);
+        }
+    }
+
+    private void OnIdentityMessage(ulong senderClientId, FastBufferReader reader)
+    {
+        if (!_matchNetworkService.IsHost)
+        {
+            return;
+        }
+
+        reader.ReadValueSafe(out FixedString128Bytes playerIdValue);
+        string playerId = playerIdValue.ToString();
+        if (string.IsNullOrWhiteSpace(playerId))
+        {
+            return;
+        }
+
+        MapClientToPlayer(senderClientId, playerId);
+    }
+
+    private async Task<CommandSubmitResult> ProcessHostCommandAsync(
+        ulong senderClientId,
+        GameCommandEnvelope command,
+        CancellationToken cancellationToken)
+    {
+        CommandValidationResult validation = _turnAuthorityService.Validate(command);
+        if (!validation.IsValid)
+        {
+            return CommandSubmitResult.Rejected(validation.ErrorCode, validation.ErrorMessage);
+        }
+
+        CommandSubmitResult localExecutionResult = await _commandExecutionService.ExecuteAsync(command, cancellationToken);
+        if (!localExecutionResult.IsAccepted)
+        {
+            return localExecutionResult;
+        }
+
+        long sequence = Interlocked.Increment(ref _serverSequence);
+        await BroadcastAppliedCommandAsync(sequence, command);
+        await BroadcastSnapshotAsync(sequence);
+        return CommandSubmitResult.Accepted(sequence);
+    }
+
+    private async Task BroadcastAppliedCommandAsync(long sequence, GameCommandEnvelope command)
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager?.CustomMessagingManager == null || !networkManager.IsServer)
+        {
+            return;
+        }
+
+        IReadOnlyList<ulong> connectedClientIds = networkManager.ConnectedClientsIds;
+        for (int i = 0; i < connectedClientIds.Count; i++)
+        {
+            ulong clientId = connectedClientIds[i];
+            if (clientId == NetworkManager.ServerClientId)
+            {
+                continue;
+            }
+
+            using var writer = new FastBufferWriter(320, Allocator.Temp);
+            writer.WriteValueSafe(sequence);
+            WriteCommand(writer, command);
+            networkManager.CustomMessagingManager.SendNamedMessage(
+                ApplyMessageName,
+                clientId,
+                writer,
+                NetworkDelivery.ReliableSequenced);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task BroadcastSnapshotAsync(long sequence)
+    {
+        if (!_matchNetworkService.IsHost || _matchStatePublisher == null)
+        {
+            return;
+        }
+
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager?.CustomMessagingManager == null || !networkManager.IsServer)
+        {
+            return;
+        }
+
+        MatchStateSnapshot snapshot = _matchStatePublisher.Capture(sequence);
+
+        IReadOnlyList<ulong> connectedClientIds = networkManager.ConnectedClientsIds;
+        for (int i = 0; i < connectedClientIds.Count; i++)
+        {
+            ulong clientId = connectedClientIds[i];
+            if (clientId == NetworkManager.ServerClientId)
+            {
+                continue;
+            }
+
+            using var writer = new FastBufferWriter(32768, Allocator.Temp);
+            WriteSnapshot(writer, snapshot);
+            networkManager.CustomMessagingManager.SendNamedMessage(
+                SnapshotMessageName,
+                clientId,
+                writer,
+                NetworkDelivery.ReliableSequenced);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task SendSnapshotToClientAsync(ulong clientId)
+    {
+        if (!_matchNetworkService.IsHost || _matchStatePublisher == null)
+        {
+            return;
+        }
+
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager?.CustomMessagingManager == null || !networkManager.IsServer)
+        {
+            return;
+        }
+
+        long sequence = Interlocked.Increment(ref _serverSequence);
+        MatchStateSnapshot snapshot = _matchStatePublisher.Capture(sequence);
+        using var writer = new FastBufferWriter(32768, Allocator.Temp);
+        WriteSnapshot(writer, snapshot);
+        networkManager.CustomMessagingManager.SendNamedMessage(
+            SnapshotMessageName,
+            clientId,
+            writer,
+            NetworkDelivery.ReliableSequenced);
+        await Task.CompletedTask;
+    }
+
+    private async Task SendRejectAsync(ulong senderClientId, long commandId, string errorCode, string errorMessage)
+    {
+        if (senderClientId == NetworkManager.ServerClientId)
+        {
+            return;
+        }
+
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager?.CustomMessagingManager == null || !networkManager.IsServer)
+        {
+            return;
+        }
+
+        using var writer = new FastBufferWriter(320, Allocator.Temp);
+        writer.WriteValueSafe(commandId);
+        writer.WriteValueSafe(new FixedString128Bytes(errorCode ?? string.Empty));
+        writer.WriteValueSafe(new FixedString512Bytes(errorMessage ?? string.Empty));
+        networkManager.CustomMessagingManager.SendNamedMessage(
+            RejectMessageName,
+            senderClientId,
+            writer,
+            NetworkDelivery.ReliableSequenced);
+        await Task.CompletedTask;
+    }
+
+    private async void OnApplyMessage(ulong senderClientId, FastBufferReader reader)
+    {
+        if (_matchNetworkService.IsHost)
+        {
+            return;
+        }
+
+        reader.ReadValueSafe(out long sequence);
+        if (sequence <= _lastAppliedCommandSequence)
+        {
+            return;
+        }
+
+        _lastAppliedCommandSequence = sequence;
+        GameCommandEnvelope command = ReadCommand(ref reader);
+        await _commandExecutionService.ExecuteAsync(command);
+    }
+
+    private void OnSnapshotMessage(ulong senderClientId, FastBufferReader reader)
+    {
+        if (_matchNetworkService.IsHost || _matchStateApplier == null)
+        {
+            return;
+        }
+
+        MatchStateSnapshot snapshot = ReadSnapshot(ref reader);
+        _matchStateApplier.TryApply(snapshot);
+    }
+
+    private void OnRejectMessage(ulong senderClientId, FastBufferReader reader)
+    {
+        reader.ReadValueSafe(out long commandId);
+        reader.ReadValueSafe(out FixedString128Bytes errorCode);
+        reader.ReadValueSafe(out FixedString512Bytes errorMessage);
+        Debug.LogWarning($"[MpsGameCommandGateway] Command {commandId} rejected ({errorCode}): {errorMessage}");
+    }
+
+    private async Task SendIdentityToHostAsync()
+    {
+        string localPlayerId = _matchNetworkService.LocalPlayerId;
+        if (string.IsNullOrWhiteSpace(localPlayerId))
+        {
+            return;
+        }
+
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager == null)
+        {
+            return;
+        }
+
+        const int maxWaitIterations = 20;
+        int iteration = 0;
+        while (iteration < maxWaitIterations &&
+               (networkManager.CustomMessagingManager == null || !networkManager.IsClient))
+        {
+            iteration++;
+            await Task.Delay(100);
+        }
+
+        if (networkManager.CustomMessagingManager == null || !networkManager.IsClient)
+        {
+            return;
+        }
+
+        using var writer = new FastBufferWriter(160, Allocator.Temp);
+        writer.WriteValueSafe(new FixedString128Bytes(localPlayerId));
+        networkManager.CustomMessagingManager.SendNamedMessage(
+            IdentityMessageName,
+            NetworkManager.ServerClientId,
+            writer,
+            NetworkDelivery.ReliableSequenced);
+    }
+
+    private void OnTurnPhaseChanged(TurnPhaseChanged _)
+    {
+        RequestSnapshotBroadcast("turn_phase");
+    }
+
+    private void OnGameStateChanged(GameStateChanged _)
+    {
+        RequestSnapshotBroadcast("game_state");
+    }
+
+    private void OnMatchPauseChanged(MatchPauseStateChanged _)
+    {
+        RequestSnapshotBroadcast("pause_state");
+    }
+
+    private void RequestSnapshotBroadcast(string reason)
+    {
+        if (!_matchNetworkService.IsHost)
+        {
+            return;
+        }
+
+        if (Interlocked.CompareExchange(ref _snapshotBroadcastInFlight, 1, 0) != 0)
+        {
+            return;
+        }
+
+        _ = BroadcastSnapshotDeferredAsync(reason);
+    }
+
+    private async Task BroadcastSnapshotDeferredAsync(string reason)
+    {
+        try
+        {
+            await Task.Delay(60);
+            long sequence = Interlocked.Increment(ref _serverSequence);
+            await BroadcastSnapshotAsync(sequence);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"[MpsGameCommandGateway] Failed to broadcast snapshot ({reason}): {exception.Message}");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _snapshotBroadcastInFlight, 0);
+        }
+    }
+
+    private void OnClientConnected(ulong clientId)
+    {
+        if (!_matchNetworkService.IsHost || clientId == NetworkManager.ServerClientId)
+        {
+            return;
+        }
+
+        _ = SendSnapshotToClientAsync(clientId);
+    }
+
+    private void OnClientDisconnected(ulong clientId)
+    {
+        if (!_matchNetworkService.IsHost || clientId == NetworkManager.ServerClientId)
+        {
+            return;
+        }
+
+        if (_playerByClientId.TryGetValue(clientId, out string playerId) && !string.IsNullOrWhiteSpace(playerId))
+        {
+            _eventBus.Publish(new OnlinePlayerConnectionChanged(playerId, false));
+            _playerByClientId.Remove(clientId);
+        }
+
+        RequestSnapshotBroadcast("client_disconnected");
+    }
+
+    private void MapClientToPlayer(ulong clientId, string playerId)
+    {
+        if (string.IsNullOrWhiteSpace(playerId))
+        {
+            return;
+        }
+
+        if (_playerByClientId.TryGetValue(clientId, out string existingPlayerId) &&
+            string.Equals(existingPlayerId, playerId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _playerByClientId[clientId] = playerId;
+        _eventBus.Publish(new OnlinePlayerConnectionChanged(playerId, true));
+    }
+
+    private static void WriteCommand(FastBufferWriter writer, GameCommandEnvelope command)
+    {
+        writer.WriteValueSafe(command.CommandId);
+        writer.WriteValueSafe((int)command.CommandType);
+        writer.WriteValueSafe(new FixedString128Bytes(command.PlayerId ?? string.Empty));
+        writer.WriteValueSafe(command.Direction.x);
+        writer.WriteValueSafe(command.Direction.y);
+        writer.WriteValueSafe(command.TargetActorId);
+        writer.WriteValueSafe(command.ClientTick);
+    }
+
+    private static GameCommandEnvelope ReadCommand(ref FastBufferReader reader)
+    {
+        reader.ReadValueSafe(out long commandId);
+        reader.ReadValueSafe(out int commandTypeValue);
+        reader.ReadValueSafe(out FixedString128Bytes playerId);
+        reader.ReadValueSafe(out int dirX);
+        reader.ReadValueSafe(out int dirY);
+        reader.ReadValueSafe(out int targetActorId);
+        reader.ReadValueSafe(out int clientTick);
+
+        return new GameCommandEnvelope(
+            commandId,
+            (GameCommandType)commandTypeValue,
+            playerId.ToString(),
+            new Vector2Int(dirX, dirY),
+            targetActorId,
+            clientTick);
+    }
+
+    private static void WriteSnapshot(FastBufferWriter writer, MatchStateSnapshot snapshot)
+    {
+        writer.WriteValueSafe(snapshot.Sequence);
+        writer.WriteValueSafe((int)snapshot.GameState);
+        writer.WriteValueSafe((int)snapshot.TurnState);
+        writer.WriteValueSafe(snapshot.CurrentActorId);
+        writer.WriteValueSafe(snapshot.StepsTotal);
+        writer.WriteValueSafe(snapshot.StepsRemaining);
+        writer.WriteValueSafe(snapshot.IsPaused);
+        writer.WriteValueSafe(new FixedString512Bytes(snapshot.PauseReason ?? string.Empty));
+        writer.WriteValueSafe(new FixedString128Bytes(snapshot.Phase ?? string.Empty));
+
+        int actorCount = snapshot.Actors?.Count ?? 0;
+        writer.WriteValueSafe(actorCount);
+        for (int i = 0; i < actorCount; i++)
+        {
+            ActorStateSnapshot actor = snapshot.Actors[i];
+            writer.WriteValueSafe(actor.ActorId);
+            writer.WriteValueSafe(new FixedString64Bytes(actor.ActorType ?? string.Empty));
+            writer.WriteValueSafe(new FixedString128Bytes(actor.OwnerPlayerId ?? string.Empty));
+            writer.WriteValueSafe(new FixedString128Bytes(actor.CharacterId ?? string.Empty));
+            writer.WriteValueSafe(new FixedString128Bytes(actor.DisplayName ?? string.Empty));
+            writer.WriteValueSafe(actor.CellX);
+            writer.WriteValueSafe(actor.CellY);
+            writer.WriteValueSafe(actor.Health);
+            writer.WriteValueSafe(actor.Level);
+            writer.WriteValueSafe(actor.HasCrown);
+            writer.WriteValueSafe(actor.IsAlive);
+        }
+
+        int openedCount = snapshot.OpenedCells?.Count ?? 0;
+        writer.WriteValueSafe(openedCount);
+        for (int i = 0; i < openedCount; i++)
+        {
+            OpenedCellSnapshot cell = snapshot.OpenedCells[i];
+            writer.WriteValueSafe(cell.X);
+            writer.WriteValueSafe(cell.Y);
+            writer.WriteValueSafe(new FixedString64Bytes(cell.CellType ?? string.Empty));
+        }
+    }
+
+    private static MatchStateSnapshot ReadSnapshot(ref FastBufferReader reader)
+    {
+        reader.ReadValueSafe(out long sequence);
+        reader.ReadValueSafe(out int gameStateValue);
+        reader.ReadValueSafe(out int turnStateValue);
+        reader.ReadValueSafe(out int currentActorId);
+        reader.ReadValueSafe(out int stepsTotal);
+        reader.ReadValueSafe(out int stepsRemaining);
+        reader.ReadValueSafe(out bool isPaused);
+        reader.ReadValueSafe(out FixedString512Bytes pauseReason);
+        reader.ReadValueSafe(out FixedString128Bytes phase);
+
+        reader.ReadValueSafe(out int actorCount);
+        var actors = new List<ActorStateSnapshot>(Math.Max(0, actorCount));
+        for (int i = 0; i < actorCount; i++)
+        {
+            reader.ReadValueSafe(out int actorId);
+            reader.ReadValueSafe(out FixedString64Bytes actorType);
+            reader.ReadValueSafe(out FixedString128Bytes ownerPlayerId);
+            reader.ReadValueSafe(out FixedString128Bytes characterId);
+            reader.ReadValueSafe(out FixedString128Bytes displayName);
+            reader.ReadValueSafe(out int cellX);
+            reader.ReadValueSafe(out int cellY);
+            reader.ReadValueSafe(out int health);
+            reader.ReadValueSafe(out int level);
+            reader.ReadValueSafe(out bool hasCrown);
+            reader.ReadValueSafe(out bool isAlive);
+
+            actors.Add(new ActorStateSnapshot(
+                actorId,
+                actorType.ToString(),
+                ownerPlayerId.ToString(),
+                characterId.ToString(),
+                displayName.ToString(),
+                cellX,
+                cellY,
+                health,
+                level,
+                hasCrown,
+                isAlive));
+        }
+
+        reader.ReadValueSafe(out int openedCount);
+        var openedCells = new List<OpenedCellSnapshot>(Math.Max(0, openedCount));
+        for (int i = 0; i < openedCount; i++)
+        {
+            reader.ReadValueSafe(out int x);
+            reader.ReadValueSafe(out int y);
+            reader.ReadValueSafe(out FixedString64Bytes cellType);
+            openedCells.Add(new OpenedCellSnapshot(x, y, cellType.ToString()));
+        }
+
+        return new MatchStateSnapshot(
+            sequence,
+            (GameState)gameStateValue,
+            (TurnState)turnStateValue,
+            currentActorId,
+            stepsTotal,
+            stepsRemaining,
+            isPaused,
+            pauseReason.ToString(),
+            phase.ToString(),
+            actors,
+            openedCells);
+    }
+}

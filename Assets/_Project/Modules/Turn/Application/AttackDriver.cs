@@ -10,6 +10,8 @@ public class AttackDriver : IPostInitializable, IDisposable
     private readonly CharacterRoster _characterRoster;
     private readonly EnemySpawner _enemySpawner;
     private readonly CrownOwnershipService _crownOwnershipService;
+    private readonly IMatchRuntimeRoleService _runtimeRoleService;
+    private readonly IActorIdentityService _actorIdentityService;
 
     private IDisposable _attackRequestedSubscription;
     private IDisposable _entityClickedSubscription;
@@ -25,7 +27,9 @@ public class AttackDriver : IPostInitializable, IDisposable
         TurnFlow turnFlow,
         CharacterRoster characterRoster,
         EnemySpawner enemySpawner,
-        CrownOwnershipService crownOwnershipService)
+        CrownOwnershipService crownOwnershipService,
+        IMatchRuntimeRoleService runtimeRoleService,
+        IActorIdentityService actorIdentityService)
     {
         _eventBus = eventBus;
         _randomSource = randomSource;
@@ -33,6 +37,8 @@ public class AttackDriver : IPostInitializable, IDisposable
         _characterRoster = characterRoster;
         _enemySpawner = enemySpawner;
         _crownOwnershipService = crownOwnershipService;
+        _runtimeRoleService = runtimeRoleService;
+        _actorIdentityService = actorIdentityService;
     }
 
     public void PostInitialize()
@@ -96,6 +102,19 @@ public class AttackDriver : IPostInitializable, IDisposable
 
         var target = msg.Occupant;
         Debug.Log($"[Attack] Target selection attempted: {DescribeActor(_currentActor)} -> {DescribeActor(target)}");
+
+        if (_runtimeRoleService != null && _runtimeRoleService.IsOnlineMatch)
+        {
+            int targetActorId = _actorIdentityService != null ? _actorIdentityService.GetId(target) : 0;
+            if (targetActorId > 0)
+            {
+                _eventBus.Publish(new AttackTargetSelected(targetActorId));
+            }
+
+            _awaitingTarget = false;
+            return;
+        }
+
         if (!IsValidTarget(target))
         {
             return;
@@ -110,6 +129,32 @@ public class AttackDriver : IPostInitializable, IDisposable
         }
 
         PerformAttack(_currentActor, target);
+    }
+
+    public bool TryExecuteAttackByActorId(int targetActorId)
+    {
+        if (_currentActor?.Entity == null || targetActorId <= 0)
+        {
+            return false;
+        }
+
+        if (_actorIdentityService == null || !_actorIdentityService.TryGetActor(targetActorId, out ICellLayoutOccupant target))
+        {
+            return false;
+        }
+
+        if (!IsValidTarget(target))
+        {
+            return false;
+        }
+
+        if (!_turnFlow.TryAttack())
+        {
+            return false;
+        }
+
+        PerformAttack(_currentActor, target);
+        return true;
     }
 
     private bool IsValidTarget(ICellLayoutOccupant target)
