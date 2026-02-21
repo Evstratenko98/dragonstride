@@ -10,6 +10,7 @@ public sealed class MatchStatePublisher : IMatchStatePublisher
     private readonly IActorIdentityService _actorIdentityService;
     private readonly CrownOwnershipService _crownOwnershipService;
     private readonly IMatchPauseService _matchPauseService;
+    private readonly IInventorySnapshotService _inventorySnapshotService;
 
     public MatchStatePublisher(
         GameFlow gameFlow,
@@ -18,7 +19,8 @@ public sealed class MatchStatePublisher : IMatchStatePublisher
         FieldState fieldState,
         IActorIdentityService actorIdentityService,
         CrownOwnershipService crownOwnershipService,
-        IMatchPauseService matchPauseService)
+        IMatchPauseService matchPauseService,
+        IInventorySnapshotService inventorySnapshotService)
     {
         _gameFlow = gameFlow;
         _turnFlow = turnFlow;
@@ -27,12 +29,14 @@ public sealed class MatchStatePublisher : IMatchStatePublisher
         _actorIdentityService = actorIdentityService;
         _crownOwnershipService = crownOwnershipService;
         _matchPauseService = matchPauseService;
+        _inventorySnapshotService = inventorySnapshotService;
     }
 
     public MatchStateSnapshot Capture(long sequence, string phase = "in_game")
     {
         var actorSnapshots = BuildActorSnapshots();
         var openedCells = BuildOpenedCellSnapshots();
+        var inventorySnapshots = BuildInventorySnapshots(actorSnapshots);
 
         int currentActorId = 0;
         if (_turnFlow?.CurrentActor != null)
@@ -59,7 +63,8 @@ public sealed class MatchStatePublisher : IMatchStatePublisher
             pauseReason,
             normalizedPhase,
             actorSnapshots,
-            openedCells);
+            openedCells,
+            inventorySnapshots);
     }
 
     private IReadOnlyList<ActorStateSnapshot> BuildActorSnapshots()
@@ -145,6 +150,28 @@ public sealed class MatchStatePublisher : IMatchStatePublisher
             }
 
             result.Add(new OpenedCellSnapshot(cell.X, cell.Y, cell.Type.ToString()));
+        }
+
+        return result;
+    }
+
+    private IReadOnlyList<CharacterInventorySnapshot> BuildInventorySnapshots(IReadOnlyList<ActorStateSnapshot> actorSnapshots)
+    {
+        var result = new List<CharacterInventorySnapshot>();
+        if (_inventorySnapshotService == null || actorSnapshots == null)
+        {
+            return result;
+        }
+
+        for (int i = 0; i < actorSnapshots.Count; i++)
+        {
+            ActorStateSnapshot actor = actorSnapshots[i];
+            if (actor.ActorId <= 0 || !string.Equals(actor.ActorType, "character", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            result.Add(_inventorySnapshotService.Capture(actor.ActorId));
         }
 
         return result;

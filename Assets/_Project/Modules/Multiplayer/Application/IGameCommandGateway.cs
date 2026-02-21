@@ -8,4 +8,5 @@ public interface IGameCommandGateway
     Task<CommandSubmitResult> SubmitAttackAsync(int targetActorId, CancellationToken ct = default);
     Task<CommandSubmitResult> SubmitOpenCellAsync(CancellationToken ct = default);
     Task<CommandSubmitResult> SubmitEndTurnAsync(CancellationToken ct = default);
+    Task<CommandSubmitResult> SubmitTakeLootAsync(CancellationToken ct = default);
 }

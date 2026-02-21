@@ -13,6 +13,7 @@ public readonly struct MatchStateSnapshot
     public string Phase { get; }
     public IReadOnlyList<ActorStateSnapshot> Actors { get; }
     public IReadOnlyList<OpenedCellSnapshot> OpenedCells { get; }
+    public IReadOnlyList<CharacterInventorySnapshot> Inventories { get; }
 
     public MatchStateSnapshot(
         long sequence,
@@ -25,7 +26,8 @@ public readonly struct MatchStateSnapshot
         string pauseReason,
         string phase,
         IReadOnlyList<ActorStateSnapshot> actors,
-        IReadOnlyList<OpenedCellSnapshot> openedCells)
+        IReadOnlyList<OpenedCellSnapshot> openedCells,
+        IReadOnlyList<CharacterInventorySnapshot> inventories)
     {
         Sequence = sequence;
         GameState = gameState;
@@ -38,5 +40,6 @@ public readonly struct MatchStateSnapshot
         Phase = phase;
         Actors = actors;
         OpenedCells = openedCells;
+        Inventories = inventories;
     }
 }

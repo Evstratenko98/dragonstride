@@ -8,6 +8,7 @@ public sealed class GameCommandPolicyService : IGameCommandPolicyService
             GameCommandType.Attack => CommandTiming.TurnBound,
             GameCommandType.OpenCell => CommandTiming.TurnBound,
             GameCommandType.EndTurn => CommandTiming.TurnBound,
+            GameCommandType.TakeLoot => CommandTiming.TurnBound,
             _ => CommandTiming.TurnBound
         };
     }

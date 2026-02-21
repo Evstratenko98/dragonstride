@@ -8,16 +8,22 @@ public sealed class GameCommandExecutionService : IGameCommandExecutionService
     private readonly CharacterMovementDriver _movementDriver;
     private readonly AttackDriver _attackDriver;
     private readonly TurnFlow _turnFlow;
+    private readonly IActorIdentityService _actorIdentityService;
+    private readonly ILootSyncService _lootSyncService;
     private readonly SemaphoreSlim _executionLock = new(1, 1);
 
     public GameCommandExecutionService(
         CharacterMovementDriver movementDriver,
         AttackDriver attackDriver,
-        TurnFlow turnFlow)
+        TurnFlow turnFlow,
+        IActorIdentityService actorIdentityService,
+        ILootSyncService lootSyncService)
     {
         _movementDriver = movementDriver;
         _attackDriver = attackDriver;
         _turnFlow = turnFlow;
+        _actorIdentityService = actorIdentityService;
+        _lootSyncService = lootSyncService;
     }
 
     public async Task<CommandSubmitResult> ExecuteAsync(
@@ -38,7 +44,8 @@ public sealed class GameCommandExecutionService : IGameCommandExecutionService
                 GameCommandType.Move => await _movementDriver.TryExecuteCommandMoveAsync(command.Direction),
                 GameCommandType.Attack => _attackDriver.TryExecuteAttackByActorId(command.TargetActorId),
                 GameCommandType.OpenCell => _turnFlow.TryOpenCell(),
-                GameCommandType.EndTurn => _turnFlow.TryEndTurnByAuthority(),
+                GameCommandType.EndTurn => TryEndTurnWithAutoLoot(),
+                GameCommandType.TakeLoot => TryTakeLoot(),
                 _ => false
             };
 
@@ -59,5 +66,39 @@ public sealed class GameCommandExecutionService : IGameCommandExecutionService
         {
             _executionLock.Release();
         }
+    }
+
+    private bool TryTakeLoot()
+    {
+        int actorId = ResolveCurrentActorId();
+        if (actorId <= 0 || _lootSyncService == null)
+        {
+            return false;
+        }
+
+        MultiplayerOperationResult<CharacterInventorySnapshot> takeResult = _lootSyncService.ConfirmTakeLoot(actorId);
+        return takeResult.IsSuccess;
+    }
+
+    private bool TryEndTurnWithAutoLoot()
+    {
+        int actorId = ResolveCurrentActorId();
+        if (actorId > 0 && _lootSyncService != null && _lootSyncService.HasPendingLootForActor(actorId))
+        {
+            _lootSyncService.AutoTakeLootOnEndTurn(actorId);
+        }
+
+        return _turnFlow.TryEndTurnByAuthority();
+    }
+
+    private int ResolveCurrentActorId()
+    {
+        ICellLayoutOccupant actor = _turnFlow?.CurrentActor;
+        if (actor == null || _actorIdentityService == null)
+        {
+            return 0;
+        }
+
+        return _actorIdentityService.GetId(actor);
     }
 }

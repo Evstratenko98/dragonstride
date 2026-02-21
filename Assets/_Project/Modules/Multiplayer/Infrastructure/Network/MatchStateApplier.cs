@@ -14,6 +14,7 @@ public sealed class MatchStateApplier : IMatchStateApplier
     private readonly FieldPresenter _fieldPresenter;
     private readonly ConfigScriptableObject _config;
     private readonly IEventBus _eventBus;
+    private readonly IInventorySnapshotService _inventorySnapshotService;
 
     public bool HasReceivedInitialSnapshot { get; private set; }
     public long LastAppliedSequence { get; private set; }
@@ -28,7 +29,8 @@ public sealed class MatchStateApplier : IMatchStateApplier
         IActorIdentityService actorIdentityService,
         FieldPresenter fieldPresenter,
         ConfigScriptableObject config,
-        IEventBus eventBus)
+        IEventBus eventBus,
+        IInventorySnapshotService inventorySnapshotService)
     {
         _runtimeRoleService = runtimeRoleService;
         _matchNetworkService = matchNetworkService;
@@ -40,6 +42,7 @@ public sealed class MatchStateApplier : IMatchStateApplier
         _fieldPresenter = fieldPresenter;
         _config = config;
         _eventBus = eventBus;
+        _inventorySnapshotService = inventorySnapshotService;
     }
 
     public bool TryApply(MatchStateSnapshot snapshot)
@@ -63,6 +66,7 @@ public sealed class MatchStateApplier : IMatchStateApplier
         ApplyOpenedCells(snapshot.OpenedCells, field);
         ApplyActors(snapshot.Actors, field);
         ApplyRemovedReplicaEnemies(snapshot.Actors);
+        ApplyInventories(snapshot.Inventories);
         UpdateOnlineTurnState(snapshot);
 
         LastAppliedSequence = snapshot.Sequence;
@@ -70,6 +74,19 @@ public sealed class MatchStateApplier : IMatchStateApplier
         HasReceivedInitialSnapshot = true;
         _eventBus.Publish(new MatchSnapshotApplied(snapshot.Sequence, isInitial));
         return true;
+    }
+
+    private void ApplyInventories(IReadOnlyList<CharacterInventorySnapshot> inventories)
+    {
+        if (_inventorySnapshotService == null || inventories == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < inventories.Count; i++)
+        {
+            _inventorySnapshotService.Apply(inventories[i]);
+        }
     }
 
     private void UpdateOnlineTurnState(MatchStateSnapshot snapshot)

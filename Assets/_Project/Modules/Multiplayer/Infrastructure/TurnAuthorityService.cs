@@ -8,19 +8,22 @@ public sealed class TurnAuthorityService : ITurnAuthorityService
     private readonly IMatchRuntimeRoleService _runtimeRoleService;
     private readonly IMatchPauseService _matchPauseService;
     private readonly IGameCommandPolicyService _commandPolicyService;
+    private readonly ILootSyncService _lootSyncService;
 
     public TurnAuthorityService(
         TurnFlow turnFlow,
         IActorIdentityService actorIdentityService,
         IMatchRuntimeRoleService runtimeRoleService,
         IMatchPauseService matchPauseService,
-        IGameCommandPolicyService commandPolicyService)
+        IGameCommandPolicyService commandPolicyService,
+        ILootSyncService lootSyncService)
     {
         _turnFlow = turnFlow;
         _actorIdentityService = actorIdentityService;
         _runtimeRoleService = runtimeRoleService;
         _matchPauseService = matchPauseService;
         _commandPolicyService = commandPolicyService;
+        _lootSyncService = lootSyncService;
     }
 
     public CommandValidationResult Validate(GameCommandEnvelope command)
@@ -73,6 +76,7 @@ public sealed class TurnAuthorityService : ITurnAuthorityService
             GameCommandType.Attack => ValidateAttack(command.TargetActorId),
             GameCommandType.OpenCell => ValidateOpenCell(),
             GameCommandType.EndTurn => ValidateEndTurn(),
+            GameCommandType.TakeLoot => ValidateTakeLoot(command),
             _ => CommandValidationResult.Failure("unsupported_command", "Unsupported command type.")
         };
     }
@@ -87,6 +91,7 @@ public sealed class TurnAuthorityService : ITurnAuthorityService
                 : CommandValidationResult.Failure("invalid_target", "Target actor id is invalid."),
             GameCommandType.OpenCell => CommandValidationResult.Success(),
             GameCommandType.EndTurn => CommandValidationResult.Success(),
+            GameCommandType.TakeLoot => CommandValidationResult.Success(),
             _ => CommandValidationResult.Failure("unsupported_command", "Unsupported command type.")
         };
     }
@@ -165,6 +170,40 @@ public sealed class TurnAuthorityService : ITurnAuthorityService
             _turnFlow.State != TurnState.Trade)
         {
             return CommandValidationResult.Failure("invalid_turn_state", "End turn is unavailable in the current turn state.");
+        }
+
+        return CommandValidationResult.Success();
+    }
+
+    private CommandValidationResult ValidateTakeLoot(GameCommandEnvelope command)
+    {
+        if (_turnFlow?.CurrentActor is not CharacterInstance currentCharacter)
+        {
+            return CommandValidationResult.Failure("not_player_turn", "Current actor is not a character.");
+        }
+
+        if (!string.Equals(currentCharacter.PlayerId, command.PlayerId, StringComparison.Ordinal))
+        {
+            return CommandValidationResult.Failure("not_your_turn", "Only active actor owner can take loot.");
+        }
+
+        int actorId = _actorIdentityService != null ? _actorIdentityService.GetId(currentCharacter) : 0;
+        if (actorId <= 0)
+        {
+            return CommandValidationResult.Failure("actor_not_found", "Failed to resolve actor id for loot action.");
+        }
+
+        if (_lootSyncService == null || !_lootSyncService.HasPendingLootForActor(actorId))
+        {
+            return CommandValidationResult.Failure("no_pending_loot", "No pending loot for current actor.");
+        }
+
+        if (_turnFlow.State != TurnState.ActionSelection &&
+            _turnFlow.State != TurnState.Movement &&
+            _turnFlow.State != TurnState.OpenCell &&
+            _turnFlow.State != TurnState.Trade)
+        {
+            return CommandValidationResult.Failure("invalid_turn_state", "Take loot is unavailable in current turn state.");
         }
 
         return CommandValidationResult.Success();

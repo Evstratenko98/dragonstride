@@ -45,6 +45,10 @@ public class GameScope : LifetimeScope
         builder.Register<IMatchClientTurnStateService, FallbackMatchClientTurnStateService>(Lifetime.Singleton);
         builder.Register<IGameCommandPolicyService, GameCommandPolicyService>(Lifetime.Singleton);
         builder.Register<IActorIdentityService, ActorIdentityService>(Lifetime.Singleton);
+        builder.Register<IInventorySnapshotService, InventorySnapshotService>(Lifetime.Singleton);
+        builder.Register<ILootSyncService, LootSyncService>(Lifetime.Singleton);
+        builder.Register<IClientActionPlaybackService, ClientActionPlaybackService>(Lifetime.Singleton);
+        builder.Register<IMatchActionTimelineService, MatchActionTimelineService>(Lifetime.Singleton);
         builder.Register<CharacterInputReader>(Lifetime.Singleton);
         builder.Register<CharacterFactory>(Lifetime.Singleton);
         builder.Register<CharacterLifecycleService>(Lifetime.Singleton);
@@ -105,8 +109,7 @@ public class GameScope : LifetimeScope
             "[GameScope] AppScope parent was not found. Ensure AppScopeRuntimeBootstrap is active and AppScope exists before loading GameScene.");
     }
 
-    // Keep a local fallback in the same compilation unit to avoid hard dependency
-    // on an external file that can be accidentally reverted during iteration.
+    // Local fallback keeps GameScope resilient to accidental file reverts.
     private sealed class FallbackMatchClientTurnStateService : IMatchClientTurnStateService
     {
         public bool HasInitialState { get; private set; }

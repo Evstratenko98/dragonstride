@@ -30,4 +30,9 @@ public sealed class GameCommandGatewayFacade : IGameCommandGateway
     {
         return _gateway.SubmitEndTurnAsync(ct);
     }
+
+    public Task<CommandSubmitResult> SubmitTakeLootAsync(CancellationToken ct = default)
+    {
+        return _gateway.SubmitTakeLootAsync(ct);
+    }
 }

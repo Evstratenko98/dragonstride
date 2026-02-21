@@ -15,13 +15,18 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
     private const string IdentityMessageName = "ds3_client_identity";
     private const string SnapshotMessageName = "ds3_match_snapshot";
     private const string FieldSnapshotMessageName = "ds3_field_snapshot";
+    private const string ActionBatchMessageName = "ds3_action_batch";
+    private const string ActionAckMessageName = "ds3_action_ack";
+    private const int ActionAckTimeoutMs = 2500;
 
     private readonly IMatchNetworkService _matchNetworkService;
     private readonly IMatchRuntimeRoleService _runtimeRoleService;
     private readonly ITurnAuthorityService _turnAuthorityService;
     private readonly IGameCommandExecutionService _commandExecutionService;
+    private readonly IGameCommandPolicyService _commandPolicyService;
     private readonly IMatchStatePublisher _matchStatePublisher;
     private readonly IMatchStateApplier _matchStateApplier;
+    private readonly IMatchActionTimelineService _matchActionTimelineService;
     private readonly IFieldSnapshotService _fieldSnapshotService;
     private readonly FieldState _fieldState;
     private readonly IEventBus _eventBus;
@@ -34,7 +39,9 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
     private bool _handlersRegistered;
     private int _snapshotBroadcastInFlight;
     private int _fieldSnapshotBroadcastInFlight;
+    private int _turnTimelineBusy;
     private CancellationTokenSource _startCts;
+    private readonly Dictionary<long, HashSet<ulong>> _pendingActionAcks = new();
 
     private IDisposable _turnPhaseChangedSubscription;
     private IDisposable _gameStateChangedSubscription;
@@ -45,8 +52,10 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         IMatchRuntimeRoleService runtimeRoleService,
         ITurnAuthorityService turnAuthorityService,
         IGameCommandExecutionService commandExecutionService,
+        IGameCommandPolicyService commandPolicyService,
         IMatchStatePublisher matchStatePublisher,
         IMatchStateApplier matchStateApplier,
+        IMatchActionTimelineService matchActionTimelineService,
         IFieldSnapshotService fieldSnapshotService,
         FieldState fieldState,
         IEventBus eventBus)
@@ -55,8 +64,10 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         _runtimeRoleService = runtimeRoleService;
         _turnAuthorityService = turnAuthorityService;
         _commandExecutionService = commandExecutionService;
+        _commandPolicyService = commandPolicyService;
         _matchStatePublisher = matchStatePublisher;
         _matchStateApplier = matchStateApplier;
+        _matchActionTimelineService = matchActionTimelineService;
         _fieldSnapshotService = fieldSnapshotService;
         _fieldState = fieldState;
         _eventBus = eventBus;
@@ -104,6 +115,8 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(IdentityMessageName);
         networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(SnapshotMessageName);
         networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(FieldSnapshotMessageName);
+        networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(ActionBatchMessageName);
+        networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(ActionAckMessageName);
         networkManager.OnClientDisconnectCallback -= OnClientDisconnected;
         networkManager.OnClientConnectedCallback -= OnClientConnected;
         _handlersRegistered = false;
@@ -151,17 +164,23 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         networkManager.CustomMessagingManager.RegisterNamedMessageHandler(RejectMessageName, OnRejectMessage);
         networkManager.CustomMessagingManager.RegisterNamedMessageHandler(SnapshotMessageName, OnSnapshotMessage);
         networkManager.CustomMessagingManager.RegisterNamedMessageHandler(FieldSnapshotMessageName, OnFieldSnapshotMessage);
+        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(ActionBatchMessageName, OnActionBatchMessage);
 
         if (isHost)
         {
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(SubmitMessageName, OnSubmitMessage);
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(IdentityMessageName, OnIdentityMessage);
+            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(ActionAckMessageName, OnActionAckMessage);
             networkManager.OnClientDisconnectCallback += OnClientDisconnected;
             networkManager.OnClientConnectedCallback += OnClientConnected;
 
             _turnPhaseChangedSubscription = _eventBus.Subscribe<TurnPhaseChanged>(OnTurnPhaseChanged);
             _gameStateChangedSubscription = _eventBus.Subscribe<GameStateChanged>(OnGameStateChanged);
             _pauseChangedSubscription = _eventBus.Subscribe<MatchPauseStateChanged>(OnMatchPauseChanged);
+            if (_matchStatePublisher != null && _matchActionTimelineService != null)
+            {
+                _matchActionTimelineService.PrimeBaseline(_matchStatePublisher.Capture(0));
+            }
 
             RequestSnapshotBroadcast("gateway_started");
             RequestFieldSnapshotBroadcast("gateway_started");
@@ -193,6 +212,11 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
     public Task<CommandSubmitResult> SubmitEndTurnAsync(CancellationToken ct = default)
     {
         return SubmitAsync(GameCommandType.EndTurn, Vector2Int.zero, 0, ct);
+    }
+
+    public Task<CommandSubmitResult> SubmitTakeLootAsync(CancellationToken ct = default)
+    {
+        return SubmitAsync(GameCommandType.TakeLoot, Vector2Int.zero, 0, ct);
     }
 
     private async Task<CommandSubmitResult> SubmitAsync(
@@ -298,22 +322,65 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         GameCommandEnvelope command,
         CancellationToken cancellationToken)
     {
-        CommandValidationResult validation = _turnAuthorityService.Validate(command);
-        if (!validation.IsValid)
+        bool isTurnBoundCommand = IsTurnBoundCommand(command.CommandType);
+        if (isTurnBoundCommand && Interlocked.CompareExchange(ref _turnTimelineBusy, 1, 0) != 0)
         {
-            return CommandSubmitResult.Rejected(validation.ErrorCode, validation.ErrorMessage);
+            return CommandSubmitResult.Rejected("timeline_busy", "Another action batch is still resolving.");
         }
 
-        CommandSubmitResult localExecutionResult = await _commandExecutionService.ExecuteAsync(command, cancellationToken);
-        if (!localExecutionResult.IsAccepted)
+        try
         {
-            return localExecutionResult;
-        }
+            CommandValidationResult validation = _turnAuthorityService.Validate(command);
+            if (!validation.IsValid)
+            {
+                return CommandSubmitResult.Rejected(validation.ErrorCode, validation.ErrorMessage);
+            }
 
-        long sequence = Interlocked.Increment(ref _serverSequence);
-        await BroadcastAppliedCommandAsync(sequence, command);
-        await BroadcastSnapshotAsync(sequence);
-        return CommandSubmitResult.Accepted(sequence);
+            CommandSubmitResult localExecutionResult = await _commandExecutionService.ExecuteAsync(command, cancellationToken);
+            if (!localExecutionResult.IsAccepted)
+            {
+                return localExecutionResult;
+            }
+
+            long snapshotSequence = Interlocked.Increment(ref _serverSequence);
+            MatchActionBatch actionBatch = default;
+            bool hasActionBatch = false;
+
+            if (_matchActionTimelineService != null)
+            {
+                MultiplayerOperationResult<MatchActionBatch> timelineResult =
+                    await _matchActionTimelineService.BuildBatchForAcceptedCommandAsync(command, cancellationToken);
+                if (timelineResult.IsSuccess)
+                {
+                    actionBatch = timelineResult.Value.WithResultSnapshotSequence(snapshotSequence);
+                    hasActionBatch = true;
+                }
+            }
+
+            if (hasActionBatch)
+            {
+                await _matchActionTimelineService.PlayBatchLocallyAsync(actionBatch, cancellationToken);
+                await BroadcastActionBatchAsync(actionBatch);
+                if (isTurnBoundCommand && actionBatch.BlocksTurnInput)
+                {
+                    await WaitForActionAcksAsync(actionBatch.ActionSequence, cancellationToken);
+                }
+            }
+            else
+            {
+                await BroadcastAppliedCommandAsync(snapshotSequence, command);
+            }
+
+            await BroadcastSnapshotAsync(snapshotSequence);
+            return CommandSubmitResult.Accepted(snapshotSequence);
+        }
+        finally
+        {
+            if (isTurnBoundCommand)
+            {
+                Interlocked.Exchange(ref _turnTimelineBusy, 0);
+            }
+        }
     }
 
     private async Task BroadcastAppliedCommandAsync(long sequence, GameCommandEnvelope command)
@@ -344,6 +411,82 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         }
 
         await Task.CompletedTask;
+    }
+
+    private async Task BroadcastActionBatchAsync(MatchActionBatch batch)
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager?.CustomMessagingManager == null || !networkManager.IsServer)
+        {
+            return;
+        }
+
+        var pendingAcks = new HashSet<ulong>();
+        IReadOnlyList<ulong> connectedClientIds = networkManager.ConnectedClientsIds;
+        for (int i = 0; i < connectedClientIds.Count; i++)
+        {
+            ulong clientId = connectedClientIds[i];
+            if (clientId == NetworkManager.ServerClientId)
+            {
+                continue;
+            }
+
+            pendingAcks.Add(clientId);
+            using var writer = new FastBufferWriter(32768, Allocator.Temp);
+            WriteActionBatch(writer, batch);
+            networkManager.CustomMessagingManager.SendNamedMessage(
+                ActionBatchMessageName,
+                clientId,
+                writer,
+                NetworkDelivery.ReliableSequenced);
+        }
+
+        lock (_pendingActionAcks)
+        {
+            if (pendingAcks.Count == 0)
+            {
+                _pendingActionAcks.Remove(batch.ActionSequence);
+            }
+            else
+            {
+                _pendingActionAcks[batch.ActionSequence] = pendingAcks;
+            }
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task WaitForActionAcksAsync(long actionSequence, CancellationToken cancellationToken)
+    {
+        DateTime expiresAt = DateTime.UtcNow.AddMilliseconds(ActionAckTimeoutMs);
+        while (!cancellationToken.IsCancellationRequested && DateTime.UtcNow < expiresAt)
+        {
+            bool completed;
+            lock (_pendingActionAcks)
+            {
+                completed = !_pendingActionAcks.TryGetValue(actionSequence, out HashSet<ulong> pending) ||
+                            pending == null ||
+                            pending.Count == 0;
+                if (completed)
+                {
+                    _pendingActionAcks.Remove(actionSequence);
+                }
+            }
+
+            if (completed)
+            {
+                return;
+            }
+
+            await Task.Delay(25, cancellationToken);
+        }
+
+        lock (_pendingActionAcks)
+        {
+            _pendingActionAcks.Remove(actionSequence);
+        }
+
+        Debug.LogWarning($"[MpsGameCommandGateway] Action ack timeout for sequence {actionSequence}.");
     }
 
     private async Task BroadcastSnapshotAsync(long sequence)
@@ -518,6 +661,54 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         _ = ReadCommand(ref reader);
     }
 
+    private async void OnActionBatchMessage(ulong senderClientId, FastBufferReader reader)
+    {
+        if (_matchNetworkService.IsHost)
+        {
+            return;
+        }
+
+        MatchActionBatch batch = ReadActionBatch(ref reader);
+        if (batch.ActionSequence <= 0)
+        {
+            return;
+        }
+
+        try
+        {
+            if (_matchActionTimelineService != null)
+            {
+                await _matchActionTimelineService.PlayBatchLocallyAsync(batch);
+            }
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"[MpsGameCommandGateway] Failed to apply action batch {batch.ActionSequence}: {exception.Message}");
+        }
+        await SendActionAckToHostAsync(batch.ActionSequence);
+    }
+
+    private void OnActionAckMessage(ulong senderClientId, FastBufferReader reader)
+    {
+        if (!_matchNetworkService.IsHost)
+        {
+            return;
+        }
+
+        reader.ReadValueSafe(out long actionSequence);
+        lock (_pendingActionAcks)
+        {
+            if (_pendingActionAcks.TryGetValue(actionSequence, out HashSet<ulong> pending))
+            {
+                pending.Remove(senderClientId);
+                if (pending.Count == 0)
+                {
+                    _pendingActionAcks.Remove(actionSequence);
+                }
+            }
+        }
+    }
+
     private void OnFieldSnapshotMessage(ulong senderClientId, FastBufferReader reader)
     {
         if (_matchNetworkService.IsHost)
@@ -590,6 +781,24 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
             NetworkDelivery.ReliableSequenced);
     }
 
+    private async Task SendActionAckToHostAsync(long actionSequence)
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager?.CustomMessagingManager == null || !networkManager.IsClient)
+        {
+            return;
+        }
+
+        await Task.Yield();
+        using var writer = new FastBufferWriter(16, Allocator.Temp);
+        writer.WriteValueSafe(actionSequence);
+        networkManager.CustomMessagingManager.SendNamedMessage(
+            ActionAckMessageName,
+            NetworkManager.ServerClientId,
+            writer,
+            NetworkDelivery.ReliableSequenced);
+    }
+
     private void OnTurnPhaseChanged(TurnPhaseChanged _)
     {
         RequestSnapshotBroadcast("turn_phase");
@@ -642,6 +851,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         {
             await Task.Delay(60);
             long sequence = Interlocked.Increment(ref _serverSequence);
+            await BroadcastSystemActionBatchIfNeededAsync(sequence);
             await BroadcastSnapshotAsync(sequence);
         }
         catch (Exception exception)
@@ -652,6 +862,33 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         {
             Interlocked.Exchange(ref _snapshotBroadcastInFlight, 0);
         }
+    }
+
+    private async Task BroadcastSystemActionBatchIfNeededAsync(long snapshotSequence)
+    {
+        if (!_matchNetworkService.IsHost || _matchActionTimelineService == null)
+        {
+            return;
+        }
+
+        var systemCommand = new GameCommandEnvelope(
+            0,
+            GameCommandType.None,
+            string.Empty,
+            Vector2Int.zero,
+            0,
+            Environment.TickCount);
+
+        MultiplayerOperationResult<MatchActionBatch> batchResult =
+            await _matchActionTimelineService.BuildBatchForAcceptedCommandAsync(systemCommand);
+        if (!batchResult.IsSuccess)
+        {
+            return;
+        }
+
+        MatchActionBatch batch = batchResult.Value.WithResultSnapshotSequence(snapshotSequence);
+        await _matchActionTimelineService.PlayBatchLocallyAsync(batch);
+        await BroadcastActionBatchAsync(batch);
     }
 
     private async Task BroadcastFieldSnapshotDeferredAsync(string reason)
@@ -724,6 +961,14 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
             _playerByClientId.Remove(clientId);
         }
 
+        lock (_pendingActionAcks)
+        {
+            foreach (KeyValuePair<long, HashSet<ulong>> kv in _pendingActionAcks)
+            {
+                kv.Value?.Remove(clientId);
+            }
+        }
+
         RequestSnapshotBroadcast("client_disconnected");
     }
 
@@ -742,6 +987,12 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
 
         _playerByClientId[clientId] = playerId;
         _eventBus.Publish(new OnlinePlayerConnectionChanged(playerId, true));
+    }
+
+    private bool IsTurnBoundCommand(GameCommandType commandType)
+    {
+        CommandTiming timing = _commandPolicyService?.GetTiming(commandType) ?? CommandTiming.TurnBound;
+        return timing == CommandTiming.TurnBound;
     }
 
     private static void WriteCommand(FastBufferWriter writer, GameCommandEnvelope command)
@@ -772,6 +1023,86 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
             new Vector2Int(dirX, dirY),
             targetActorId,
             clientTick);
+    }
+
+    private static void WriteActionBatch(FastBufferWriter writer, MatchActionBatch batch)
+    {
+        writer.WriteValueSafe(batch.ActionSequence);
+        writer.WriteValueSafe(batch.ResultSnapshotSequence);
+        writer.WriteValueSafe(new FixedString128Bytes(batch.SourcePlayerId ?? string.Empty));
+        writer.WriteValueSafe(batch.BlocksTurnInput);
+
+        int eventCount = batch.Events?.Count ?? 0;
+        writer.WriteValueSafe(eventCount);
+        for (int i = 0; i < eventCount; i++)
+        {
+            ActionEventEnvelope actionEvent = batch.Events[i];
+            writer.WriteValueSafe((int)actionEvent.Type);
+            writer.WriteValueSafe(actionEvent.ActorId);
+            writer.WriteValueSafe(actionEvent.TargetActorId);
+            writer.WriteValueSafe(actionEvent.FromX);
+            writer.WriteValueSafe(actionEvent.FromY);
+            writer.WriteValueSafe(actionEvent.ToX);
+            writer.WriteValueSafe(actionEvent.ToY);
+            writer.WriteValueSafe(actionEvent.IntValue1);
+            writer.WriteValueSafe(actionEvent.IntValue2);
+            writer.WriteValueSafe(actionEvent.BoolValue1);
+            writer.WriteValueSafe(actionEvent.BoolValue2);
+            writer.WriteValueSafe(new FixedString4096Bytes(actionEvent.StrValue1 ?? string.Empty));
+            writer.WriteValueSafe(new FixedString4096Bytes(actionEvent.StrValue2 ?? string.Empty));
+            writer.WriteValueSafe(actionEvent.DurationMs);
+        }
+    }
+
+    private static MatchActionBatch ReadActionBatch(ref FastBufferReader reader)
+    {
+        reader.ReadValueSafe(out long actionSequence);
+        reader.ReadValueSafe(out long resultSnapshotSequence);
+        reader.ReadValueSafe(out FixedString128Bytes sourcePlayerId);
+        reader.ReadValueSafe(out bool blocksTurnInput);
+
+        reader.ReadValueSafe(out int eventCount);
+        var events = new List<ActionEventEnvelope>(Math.Max(0, eventCount));
+        for (int i = 0; i < eventCount; i++)
+        {
+            reader.ReadValueSafe(out int eventTypeValue);
+            reader.ReadValueSafe(out int actorId);
+            reader.ReadValueSafe(out int targetActorId);
+            reader.ReadValueSafe(out int fromX);
+            reader.ReadValueSafe(out int fromY);
+            reader.ReadValueSafe(out int toX);
+            reader.ReadValueSafe(out int toY);
+            reader.ReadValueSafe(out int intValue1);
+            reader.ReadValueSafe(out int intValue2);
+            reader.ReadValueSafe(out bool boolValue1);
+            reader.ReadValueSafe(out bool boolValue2);
+            reader.ReadValueSafe(out FixedString4096Bytes strValue1);
+            reader.ReadValueSafe(out FixedString4096Bytes strValue2);
+            reader.ReadValueSafe(out int durationMs);
+
+            events.Add(new ActionEventEnvelope(
+                (ActionEventType)eventTypeValue,
+                actorId,
+                targetActorId,
+                fromX,
+                fromY,
+                toX,
+                toY,
+                intValue1,
+                intValue2,
+                boolValue1,
+                boolValue2,
+                strValue1.ToString(),
+                strValue2.ToString(),
+                durationMs));
+        }
+
+        return new MatchActionBatch(
+            actionSequence,
+            resultSnapshotSequence,
+            sourcePlayerId.ToString(),
+            events,
+            blocksTurnInput);
     }
 
     private static void WriteFieldSnapshot(FastBufferWriter writer, FieldGridSnapshot snapshot)
@@ -886,6 +1217,24 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
             writer.WriteValueSafe(cell.Y);
             writer.WriteValueSafe(new FixedString64Bytes(cell.CellType ?? string.Empty));
         }
+
+        int inventoryCount = snapshot.Inventories?.Count ?? 0;
+        writer.WriteValueSafe(inventoryCount);
+        for (int i = 0; i < inventoryCount; i++)
+        {
+            CharacterInventorySnapshot inventory = snapshot.Inventories[i];
+            writer.WriteValueSafe(inventory.ActorId);
+
+            int slotCount = inventory.Slots?.Count ?? 0;
+            writer.WriteValueSafe(slotCount);
+            for (int j = 0; j < slotCount; j++)
+            {
+                InventorySlotSnapshot slot = inventory.Slots[j];
+                writer.WriteValueSafe(slot.SlotIndex);
+                writer.WriteValueSafe(new FixedString128Bytes(slot.ItemId ?? string.Empty));
+                writer.WriteValueSafe(slot.Count);
+            }
+        }
     }
 
     private static MatchStateSnapshot ReadSnapshot(ref FastBufferReader reader)
@@ -940,6 +1289,24 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
             openedCells.Add(new OpenedCellSnapshot(x, y, cellType.ToString()));
         }
 
+        reader.ReadValueSafe(out int inventoryCount);
+        var inventories = new List<CharacterInventorySnapshot>(Math.Max(0, inventoryCount));
+        for (int i = 0; i < inventoryCount; i++)
+        {
+            reader.ReadValueSafe(out int actorId);
+            reader.ReadValueSafe(out int slotCount);
+            var slots = new List<InventorySlotSnapshot>(Math.Max(0, slotCount));
+            for (int j = 0; j < slotCount; j++)
+            {
+                reader.ReadValueSafe(out int slotIndex);
+                reader.ReadValueSafe(out FixedString128Bytes itemId);
+                reader.ReadValueSafe(out int count);
+                slots.Add(new InventorySlotSnapshot(slotIndex, itemId.ToString(), count));
+            }
+
+            inventories.Add(new CharacterInventorySnapshot(actorId, slots));
+        }
+
         return new MatchStateSnapshot(
             sequence,
             (GameState)gameStateValue,
@@ -951,6 +1318,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
             pauseReason.ToString(),
             phase.ToString(),
             actors,
-            openedCells);
+            openedCells,
+            inventories);
     }
 }

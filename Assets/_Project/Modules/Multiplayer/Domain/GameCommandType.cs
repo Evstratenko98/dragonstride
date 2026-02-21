@@ -4,5 +4,6 @@ public enum GameCommandType
     Move = 1,
     Attack = 2,
     OpenCell = 3,
-    EndTurn = 4
+    EndTurn = 4,
+    TakeLoot = 5
 }

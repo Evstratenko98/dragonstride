@@ -14,11 +14,14 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
     private readonly IGameCommandGateway _commandGateway;
     private readonly IMatchClientTurnStateService _clientTurnStateService;
     private readonly IGameCommandPolicyService _commandPolicyService;
+    private readonly IClientActionPlaybackService _clientActionPlaybackService;
+    private readonly IMatchActionTimelineService _matchActionTimelineService;
 
     private IDisposable _moveRequestedSubscription;
     private IDisposable _endTurnRequestedSubscription;
     private IDisposable _openCellRequestedSubscription;
     private IDisposable _attackTargetSelectedSubscription;
+    private IDisposable _takeLootRequestedSubscription;
 
     private DateTime _lastMoveSubmitUtc = DateTime.MinValue;
     private int _moveInFlight;
@@ -30,7 +33,9 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
         TurnFlow turnFlow,
         IGameCommandGateway commandGateway,
         IMatchClientTurnStateService clientTurnStateService,
-        IGameCommandPolicyService commandPolicyService)
+        IGameCommandPolicyService commandPolicyService,
+        IClientActionPlaybackService clientActionPlaybackService,
+        IMatchActionTimelineService matchActionTimelineService)
     {
         _eventBus = eventBus;
         _runtimeRoleService = runtimeRoleService;
@@ -39,6 +44,8 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
         _commandGateway = commandGateway;
         _clientTurnStateService = clientTurnStateService;
         _commandPolicyService = commandPolicyService;
+        _clientActionPlaybackService = clientActionPlaybackService;
+        _matchActionTimelineService = matchActionTimelineService;
     }
 
     public void PostInitialize()
@@ -47,6 +54,7 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
         _endTurnRequestedSubscription = _eventBus.Subscribe<EndTurnRequested>(OnEndTurnRequested);
         _openCellRequestedSubscription = _eventBus.Subscribe<OpenCellRequested>(OnOpenCellRequested);
         _attackTargetSelectedSubscription = _eventBus.Subscribe<AttackTargetSelected>(OnAttackTargetSelected);
+        _takeLootRequestedSubscription = _eventBus.Subscribe<TakeLootRequested>(OnTakeLootRequested);
     }
 
     public void Dispose()
@@ -55,6 +63,7 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
         _endTurnRequestedSubscription?.Dispose();
         _openCellRequestedSubscription?.Dispose();
         _attackTargetSelectedSubscription?.Dispose();
+        _takeLootRequestedSubscription?.Dispose();
     }
 
     private async void OnMoveRequested(MoveCommandRequested message)
@@ -115,6 +124,16 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
         await _commandGateway.SubmitAttackAsync(message.TargetActorId);
     }
 
+    private async void OnTakeLootRequested(TakeLootRequested _)
+    {
+        if (!ShouldForwardOnlineInput(GameCommandType.TakeLoot))
+        {
+            return;
+        }
+
+        await _commandGateway.SubmitTakeLootAsync();
+    }
+
     private bool ShouldForwardOnlineInput(GameCommandType commandType)
     {
         if (_runtimeRoleService == null || !_runtimeRoleService.IsOnlineMatch)
@@ -123,6 +142,13 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
         }
 
         CommandTiming timing = _commandPolicyService?.GetTiming(commandType) ?? CommandTiming.TurnBound;
+        bool playbackBusy = (_clientActionPlaybackService != null && _clientActionPlaybackService.IsBusy) ||
+                            (_matchActionTimelineService != null && _matchActionTimelineService.IsPlaybackInProgress);
+        if (timing == CommandTiming.TurnBound && playbackBusy)
+        {
+            return false;
+        }
+
         if (!_runtimeRoleService.IsClientReplica)
         {
             return timing == CommandTiming.Anytime || IsHostTurnBoundCommandAllowed(commandType);
@@ -161,6 +187,10 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
                                     && _turnFlow.StepsRemaining > 0,
             GameCommandType.Attack => _turnFlow.State == TurnState.ActionSelection,
             GameCommandType.OpenCell => _turnFlow.State == TurnState.ActionSelection || _turnFlow.State == TurnState.Movement,
+            GameCommandType.TakeLoot => _turnFlow.State == TurnState.ActionSelection ||
+                                        _turnFlow.State == TurnState.Movement ||
+                                        _turnFlow.State == TurnState.OpenCell ||
+                                        _turnFlow.State == TurnState.Trade,
             GameCommandType.EndTurn => _turnFlow.State == TurnState.ActionSelection ||
                                        _turnFlow.State == TurnState.Movement ||
                                        _turnFlow.State == TurnState.Attack ||
