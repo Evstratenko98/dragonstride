@@ -26,6 +26,7 @@ public sealed class MainMenuView : MonoBehaviour
         exitButton ??= FindButton("ExitButton");
         statusText ??= FindText("StatusText");
         EnsureRequiredReferences();
+        ApplyButtonLabels();
     }
 
     public void SetStatus(string message)
@@ -120,5 +121,28 @@ public sealed class MainMenuView : MonoBehaviour
 
         throw new InvalidOperationException(
             "[MainMenuView] Required UI references are missing. Check MainMenu scene bindings for buttons and status text.");
+    }
+
+    private void ApplyButtonLabels()
+    {
+        SetButtonLabel(playOnlineButton, "Play Online");
+        SetButtonLabel(offlineTrainingButton, "Offline Training");
+        SetButtonLabel(reconnectButton, "Reconnect");
+        SetButtonLabel(settingsButton, "Settings");
+        SetButtonLabel(exitButton, "Exit");
+    }
+
+    private static void SetButtonLabel(Button button, string label)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        Text labelText = button.GetComponentInChildren<Text>(true);
+        if (labelText != null)
+        {
+            labelText.text = label;
+        }
     }
 }

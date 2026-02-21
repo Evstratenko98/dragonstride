@@ -9,6 +9,7 @@ public sealed class EnemyTurnDriver : IPostInitializable, ITickable, IDisposable
     private readonly TurnFlow _turnFlow;
     private readonly CharacterRoster _characterRoster;
     private readonly CrownOwnershipService _crownOwnershipService;
+    private readonly IMatchRuntimeRoleService _runtimeRoleService;
 
     private IDisposable _turnPhaseSubscription;
     private EnemyInstance _pendingEnemyTurn;
@@ -18,7 +19,8 @@ public sealed class EnemyTurnDriver : IPostInitializable, ITickable, IDisposable
         IRandomSource randomSource,
         TurnFlow turnFlow,
         CharacterRoster characterRoster,
-        CrownOwnershipService crownOwnershipService
+        CrownOwnershipService crownOwnershipService,
+        IMatchRuntimeRoleService runtimeRoleService
     )
     {
         _eventBus = eventBus;
@@ -26,6 +28,7 @@ public sealed class EnemyTurnDriver : IPostInitializable, ITickable, IDisposable
         _turnFlow = turnFlow;
         _characterRoster = characterRoster;
         _crownOwnershipService = crownOwnershipService;
+        _runtimeRoleService = runtimeRoleService;
     }
 
     public void PostInitialize()
@@ -40,6 +43,11 @@ public sealed class EnemyTurnDriver : IPostInitializable, ITickable, IDisposable
 
     private void OnTurnPhaseChanged(TurnPhaseChanged message)
     {
+        if (_runtimeRoleService != null && !_runtimeRoleService.CanMutateWorld)
+        {
+            return;
+        }
+
         if (message.State != TurnState.ActionSelection)
         {
             return;
@@ -55,6 +63,11 @@ public sealed class EnemyTurnDriver : IPostInitializable, ITickable, IDisposable
 
     public void Tick()
     {
+        if (_runtimeRoleService != null && !_runtimeRoleService.CanMutateWorld)
+        {
+            return;
+        }
+
         if (_pendingEnemyTurn == null)
         {
             return;

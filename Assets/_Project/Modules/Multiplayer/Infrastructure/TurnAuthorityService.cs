@@ -7,17 +7,20 @@ public sealed class TurnAuthorityService : ITurnAuthorityService
     private readonly IActorIdentityService _actorIdentityService;
     private readonly IMatchRuntimeRoleService _runtimeRoleService;
     private readonly IMatchPauseService _matchPauseService;
+    private readonly IGameCommandPolicyService _commandPolicyService;
 
     public TurnAuthorityService(
         TurnFlow turnFlow,
         IActorIdentityService actorIdentityService,
         IMatchRuntimeRoleService runtimeRoleService,
-        IMatchPauseService matchPauseService)
+        IMatchPauseService matchPauseService,
+        IGameCommandPolicyService commandPolicyService)
     {
         _turnFlow = turnFlow;
         _actorIdentityService = actorIdentityService;
         _runtimeRoleService = runtimeRoleService;
         _matchPauseService = matchPauseService;
+        _commandPolicyService = commandPolicyService;
     }
 
     public CommandValidationResult Validate(GameCommandEnvelope command)
@@ -42,6 +45,12 @@ public sealed class TurnAuthorityService : ITurnAuthorityService
             return CommandValidationResult.Failure("missing_player", "Command player id is empty.");
         }
 
+        CommandTiming timing = _commandPolicyService?.GetTiming(command.CommandType) ?? CommandTiming.TurnBound;
+        if (timing == CommandTiming.Anytime)
+        {
+            return ValidateAnytime(command);
+        }
+
         CharacterInstance currentCharacter = _turnFlow?.CurrentActor as CharacterInstance;
         if (currentCharacter == null)
         {
@@ -53,12 +62,31 @@ public sealed class TurnAuthorityService : ITurnAuthorityService
             return CommandValidationResult.Failure("not_your_turn", "Command sender does not own the current actor.");
         }
 
+        return ValidateTurnBound(command);
+    }
+
+    private CommandValidationResult ValidateTurnBound(GameCommandEnvelope command)
+    {
         return command.CommandType switch
         {
             GameCommandType.Move => ValidateMove(command.Direction),
             GameCommandType.Attack => ValidateAttack(command.TargetActorId),
             GameCommandType.OpenCell => ValidateOpenCell(),
             GameCommandType.EndTurn => ValidateEndTurn(),
+            _ => CommandValidationResult.Failure("unsupported_command", "Unsupported command type.")
+        };
+    }
+
+    private CommandValidationResult ValidateAnytime(GameCommandEnvelope command)
+    {
+        return command.CommandType switch
+        {
+            GameCommandType.Move => ValidateDirectionPayload(command.Direction),
+            GameCommandType.Attack => command.TargetActorId > 0
+                ? CommandValidationResult.Success()
+                : CommandValidationResult.Failure("invalid_target", "Target actor id is invalid."),
+            GameCommandType.OpenCell => CommandValidationResult.Success(),
+            GameCommandType.EndTurn => CommandValidationResult.Success(),
             _ => CommandValidationResult.Failure("unsupported_command", "Unsupported command type.")
         };
     }
@@ -75,6 +103,17 @@ public sealed class TurnAuthorityService : ITurnAuthorityService
             return CommandValidationResult.Failure("no_steps", "No movement steps remaining.");
         }
 
+        CommandValidationResult directionValidation = ValidateDirectionPayload(direction);
+        if (!directionValidation.IsValid)
+        {
+            return directionValidation;
+        }
+
+        return CommandValidationResult.Success();
+    }
+
+    private static CommandValidationResult ValidateDirectionPayload(Vector2Int direction)
+    {
         bool isCardinal = direction == Vector2Int.left ||
                           direction == Vector2Int.right ||
                           direction == Vector2Int.up ||

@@ -7,6 +7,7 @@ public sealed class FieldPresenter : IDisposable
 {
     private readonly ConfigScriptableObject _config;
     private readonly FieldGenerator _fieldGenerator;
+    private readonly IFieldSnapshotService _fieldSnapshotService;
     private readonly FieldState _fieldState;
     private readonly CellView _cellPrefab;
     private readonly CellColorTheme _theme;
@@ -24,6 +25,7 @@ public sealed class FieldPresenter : IDisposable
     public FieldPresenter(
         ConfigScriptableObject config,
         FieldGenerator fieldGenerator,
+        IFieldSnapshotService fieldSnapshotService,
         FieldState fieldState,
         CellView cellPrefab,
         CellColorTheme theme,
@@ -33,6 +35,7 @@ public sealed class FieldPresenter : IDisposable
     {
         _config = config;
         _fieldGenerator = fieldGenerator;
+        _fieldSnapshotService = fieldSnapshotService;
         _fieldState = fieldState;
         _cellPrefab = cellPrefab;
         _theme = theme;
@@ -47,28 +50,29 @@ public sealed class FieldPresenter : IDisposable
     public void CreateField()
     {
         var field = _fieldGenerator.Create(_config.FIELD_WIDTH, _config.FIELD_HEIGHT, _config.EXTRA_CONNECTION_CHANCE);
-        _fieldState.SetField(field);
+        BuildFromField(field);
+    }
 
-        _root = _fieldRoot.EnsureRoot();
-        _linkView = _viewFactory.LinkView;
-        _ = _viewFactory.FogOfWarView;
+    public bool CreateFieldFromSnapshot(FieldGridSnapshot snapshot)
+    {
+        if (_fieldSnapshotService == null)
+        {
+            return false;
+        }
 
-        BuildCells(field);
-        BuildLinks(field);
+        FieldGrid field = _fieldSnapshotService.Build(snapshot);
+        if (field == null)
+        {
+            return false;
+        }
+
+        BuildFromField(field);
+        return true;
     }
 
     public void Reset()
     {
-        foreach (var view in _views.Values)
-        {
-            if (view != null)
-            {
-                Object.Destroy(view.gameObject);
-            }
-        }
-
-        _views.Clear();
-        _linkView?.ClearLinks();
+        ClearVisuals();
         _fieldState.Clear();
     }
 
@@ -88,6 +92,24 @@ public sealed class FieldPresenter : IDisposable
         {
             view.Refresh();
         }
+    }
+
+    private void BuildFromField(FieldGrid field)
+    {
+        if (field == null)
+        {
+            return;
+        }
+
+        ClearVisuals();
+        _fieldState.SetField(field);
+
+        _root = _fieldRoot.EnsureRoot();
+        _linkView = _viewFactory.LinkView;
+        _ = _viewFactory.FogOfWarView;
+
+        BuildCells(field);
+        BuildLinks(field);
     }
 
     private void BuildCells(FieldGrid field)
@@ -130,5 +152,19 @@ public sealed class FieldPresenter : IDisposable
                 _linkView.CreateVisualLink(link, aView, bView);
             }
         }
+    }
+
+    private void ClearVisuals()
+    {
+        foreach (var view in _views.Values)
+        {
+            if (view != null)
+            {
+                Object.Destroy(view.gameObject);
+            }
+        }
+
+        _views.Clear();
+        _linkView?.ClearLinks();
     }
 }

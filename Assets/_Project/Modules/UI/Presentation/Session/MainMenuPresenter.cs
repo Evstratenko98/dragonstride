@@ -91,7 +91,7 @@ public sealed class MainMenuPresenter : IStartable, IDisposable
         _view.SetExitInteractable(true);
 
         _view.SetStatus(multiplayerEnabled
-            ? "Online mode is available. Character draft scene is enabled in Phase 3.1."
+            ? "Online mode is available. Create or join a lobby to start a match."
             : "Multiplayer disabled in config. Offline training is available.");
     }
 
@@ -109,12 +109,12 @@ public sealed class MainMenuPresenter : IStartable, IDisposable
 
     private void OnReconnectClicked()
     {
-        _view.SetStatus("Reconnect flow will be implemented in Phase 5+.");
+        _view.SetStatus("Reconnect flow is planned for Phase 5+.");
     }
 
     private void OnSettingsClicked()
     {
-        _view.SetStatus("Settings flow will be implemented in Phase 2.");
+        _view.SetStatus("Settings menu is planned for a later phase.");
     }
 
     private void OnExitClicked()

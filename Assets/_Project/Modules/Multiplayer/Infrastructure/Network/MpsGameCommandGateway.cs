@@ -14,6 +14,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
     private const string RejectMessageName = "ds3_cmd_reject";
     private const string IdentityMessageName = "ds3_client_identity";
     private const string SnapshotMessageName = "ds3_match_snapshot";
+    private const string FieldSnapshotMessageName = "ds3_field_snapshot";
 
     private readonly IMatchNetworkService _matchNetworkService;
     private readonly IMatchRuntimeRoleService _runtimeRoleService;
@@ -21,6 +22,8 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
     private readonly IGameCommandExecutionService _commandExecutionService;
     private readonly IMatchStatePublisher _matchStatePublisher;
     private readonly IMatchStateApplier _matchStateApplier;
+    private readonly IFieldSnapshotService _fieldSnapshotService;
+    private readonly FieldState _fieldState;
     private readonly IEventBus _eventBus;
 
     private readonly Dictionary<ulong, string> _playerByClientId = new();
@@ -29,6 +32,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
     private long _lastAppliedCommandSequence;
     private bool _isStarted;
     private int _snapshotBroadcastInFlight;
+    private int _fieldSnapshotBroadcastInFlight;
 
     private IDisposable _turnPhaseChangedSubscription;
     private IDisposable _gameStateChangedSubscription;
@@ -41,6 +45,8 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         IGameCommandExecutionService commandExecutionService,
         IMatchStatePublisher matchStatePublisher,
         IMatchStateApplier matchStateApplier,
+        IFieldSnapshotService fieldSnapshotService,
+        FieldState fieldState,
         IEventBus eventBus)
     {
         _matchNetworkService = matchNetworkService;
@@ -49,6 +55,8 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         _commandExecutionService = commandExecutionService;
         _matchStatePublisher = matchStatePublisher;
         _matchStateApplier = matchStateApplier;
+        _fieldSnapshotService = fieldSnapshotService;
+        _fieldState = fieldState;
         _eventBus = eventBus;
     }
 
@@ -69,6 +77,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         networkManager.CustomMessagingManager.RegisterNamedMessageHandler(ApplyMessageName, OnApplyMessage);
         networkManager.CustomMessagingManager.RegisterNamedMessageHandler(RejectMessageName, OnRejectMessage);
         networkManager.CustomMessagingManager.RegisterNamedMessageHandler(SnapshotMessageName, OnSnapshotMessage);
+        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(FieldSnapshotMessageName, OnFieldSnapshotMessage);
 
         if (_matchNetworkService.IsHost)
         {
@@ -108,6 +117,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(SubmitMessageName);
         networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(IdentityMessageName);
         networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(SnapshotMessageName);
+        networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(FieldSnapshotMessageName);
         networkManager.OnClientDisconnectCallback -= OnClientDisconnected;
         networkManager.OnClientConnectedCallback -= OnClientConnected;
         _isStarted = false;
@@ -318,6 +328,46 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         await Task.CompletedTask;
     }
 
+    private async Task BroadcastFieldSnapshotAsync()
+    {
+        if (!_matchNetworkService.IsHost || _fieldSnapshotService == null || _fieldState?.CurrentField == null)
+        {
+            return;
+        }
+
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager?.CustomMessagingManager == null || !networkManager.IsServer)
+        {
+            return;
+        }
+
+        FieldGridSnapshot snapshot = _fieldSnapshotService.Capture(_fieldState.CurrentField);
+        if (snapshot.Width <= 0 || snapshot.Height <= 0)
+        {
+            return;
+        }
+
+        IReadOnlyList<ulong> connectedClientIds = networkManager.ConnectedClientsIds;
+        for (int i = 0; i < connectedClientIds.Count; i++)
+        {
+            ulong clientId = connectedClientIds[i];
+            if (clientId == NetworkManager.ServerClientId)
+            {
+                continue;
+            }
+
+            using var writer = new FastBufferWriter(32768, Allocator.Temp);
+            WriteFieldSnapshot(writer, snapshot);
+            networkManager.CustomMessagingManager.SendNamedMessage(
+                FieldSnapshotMessageName,
+                clientId,
+                writer,
+                NetworkDelivery.ReliableSequenced);
+        }
+
+        await Task.CompletedTask;
+    }
+
     private async Task SendSnapshotToClientAsync(ulong clientId)
     {
         if (!_matchNetworkService.IsHost || _matchStatePublisher == null)
@@ -337,6 +387,35 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         WriteSnapshot(writer, snapshot);
         networkManager.CustomMessagingManager.SendNamedMessage(
             SnapshotMessageName,
+            clientId,
+            writer,
+            NetworkDelivery.ReliableSequenced);
+        await Task.CompletedTask;
+    }
+
+    private async Task SendFieldSnapshotToClientAsync(ulong clientId)
+    {
+        if (!_matchNetworkService.IsHost || _fieldSnapshotService == null || _fieldState?.CurrentField == null)
+        {
+            return;
+        }
+
+        NetworkManager networkManager = NetworkManager.Singleton;
+        if (networkManager?.CustomMessagingManager == null || !networkManager.IsServer)
+        {
+            return;
+        }
+
+        FieldGridSnapshot snapshot = _fieldSnapshotService.Capture(_fieldState.CurrentField);
+        if (snapshot.Width <= 0 || snapshot.Height <= 0)
+        {
+            return;
+        }
+
+        using var writer = new FastBufferWriter(32768, Allocator.Temp);
+        WriteFieldSnapshot(writer, snapshot);
+        networkManager.CustomMessagingManager.SendNamedMessage(
+            FieldSnapshotMessageName,
             clientId,
             writer,
             NetworkDelivery.ReliableSequenced);
@@ -368,7 +447,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         await Task.CompletedTask;
     }
 
-    private async void OnApplyMessage(ulong senderClientId, FastBufferReader reader)
+    private void OnApplyMessage(ulong senderClientId, FastBufferReader reader)
     {
         if (_matchNetworkService.IsHost)
         {
@@ -382,8 +461,23 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         }
 
         _lastAppliedCommandSequence = sequence;
-        GameCommandEnvelope command = ReadCommand(ref reader);
-        await _commandExecutionService.ExecuteAsync(command);
+        _ = ReadCommand(ref reader);
+    }
+
+    private void OnFieldSnapshotMessage(ulong senderClientId, FastBufferReader reader)
+    {
+        if (_matchNetworkService.IsHost)
+        {
+            return;
+        }
+
+        FieldGridSnapshot snapshot = ReadFieldSnapshot(ref reader);
+        if (snapshot.Width <= 0 || snapshot.Height <= 0)
+        {
+            return;
+        }
+
+        _eventBus.Publish(new FieldSnapshotReceived(snapshot));
     }
 
     private void OnSnapshotMessage(ulong senderClientId, FastBufferReader reader)
@@ -450,6 +544,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
     private void OnGameStateChanged(GameStateChanged _)
     {
         RequestSnapshotBroadcast("game_state");
+        RequestFieldSnapshotBroadcast("game_state");
     }
 
     private void OnMatchPauseChanged(MatchPauseStateChanged _)
@@ -472,6 +567,21 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         _ = BroadcastSnapshotDeferredAsync(reason);
     }
 
+    private void RequestFieldSnapshotBroadcast(string reason)
+    {
+        if (!_matchNetworkService.IsHost || _fieldState?.CurrentField == null)
+        {
+            return;
+        }
+
+        if (Interlocked.CompareExchange(ref _fieldSnapshotBroadcastInFlight, 1, 0) != 0)
+        {
+            return;
+        }
+
+        _ = BroadcastFieldSnapshotDeferredAsync(reason);
+    }
+
     private async Task BroadcastSnapshotDeferredAsync(string reason)
     {
         try
@@ -490,6 +600,23 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         }
     }
 
+    private async Task BroadcastFieldSnapshotDeferredAsync(string reason)
+    {
+        try
+        {
+            await Task.Delay(60);
+            await BroadcastFieldSnapshotAsync();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"[MpsGameCommandGateway] Failed to broadcast field snapshot ({reason}): {exception.Message}");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _fieldSnapshotBroadcastInFlight, 0);
+        }
+    }
+
     private void OnClientConnected(ulong clientId)
     {
         if (!_matchNetworkService.IsHost || clientId == NetworkManager.ServerClientId)
@@ -497,6 +624,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
             return;
         }
 
+        _ = SendFieldSnapshotToClientAsync(clientId);
         _ = SendSnapshotToClientAsync(clientId);
     }
 
@@ -561,6 +689,79 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
             new Vector2Int(dirX, dirY),
             targetActorId,
             clientTick);
+    }
+
+    private static void WriteFieldSnapshot(FastBufferWriter writer, FieldGridSnapshot snapshot)
+    {
+        writer.WriteValueSafe(snapshot.Width);
+        writer.WriteValueSafe(snapshot.Height);
+        writer.WriteValueSafe(snapshot.StartX);
+        writer.WriteValueSafe(snapshot.StartY);
+        writer.WriteValueSafe(new FixedString128Bytes(snapshot.Checksum ?? string.Empty));
+
+        int cellCount = snapshot.Cells?.Count ?? 0;
+        writer.WriteValueSafe(cellCount);
+        for (int i = 0; i < cellCount; i++)
+        {
+            FieldCellSnapshot cell = snapshot.Cells[i];
+            writer.WriteValueSafe(cell.X);
+            writer.WriteValueSafe(cell.Y);
+            writer.WriteValueSafe((int)cell.Type);
+            writer.WriteValueSafe(cell.IsOpened);
+            writer.WriteValueSafe(cell.IsTypeRevealed);
+        }
+
+        int linkCount = snapshot.Links?.Count ?? 0;
+        writer.WriteValueSafe(linkCount);
+        for (int i = 0; i < linkCount; i++)
+        {
+            FieldLinkSnapshot link = snapshot.Links[i];
+            writer.WriteValueSafe(link.AX);
+            writer.WriteValueSafe(link.AY);
+            writer.WriteValueSafe(link.BX);
+            writer.WriteValueSafe(link.BY);
+        }
+    }
+
+    private static FieldGridSnapshot ReadFieldSnapshot(ref FastBufferReader reader)
+    {
+        reader.ReadValueSafe(out int width);
+        reader.ReadValueSafe(out int height);
+        reader.ReadValueSafe(out int startX);
+        reader.ReadValueSafe(out int startY);
+        reader.ReadValueSafe(out FixedString128Bytes checksum);
+
+        reader.ReadValueSafe(out int cellCount);
+        var cells = new List<FieldCellSnapshot>(Math.Max(0, cellCount));
+        for (int i = 0; i < cellCount; i++)
+        {
+            reader.ReadValueSafe(out int x);
+            reader.ReadValueSafe(out int y);
+            reader.ReadValueSafe(out int typeValue);
+            reader.ReadValueSafe(out bool isOpened);
+            reader.ReadValueSafe(out bool isTypeRevealed);
+            cells.Add(new FieldCellSnapshot(x, y, (CellType)typeValue, isOpened, isTypeRevealed));
+        }
+
+        reader.ReadValueSafe(out int linkCount);
+        var links = new List<FieldLinkSnapshot>(Math.Max(0, linkCount));
+        for (int i = 0; i < linkCount; i++)
+        {
+            reader.ReadValueSafe(out int ax);
+            reader.ReadValueSafe(out int ay);
+            reader.ReadValueSafe(out int bx);
+            reader.ReadValueSafe(out int by);
+            links.Add(new FieldLinkSnapshot(ax, ay, bx, by));
+        }
+
+        return new FieldGridSnapshot(
+            width,
+            height,
+            cells,
+            links,
+            startX,
+            startY,
+            checksum.ToString());
     }
 
     private static void WriteSnapshot(FastBufferWriter writer, MatchStateSnapshot snapshot)

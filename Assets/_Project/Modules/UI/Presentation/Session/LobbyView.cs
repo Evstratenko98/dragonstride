@@ -42,6 +42,7 @@ public sealed class LobbyView : MonoBehaviour
         activeSessionText ??= FindText("ActiveSessionText");
         statusText ??= FindText("LobbyStatusText");
         EnsureRequiredReferences();
+        ApplyButtonLabels();
 
         if (sessionListContent != null)
         {
@@ -290,5 +291,28 @@ public sealed class LobbyView : MonoBehaviour
 
         throw new InvalidOperationException(
             "[LobbyView] Required UI references are missing. Check Lobby scene bindings and object names.");
+    }
+
+    private void ApplyButtonLabels()
+    {
+        SetButtonLabel(createLobbyButton, "Create Lobby");
+        SetButtonLabel(refreshButton, "Refresh");
+        SetButtonLabel(joinByCodeButton, "Join by Code");
+        SetButtonLabel(startMatchButton, "Start Match");
+        SetButtonLabel(backToMenuButton, "Back to Menu");
+    }
+
+    private static void SetButtonLabel(Button button, string label)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        Text labelText = button.GetComponentInChildren<Text>(true);
+        if (labelText != null)
+        {
+            labelText.text = label;
+        }
     }
 }

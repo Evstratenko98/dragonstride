@@ -1,18 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
 public class GameFlow : IPostInitializable, IDisposable, IStartable
 {
+    private const int FieldSnapshotTimeoutMs = 10000;
+
     private readonly IEventBus _eventBus;
     private readonly IRandomSource _randomSource;
-    private IDisposable _turnEndSub;
-    private IDisposable _gameStateSub;
-    private IDisposable _resetButtonSub;
-
+    private readonly IMatchRuntimeRoleService _runtimeRoleService;
     private readonly FieldPresenter _fieldPresenter;
     private readonly CharacterMovementDriver _characterDriver;
     private readonly TurnFlow _turnFlow;
@@ -22,10 +23,21 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
     private readonly CharacterCatalog _characterCatalog;
     private readonly ISessionSceneRouter _sceneRouter;
 
+    private readonly CancellationTokenSource _lifecycleCts = new();
+    private IDisposable _turnEndSub;
+    private IDisposable _gameStateSub;
+    private IDisposable _resetButtonSub;
+    private IDisposable _fieldSnapshotSub;
+
     private IReadOnlyList<Entity> _turnEntities = Array.Empty<Entity>();
     private ICellLayoutOccupant _currentTurnActor;
     private List<ICellLayoutOccupant> _roundActors = new();
     private int _roundActorIndex;
+
+    private bool _isStarting;
+    private bool _hasFieldSnapshot;
+    private FieldGridSnapshot _latestFieldSnapshot;
+    private TaskCompletionSource<FieldGridSnapshot> _fieldSnapshotTcs;
 
     public GameState GameState { get; private set; } = GameState.Init;
     public GameTurnState GameTurnState { get; private set; } = GameTurnState.Init;
@@ -36,6 +48,7 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
     public GameFlow(
         IEventBus eventBus,
         IRandomSource randomSource,
+        IMatchRuntimeRoleService runtimeRoleService,
         TurnFlow turnFlow,
         FieldPresenter fieldPresenter,
         CharacterMovementDriver characterDriver,
@@ -43,11 +56,11 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         IMultiplayerSessionService sessionService,
         IMatchSetupContextService matchSetupContextService,
         CharacterCatalog characterCatalog,
-        ISessionSceneRouter sceneRouter
-    )
+        ISessionSceneRouter sceneRouter)
     {
         _eventBus = eventBus;
         _randomSource = randomSource;
+        _runtimeRoleService = runtimeRoleService;
         _fieldPresenter = fieldPresenter;
         _characterDriver = characterDriver;
         _turnFlow = turnFlow;
@@ -63,6 +76,7 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         _turnEndSub = _eventBus.Subscribe<TurnEnded>(OnEndTurn);
         _gameStateSub = _eventBus.Subscribe<GameStateChanged>(OnStateGame);
         _resetButtonSub = _eventBus.Subscribe<ResetRequested>(OnStartGame);
+        _fieldSnapshotSub = _eventBus.Subscribe<FieldSnapshotReceived>(OnFieldSnapshotReceived);
     }
 
     public void Dispose()
@@ -70,57 +84,100 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         _turnEndSub?.Dispose();
         _gameStateSub?.Dispose();
         _resetButtonSub?.Dispose();
+        _fieldSnapshotSub?.Dispose();
+
+        if (!_lifecycleCts.IsCancellationRequested)
+        {
+            _lifecycleCts.Cancel();
+        }
+
+        _lifecycleCts.Dispose();
     }
 
     public void OnStartGame(ResetRequested msg)
     {
-        Start();
+        _ = StartAsync(_lifecycleCts.Token);
     }
 
     public void Start()
     {
-        SetGameState(GameState.Loading);
-        _randomSource.ResetSeed(ResolveMatchSeed());
+        _ = StartAsync(_lifecycleCts.Token);
+    }
 
-        _characterDriver.Reset();
-        _fieldPresenter.CreateField();
-        Cell startCell = _fieldPresenter.StartCell;
-
-        IReadOnlyList<CharacterSpawnRequest> spawnRequests = ResolveSpawnRequests();
-        if (spawnRequests == null || spawnRequests.Count == 0)
+    private async Task StartAsync(CancellationToken cancellationToken)
+    {
+        if (_isStarting)
         {
-            Debug.LogError("[GameFlow] Match setup context has no spawn requests. Returning to MainMenu.");
-            _ = _sceneRouter.LoadMainMenuAsync();
             return;
         }
 
-        var characters = _characterDriver.SpawnCharacters(startCell, spawnRequests);
-        if (characters == null || characters.Count == 0)
+        _isStarting = true;
+        try
         {
-            Debug.LogError("[GameFlow] Character roster is empty after spawn. Returning to MainMenu.");
+            SetGameState(GameState.Loading);
+            _randomSource.ResetSeed(ResolveMatchSeed());
+
+            _characterDriver.Reset();
+
+            bool fieldPrepared = await PrepareFieldAsync(cancellationToken);
+            if (!fieldPrepared)
+            {
+                await AbortToMainMenuAsync("Field initialization failed. Returning to MainMenu.");
+                return;
+            }
+
+            Cell startCell = _fieldPresenter.StartCell;
+            IReadOnlyList<CharacterSpawnRequest> spawnRequests = ResolveSpawnRequests();
+            if (spawnRequests == null || spawnRequests.Count == 0)
+            {
+                Debug.LogError("[GameFlow] Match setup context has no spawn requests. Returning to MainMenu.");
+                await AbortToMainMenuAsync("Match setup is empty. Returning to MainMenu.");
+                return;
+            }
+
+            var characters = _characterDriver.SpawnCharacters(startCell, spawnRequests);
+            if (characters == null || characters.Count == 0)
+            {
+                Debug.LogError("[GameFlow] Character roster is empty after spawn. Returning to MainMenu.");
+                _matchSetupContextService.Clear();
+                await AbortToMainMenuAsync("Character spawn failed. Returning to MainMenu.");
+                return;
+            }
+
             _matchSetupContextService.Clear();
-            _ = _sceneRouter.LoadMainMenuAsync();
-            return;
+            _eventBus.Publish(new CharacterRosterUpdated(characters));
+            _turnEntities = Array.Empty<Entity>();
+            _roundActors.Clear();
+            _roundActorIndex = 0;
+
+            StartGame();
         }
-
-        _matchSetupContextService.Clear();
-        _eventBus.Publish(new CharacterRosterUpdated(characters));
-        _turnEntities = Array.Empty<Entity>();
-        _roundActors.Clear();
-        _roundActorIndex = 0;
-
-        StartGame();
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            _isStarting = false;
+        }
     }
 
     public void StartGame()
     {
         SetGameState(GameState.Playing);
 
-        StartTurnCycle();
+        if (ShouldRunAuthoritativeTurnLoop())
+        {
+            StartTurnCycle();
+        }
     }
 
     public void StartTurnCycle()
     {
+        if (!ShouldRunAuthoritativeTurnLoop())
+        {
+            return;
+        }
+
         GameTurnState = GameTurnState.BeginTurn;
         _currentTurnActor = null;
         BuildRoundOrder();
@@ -129,6 +186,11 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
 
     private void StartTurn()
     {
+        if (!ShouldRunAuthoritativeTurnLoop())
+        {
+            return;
+        }
+
         GameTurnState = GameTurnState.CharacterTurns;
 
         _turnFlow.StartTurn(_currentTurnActor);
@@ -136,7 +198,7 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
 
     public void OnEndTurn(TurnEnded msg)
     {
-        if (GameState == GameState.Finished)
+        if (!ShouldRunAuthoritativeTurnLoop() || GameState == GameState.Finished)
         {
             return;
         }
@@ -171,7 +233,7 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
 
     private void OnStateGame(GameStateChanged msg)
     {
-        if(msg.State == GameState.Finished)
+        if (msg.State == GameState.Finished)
         {
             FinishGame();
         }
@@ -191,7 +253,6 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
     private void SetGameState(GameState newState)
     {
         GameState = newState;
-        
         _eventBus.Publish(new GameStateChanged(newState));
     }
 
@@ -283,5 +344,66 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         }
 
         return DateTime.UtcNow.GetHashCode();
+    }
+
+    private bool ShouldRunAuthoritativeTurnLoop()
+    {
+        return _runtimeRoleService == null || _runtimeRoleService.CanMutateWorld;
+    }
+
+    private async Task<bool> PrepareFieldAsync(CancellationToken cancellationToken)
+    {
+        if (_runtimeRoleService != null && _runtimeRoleService.IsClientReplica)
+        {
+            return await WaitForFieldSnapshotAndBuildAsync(cancellationToken);
+        }
+
+        _fieldPresenter.CreateField();
+        return _fieldPresenter.StartCell != null;
+    }
+
+    private async Task<bool> WaitForFieldSnapshotAndBuildAsync(CancellationToken cancellationToken)
+    {
+        if (_hasFieldSnapshot)
+        {
+            return _fieldPresenter.CreateFieldFromSnapshot(_latestFieldSnapshot);
+        }
+
+        _fieldSnapshotTcs = new TaskCompletionSource<FieldGridSnapshot>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task delayTask = Task.Delay(FieldSnapshotTimeoutMs, cancellationToken);
+        Task completed = await Task.WhenAny(_fieldSnapshotTcs.Task, delayTask);
+        if (completed != _fieldSnapshotTcs.Task)
+        {
+            Debug.LogWarning("[GameFlow] Timed out while waiting for host field snapshot.");
+            return false;
+        }
+
+        FieldGridSnapshot snapshot = await _fieldSnapshotTcs.Task;
+        if (snapshot.Width <= 0 || snapshot.Height <= 0)
+        {
+            Debug.LogWarning("[GameFlow] Host field snapshot payload is invalid.");
+            return false;
+        }
+
+        return _fieldPresenter.CreateFieldFromSnapshot(snapshot);
+    }
+
+    private void OnFieldSnapshotReceived(FieldSnapshotReceived message)
+    {
+        if (message.Snapshot.Width <= 0 || message.Snapshot.Height <= 0)
+        {
+            return;
+        }
+
+        _latestFieldSnapshot = message.Snapshot;
+        _hasFieldSnapshot = true;
+        _fieldSnapshotTcs?.TrySetResult(message.Snapshot);
+    }
+
+    private async Task AbortToMainMenuAsync(string logMessage)
+    {
+        Debug.LogError($"[GameFlow] {logMessage}");
+        _matchSetupContextService.Clear();
+        await _sceneRouter.LoadMainMenuAsync();
     }
 }

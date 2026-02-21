@@ -15,6 +15,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
     private IDisposable _attackAvailabilitySubscription;
     private IDisposable _openCellAvailabilitySubscription;
     private IDisposable _snapshotAppliedSubscription;
+    private IDisposable _onlineTurnStateSubscription;
 
     private ICellLayoutOccupant _currentActor;
     private TurnState _currentTurnState = TurnState.None;
@@ -42,6 +43,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _attackAvailabilitySubscription = _eventBus.Subscribe<AttackAvailabilityChanged>(OnAttackAvailabilityChanged);
         _openCellAvailabilitySubscription = _eventBus.Subscribe<OpenCellAvailabilityChanged>(OnOpenCellAvailabilityChanged);
         _snapshotAppliedSubscription = _eventBus.Subscribe<MatchSnapshotApplied>(OnMatchSnapshotApplied);
+        _onlineTurnStateSubscription = _eventBus.Subscribe<OnlineTurnStateUpdated>(OnOnlineTurnStateUpdated);
 
         if (_view.CharacaterButton != null)
         {
@@ -99,6 +101,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         _attackAvailabilitySubscription?.Dispose();
         _openCellAvailabilitySubscription?.Dispose();
         _snapshotAppliedSubscription?.Dispose();
+        _onlineTurnStateSubscription?.Dispose();
 
         if (_view.CharacaterButton != null)
         {
@@ -313,6 +316,34 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         SetOpenCellButtonInteractable(false);
     }
 
+    private void OnOnlineTurnStateUpdated(OnlineTurnStateUpdated msg)
+    {
+        bool isOnlineMatch = _matchSetupContextService != null && _matchSetupContextService.IsOnlineMatch;
+        bool isHost = _matchNetworkService != null && _matchNetworkService.IsHost;
+        if (!isOnlineMatch || isHost)
+        {
+            return;
+        }
+
+        _isWaitingForInitialSnapshot = false;
+        _currentTurnState = msg.TurnState;
+        _stepsTotal = msg.StepsTotal;
+        _stepsRemaining = msg.StepsRemaining;
+
+        string currentPlayerLabel = msg.IsLocalTurn ? "You" : "Opponent";
+        _view.SetCurrentPlayer(currentPlayerLabel);
+        _view.SetTurnState(msg.IsLocalTurn
+            ? msg.TurnState.ToString()
+            : $"Opponent turn ({msg.TurnState})");
+        UpdateStepsText();
+
+        bool canAct = msg.IsLocalTurn && CanUseTurnActions(msg.TurnState);
+        SetCharacterButtonInteractable(canAct);
+        SetEndTurnButtonInteractable(canAct);
+        SetAttackButtonInteractable(canAct);
+        SetOpenCellButtonInteractable(canAct);
+    }
+
     private void SetAttackButtonInteractable(bool isInteractable)
     {
         if (_view.AttackButton == null)
@@ -355,11 +386,16 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     private bool CanUseTurnActions()
     {
-        return _currentTurnState == TurnState.ActionSelection ||
-               _currentTurnState == TurnState.Movement ||
-               _currentTurnState == TurnState.Attack ||
-               _currentTurnState == TurnState.OpenCell ||
-               _currentTurnState == TurnState.Trade;
+        return CanUseTurnActions(_currentTurnState);
+    }
+
+    private static bool CanUseTurnActions(TurnState turnState)
+    {
+        return turnState == TurnState.ActionSelection ||
+               turnState == TurnState.Movement ||
+               turnState == TurnState.Attack ||
+               turnState == TurnState.OpenCell ||
+               turnState == TurnState.Trade;
     }
 
     private void ApplyInitialSnapshotWaitingState()

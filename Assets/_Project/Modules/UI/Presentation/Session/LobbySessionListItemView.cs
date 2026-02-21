@@ -68,7 +68,7 @@ public sealed class LobbySessionListItemView : MonoBehaviour
         string state;
         if (summary.HasPassword)
         {
-            state = "Password lobby (join disabled in Phase 2)";
+            state = "Password protected (join unavailable)";
         }
         else if (summary.IsLocked)
         {

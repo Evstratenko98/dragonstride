@@ -107,11 +107,15 @@ public sealed class MatchStatePublisher : IMatchStatePublisher
                 continue;
             }
 
+            string enemyType = actor is EnemyInstance enemyInstance && enemyInstance.EntityModel != null
+                ? enemyInstance.EntityModel.GetType().Name
+                : entity.GetType().Name;
+
             result.Add(new ActorStateSnapshot(
                 actorId,
                 "enemy",
                 string.Empty,
-                string.Empty,
+                enemyType,
                 entity.Name ?? string.Empty,
                 cellX,
                 cellY,

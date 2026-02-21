@@ -1,6 +1,5 @@
 using System;
 using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 using VContainer.Unity;
 
@@ -11,7 +10,8 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
     private readonly IEventBus _eventBus;
     private readonly IMatchRuntimeRoleService _runtimeRoleService;
     private readonly IGameCommandGateway _commandGateway;
-    private readonly IMatchStateApplier _matchStateApplier;
+    private readonly IMatchClientTurnStateService _clientTurnStateService;
+    private readonly IGameCommandPolicyService _commandPolicyService;
 
     private IDisposable _moveRequestedSubscription;
     private IDisposable _endTurnRequestedSubscription;
@@ -25,12 +25,14 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
         IEventBus eventBus,
         IMatchRuntimeRoleService runtimeRoleService,
         IGameCommandGateway commandGateway,
-        IMatchStateApplier matchStateApplier)
+        IMatchClientTurnStateService clientTurnStateService,
+        IGameCommandPolicyService commandPolicyService)
     {
         _eventBus = eventBus;
         _runtimeRoleService = runtimeRoleService;
         _commandGateway = commandGateway;
-        _matchStateApplier = matchStateApplier;
+        _clientTurnStateService = clientTurnStateService;
+        _commandPolicyService = commandPolicyService;
     }
 
     public void PostInitialize()
@@ -51,7 +53,7 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
 
     private async void OnMoveRequested(MoveCommandRequested message)
     {
-        if (!ShouldForwardOnlineInput())
+        if (!ShouldForwardOnlineInput(GameCommandType.Move))
         {
             return;
         }
@@ -79,7 +81,7 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
 
     private async void OnEndTurnRequested(EndTurnRequested _)
     {
-        if (!ShouldForwardOnlineInput())
+        if (!ShouldForwardOnlineInput(GameCommandType.EndTurn))
         {
             return;
         }
@@ -89,7 +91,7 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
 
     private async void OnOpenCellRequested(OpenCellRequested _)
     {
-        if (!ShouldForwardOnlineInput())
+        if (!ShouldForwardOnlineInput(GameCommandType.OpenCell))
         {
             return;
         }
@@ -99,7 +101,7 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
 
     private async void OnAttackTargetSelected(AttackTargetSelected message)
     {
-        if (!ShouldForwardOnlineInput())
+        if (!ShouldForwardOnlineInput(GameCommandType.Attack))
         {
             return;
         }
@@ -107,15 +109,25 @@ public sealed class OnlineInputCommandForwarder : IPostInitializable, IDisposabl
         await _commandGateway.SubmitAttackAsync(message.TargetActorId);
     }
 
-    private bool ShouldForwardOnlineInput()
+    private bool ShouldForwardOnlineInput(GameCommandType commandType)
     {
         if (_runtimeRoleService == null || !_runtimeRoleService.IsOnlineMatch)
         {
             return false;
         }
 
-        if (_runtimeRoleService.IsClientReplica &&
-            (_matchStateApplier == null || !_matchStateApplier.HasReceivedInitialSnapshot))
+        if (!_runtimeRoleService.IsClientReplica)
+        {
+            return true;
+        }
+
+        if (_clientTurnStateService == null || !_clientTurnStateService.HasInitialState)
+        {
+            return false;
+        }
+
+        CommandTiming timing = _commandPolicyService?.GetTiming(commandType) ?? CommandTiming.TurnBound;
+        if (timing == CommandTiming.TurnBound && !_clientTurnStateService.IsLocalTurn)
         {
             return false;
         }

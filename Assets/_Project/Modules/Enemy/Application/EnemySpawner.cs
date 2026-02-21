@@ -13,6 +13,7 @@ public sealed class EnemySpawner
     private readonly IEventBus _eventBus;
     private readonly IRandomSource _randomSource;
     private readonly IActorIdentityService _actorIdentityService;
+    private readonly IMatchRuntimeRoleService _runtimeRoleService;
 
     private readonly List<EnemyInstance> _enemies = new();
     private readonly List<EnemySpawnOption> _spawnOptions = new();
@@ -26,7 +27,8 @@ public sealed class EnemySpawner
         TurnActorRegistry turnActorRegistry,
         IEventBus eventBus,
         IRandomSource randomSource,
-        IActorIdentityService actorIdentityService
+        IActorIdentityService actorIdentityService,
+        IMatchRuntimeRoleService runtimeRoleService
     )
     {
         _config = config;
@@ -37,6 +39,7 @@ public sealed class EnemySpawner
         _eventBus = eventBus;
         _randomSource = randomSource;
         _actorIdentityService = actorIdentityService;
+        _runtimeRoleService = runtimeRoleService;
 
         _spawnOptions.Add(new EnemySpawnOption(
             "SlimeEnemy",
@@ -53,6 +56,11 @@ public sealed class EnemySpawner
 
     public EnemyInstance SpawnOnCell(Cell cell)
     {
+        if (_runtimeRoleService != null && _runtimeRoleService.IsClientReplica)
+        {
+            return null;
+        }
+
         if (cell == null)
         {
             return null;
@@ -75,6 +83,11 @@ public sealed class EnemySpawner
 
     public EnemyInstance SpawnBossOnCell(Cell cell)
     {
+        if (_runtimeRoleService != null && _runtimeRoleService.IsClientReplica)
+        {
+            return null;
+        }
+
         if (cell == null)
         {
             return null;
@@ -102,6 +115,33 @@ public sealed class EnemySpawner
         }
 
         return spawnedBoss;
+    }
+
+    public EnemyInstance SpawnReplicatedEnemy(string enemyType, Cell cell)
+    {
+        if (cell == null)
+        {
+            return null;
+        }
+
+        EnemySpawnOption option = ResolveReplicatedOption(enemyType);
+        if (option == null)
+        {
+            return null;
+        }
+
+        EnemyInstance enemy = SpawnEnemy(cell, option.Name, option.ModelFactory, option.PrefabFactory);
+        if (enemy == null)
+        {
+            return null;
+        }
+
+        if (string.Equals(option.Name, "BossEnemy", StringComparison.Ordinal))
+        {
+            _bossEnemy = enemy;
+        }
+
+        return enemy;
     }
 
     public void Reset()
@@ -210,6 +250,39 @@ public sealed class EnemySpawner
         _turnActorRegistry.Unregister(enemy);
         _actorIdentityService?.Remove(enemy);
         enemy.Destroy();
+    }
+
+    private EnemySpawnOption ResolveReplicatedOption(string enemyType)
+    {
+        string normalized = string.IsNullOrWhiteSpace(enemyType) ? string.Empty : enemyType.Trim();
+        if (string.Equals(normalized, nameof(SlimeEnemy), StringComparison.OrdinalIgnoreCase))
+        {
+            return new EnemySpawnOption(
+                "SlimeEnemy",
+                0,
+                () => new SlimeEnemy(),
+                () => _enemyPrefabs?.SlimePrefab);
+        }
+
+        if (string.Equals(normalized, nameof(WolfEnemy), StringComparison.OrdinalIgnoreCase))
+        {
+            return new EnemySpawnOption(
+                "WolfEnemy",
+                0,
+                () => new WolfEnemy(),
+                () => _enemyPrefabs?.WolfPrefab);
+        }
+
+        if (string.Equals(normalized, nameof(BossEnemy), StringComparison.OrdinalIgnoreCase))
+        {
+            return new EnemySpawnOption(
+                "BossEnemy",
+                0,
+                () => new BossEnemy(),
+                () => _enemyPrefabs?.BossPrefab);
+        }
+
+        return null;
     }
 
     private sealed class EnemySpawnOption

@@ -39,6 +39,57 @@ public sealed class ActorIdentityService : IActorIdentityService
         return _actorsById.TryGetValue(actorId, out actor);
     }
 
+    public bool TryBind(ICellLayoutOccupant actor, int actorId)
+    {
+        if (actor == null || actorId <= 0)
+        {
+            return false;
+        }
+
+        if (_idsByActor.TryGetValue(actor, out int existingId))
+        {
+            if (existingId == actorId)
+            {
+                return true;
+            }
+
+            if (_actorsById.TryGetValue(actorId, out ICellLayoutOccupant actorForRequestedId) &&
+                !ReferenceEquals(actorForRequestedId, actor))
+            {
+                return false;
+            }
+
+            _actorsById.Remove(existingId);
+            _idsByActor[actor] = actorId;
+            _actorsById[actorId] = actor;
+            if (actorId >= _nextId)
+            {
+                _nextId = actorId + 1;
+            }
+
+            return true;
+        }
+
+        if (_actorsById.TryGetValue(actorId, out ICellLayoutOccupant existingActor))
+        {
+            return ReferenceEquals(existingActor, actor);
+        }
+
+        _idsByActor[actor] = actorId;
+        _actorsById[actorId] = actor;
+        if (actorId >= _nextId)
+        {
+            _nextId = actorId + 1;
+        }
+
+        return true;
+    }
+
+    public IReadOnlyList<int> GetActorIds()
+    {
+        return new List<int>(_actorsById.Keys);
+    }
+
     public void Remove(ICellLayoutOccupant actor)
     {
         if (actor == null || !_idsByActor.TryGetValue(actor, out int id))

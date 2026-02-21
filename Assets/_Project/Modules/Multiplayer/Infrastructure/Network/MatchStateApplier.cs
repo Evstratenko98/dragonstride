@@ -5,8 +5,11 @@ using UnityEngine;
 public sealed class MatchStateApplier : IMatchStateApplier
 {
     private readonly IMatchRuntimeRoleService _runtimeRoleService;
+    private readonly IMatchNetworkService _matchNetworkService;
+    private readonly IMatchClientTurnStateService _clientTurnStateService;
     private readonly FieldState _fieldState;
     private readonly CharacterRoster _characterRoster;
+    private readonly EnemySpawner _enemySpawner;
     private readonly IActorIdentityService _actorIdentityService;
     private readonly FieldPresenter _fieldPresenter;
     private readonly ConfigScriptableObject _config;
@@ -17,16 +20,22 @@ public sealed class MatchStateApplier : IMatchStateApplier
 
     public MatchStateApplier(
         IMatchRuntimeRoleService runtimeRoleService,
+        IMatchNetworkService matchNetworkService,
+        IMatchClientTurnStateService clientTurnStateService,
         FieldState fieldState,
         CharacterRoster characterRoster,
+        EnemySpawner enemySpawner,
         IActorIdentityService actorIdentityService,
         FieldPresenter fieldPresenter,
         ConfigScriptableObject config,
         IEventBus eventBus)
     {
         _runtimeRoleService = runtimeRoleService;
+        _matchNetworkService = matchNetworkService;
+        _clientTurnStateService = clientTurnStateService;
         _fieldState = fieldState;
         _characterRoster = characterRoster;
+        _enemySpawner = enemySpawner;
         _actorIdentityService = actorIdentityService;
         _fieldPresenter = fieldPresenter;
         _config = config;
@@ -45,8 +54,16 @@ public sealed class MatchStateApplier : IMatchStateApplier
             return false;
         }
 
-        ApplyOpenedCells(snapshot.OpenedCells);
-        ApplyActors(snapshot.Actors);
+        FieldGrid field = _fieldState?.CurrentField;
+        if (field == null)
+        {
+            return false;
+        }
+
+        ApplyOpenedCells(snapshot.OpenedCells, field);
+        ApplyActors(snapshot.Actors, field);
+        ApplyRemovedReplicaEnemies(snapshot.Actors);
+        UpdateOnlineTurnState(snapshot);
 
         LastAppliedSequence = snapshot.Sequence;
         bool isInitial = !HasReceivedInitialSnapshot;
@@ -55,15 +72,28 @@ public sealed class MatchStateApplier : IMatchStateApplier
         return true;
     }
 
-    private void ApplyOpenedCells(IReadOnlyList<OpenedCellSnapshot> openedCells)
+    private void UpdateOnlineTurnState(MatchStateSnapshot snapshot)
     {
-        if (openedCells == null || openedCells.Count == 0)
+        if (_clientTurnStateService == null)
         {
             return;
         }
 
-        FieldGrid field = _fieldState?.CurrentField;
-        if (field == null)
+        string localPlayerId = _matchNetworkService != null ? _matchNetworkService.LocalPlayerId : string.Empty;
+        _clientTurnStateService.UpdateFromSnapshot(snapshot, localPlayerId);
+
+        _eventBus.Publish(new OnlineTurnStateUpdated(
+            snapshot.CurrentActorId,
+            _clientTurnStateService.CurrentOwnerPlayerId,
+            snapshot.TurnState,
+            snapshot.StepsTotal,
+            snapshot.StepsRemaining,
+            _clientTurnStateService.IsLocalTurn));
+    }
+
+    private void ApplyOpenedCells(IReadOnlyList<OpenedCellSnapshot> openedCells, FieldGrid field)
+    {
+        if (openedCells == null || openedCells.Count == 0 || field == null)
         {
             return;
         }
@@ -103,15 +133,9 @@ public sealed class MatchStateApplier : IMatchStateApplier
         }
     }
 
-    private void ApplyActors(IReadOnlyList<ActorStateSnapshot> actors)
+    private void ApplyActors(IReadOnlyList<ActorStateSnapshot> actors, FieldGrid field)
     {
-        if (actors == null || actors.Count == 0 || _actorIdentityService == null)
-        {
-            return;
-        }
-
-        FieldGrid field = _fieldState?.CurrentField;
-        if (field == null)
+        if (actors == null || _actorIdentityService == null || field == null)
         {
             return;
         }
@@ -119,7 +143,8 @@ public sealed class MatchStateApplier : IMatchStateApplier
         for (int i = 0; i < actors.Count; i++)
         {
             ActorStateSnapshot snapshot = actors[i];
-            if (!_actorIdentityService.TryGetActor(snapshot.ActorId, out ICellLayoutOccupant actor) || actor == null)
+            ICellLayoutOccupant actor = ResolveOrSpawnActor(snapshot, field);
+            if (actor == null)
             {
                 continue;
             }
@@ -142,13 +167,7 @@ public sealed class MatchStateApplier : IMatchStateApplier
 
             if (!snapshot.IsAlive)
             {
-                Cell previousCell = entity.CurrentCell;
-                if (previousCell != null)
-                {
-                    entity.SetCell(null);
-                    _characterRoster.UpdateEntityLayout(entity, previousCell);
-                }
-
+                HandleDeadActor(actor, entity);
                 continue;
             }
 
@@ -165,6 +184,150 @@ public sealed class MatchStateApplier : IMatchStateApplier
                 SyncActorViewPosition(actor, targetCell);
                 _characterRoster.UpdateEntityLayout(entity, currentCell);
             }
+        }
+    }
+
+    private ICellLayoutOccupant ResolveOrSpawnActor(ActorStateSnapshot snapshot, FieldGrid field)
+    {
+        if (snapshot.ActorId <= 0 || _actorIdentityService == null)
+        {
+            return null;
+        }
+
+        if (_actorIdentityService.TryGetActor(snapshot.ActorId, out ICellLayoutOccupant existingActor) && existingActor != null)
+        {
+            return existingActor;
+        }
+
+        if (string.Equals(snapshot.ActorType, "character", StringComparison.OrdinalIgnoreCase))
+        {
+            CharacterInstance character = ResolveCharacterForSnapshot(snapshot);
+            if (character != null)
+            {
+                _actorIdentityService.TryBind(character, snapshot.ActorId);
+                return character;
+            }
+        }
+
+        if (!snapshot.IsAlive || !string.Equals(snapshot.ActorType, "enemy", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        Cell spawnCell = field.GetCell(snapshot.CellX, snapshot.CellY);
+        if (spawnCell == null || _enemySpawner == null)
+        {
+            return null;
+        }
+
+        string enemyType = string.IsNullOrWhiteSpace(snapshot.CharacterId)
+            ? snapshot.DisplayName
+            : snapshot.CharacterId;
+
+        EnemyInstance spawnedEnemy = _enemySpawner.SpawnReplicatedEnemy(enemyType, spawnCell);
+        if (spawnedEnemy == null)
+        {
+            return null;
+        }
+
+        _actorIdentityService.TryBind(spawnedEnemy, snapshot.ActorId);
+        return spawnedEnemy;
+    }
+
+    private CharacterInstance ResolveCharacterForSnapshot(ActorStateSnapshot snapshot)
+    {
+        if (_characterRoster == null)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(snapshot.OwnerPlayerId) &&
+            _characterRoster.TryGetCharacterByPlayerId(snapshot.OwnerPlayerId, out CharacterInstance byOwner) &&
+            byOwner != null)
+        {
+            return byOwner;
+        }
+
+        IReadOnlyList<CharacterInstance> characters = _characterRoster.AllCharacters;
+        for (int i = 0; i < characters.Count; i++)
+        {
+            CharacterInstance candidate = characters[i];
+            if (candidate == null)
+            {
+                continue;
+            }
+
+            bool sameCharacterId = string.Equals(
+                candidate.CharacterDefinition?.Id ?? string.Empty,
+                snapshot.CharacterId ?? string.Empty,
+                StringComparison.Ordinal);
+            bool sameName = string.Equals(
+                candidate.Name ?? string.Empty,
+                snapshot.DisplayName ?? string.Empty,
+                StringComparison.Ordinal);
+
+            if (sameCharacterId && sameName)
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private void HandleDeadActor(ICellLayoutOccupant actor, Entity entity)
+    {
+        if (actor is EnemyInstance enemy)
+        {
+            _enemySpawner?.RemoveEnemy(enemy);
+            return;
+        }
+
+        Cell previousCell = entity.CurrentCell;
+        if (previousCell == null)
+        {
+            return;
+        }
+
+        entity.SetCell(null);
+        _characterRoster.UpdateEntityLayout(entity, previousCell);
+    }
+
+    private void ApplyRemovedReplicaEnemies(IReadOnlyList<ActorStateSnapshot> actorSnapshots)
+    {
+        if (_actorIdentityService == null || _enemySpawner == null)
+        {
+            return;
+        }
+
+        var snapshotActorIds = new HashSet<int>();
+        if (actorSnapshots != null)
+        {
+            for (int i = 0; i < actorSnapshots.Count; i++)
+            {
+                int actorId = actorSnapshots[i].ActorId;
+                if (actorId > 0)
+                {
+                    snapshotActorIds.Add(actorId);
+                }
+            }
+        }
+
+        IReadOnlyList<int> knownActorIds = _actorIdentityService.GetActorIds();
+        for (int i = 0; i < knownActorIds.Count; i++)
+        {
+            int actorId = knownActorIds[i];
+            if (snapshotActorIds.Contains(actorId))
+            {
+                continue;
+            }
+
+            if (!_actorIdentityService.TryGetActor(actorId, out ICellLayoutOccupant actor) || actor is not EnemyInstance enemy)
+            {
+                continue;
+            }
+
+            _enemySpawner.RemoveEnemy(enemy);
         }
     }
 

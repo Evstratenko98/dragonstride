@@ -11,6 +11,7 @@ public class AttackDriver : IPostInitializable, IDisposable
     private readonly EnemySpawner _enemySpawner;
     private readonly CrownOwnershipService _crownOwnershipService;
     private readonly IMatchRuntimeRoleService _runtimeRoleService;
+    private readonly IMatchClientTurnStateService _clientTurnStateService;
     private readonly IActorIdentityService _actorIdentityService;
 
     private IDisposable _attackRequestedSubscription;
@@ -29,6 +30,7 @@ public class AttackDriver : IPostInitializable, IDisposable
         EnemySpawner enemySpawner,
         CrownOwnershipService crownOwnershipService,
         IMatchRuntimeRoleService runtimeRoleService,
+        IMatchClientTurnStateService clientTurnStateService,
         IActorIdentityService actorIdentityService)
     {
         _eventBus = eventBus;
@@ -38,6 +40,7 @@ public class AttackDriver : IPostInitializable, IDisposable
         _enemySpawner = enemySpawner;
         _crownOwnershipService = crownOwnershipService;
         _runtimeRoleService = runtimeRoleService;
+        _clientTurnStateService = clientTurnStateService;
         _actorIdentityService = actorIdentityService;
     }
 
@@ -80,6 +83,20 @@ public class AttackDriver : IPostInitializable, IDisposable
 
     private void OnAttackRequested(AttackRequested msg)
     {
+        if (_runtimeRoleService != null && _runtimeRoleService.IsClientReplica)
+        {
+            if (_clientTurnStateService == null ||
+                !_clientTurnStateService.HasInitialState ||
+                !_clientTurnStateService.IsLocalTurn ||
+                _clientTurnStateService.CurrentTurnState != TurnState.ActionSelection)
+            {
+                return;
+            }
+
+            _awaitingTarget = true;
+            return;
+        }
+
         if (_currentActor?.Entity == null)
         {
             return;
