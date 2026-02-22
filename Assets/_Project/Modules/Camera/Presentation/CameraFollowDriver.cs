@@ -9,9 +9,12 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
     private readonly Camera _camera;
     private readonly IEventBus _eventBus;
     private readonly ConfigScriptableObject _config;
+    private readonly IMatchNetworkService _matchNetworkService;
+    private readonly IMatchSetupContextService _matchSetupContextService;
     private IDisposable _subscription;
     private IDisposable _gameStateSub;
     private IDisposable _followToggleSub;
+    private IDisposable _rosterUpdatedSub;
 
     private float smooth = 3f;
     private Vector3 offset = new Vector3(0, 15, -15);
@@ -25,12 +28,20 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
     private float _minZ;
     private float _maxZ;
 
-    public CameraFollowDriver(CameraFocusState cameraFocusState, Camera camera, IEventBus eventBus, ConfigScriptableObject config)
+    public CameraFollowDriver(
+        CameraFocusState cameraFocusState,
+        Camera camera,
+        IEventBus eventBus,
+        ConfigScriptableObject config,
+        IMatchNetworkService matchNetworkService,
+        IMatchSetupContextService matchSetupContextService)
     {
         _cameraFocusState = cameraFocusState;
         _camera = camera;
         _eventBus = eventBus;
         _config = config;
+        _matchNetworkService = matchNetworkService;
+        _matchSetupContextService = matchSetupContextService;
     }
 
     public void PostInitialize()
@@ -38,6 +49,7 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
         _subscription = _eventBus.Subscribe<TurnPhaseChanged>(FocusCameraForCharacter);
         _gameStateSub = _eventBus.Subscribe<GameStateChanged>(OnStateGame);
         _followToggleSub = _eventBus.Subscribe<CameraFollowToggled>(OnFollowToggled);
+        _rosterUpdatedSub = _eventBus.Subscribe<CharacterRosterUpdated>(OnCharacterRosterUpdated);
 
         InitializeZoom();
         UpdateFieldBounds();
@@ -45,12 +57,20 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
 
     private void FocusCameraForCharacter(TurnPhaseChanged msg)
     {
+        if (IsOnlineMatch())
+        {
+            // In online matches the camera should follow the local player's character,
+            // not whoever currently owns the turn.
+            return;
+        }
+
         if (msg.State != TurnState.RollDice)
         {
             return;
         }
 
         _cameraFocusState.SetTarget(msg.Actor as CharacterInstance);
+        SnapToCurrentTargetIfNeeded();
     }
 
     public void Tick()
@@ -83,6 +103,7 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
         _subscription?.Dispose();
         _gameStateSub?.Dispose();
         _followToggleSub?.Dispose();
+        _rosterUpdatedSub?.Dispose();
     }
 
     private void OnStateGame(GameStateChanged msg)
@@ -96,6 +117,11 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
     private void OnFollowToggled(CameraFollowToggled msg)
     {
         _cameraFocusState.SetFollowEnabled(msg.IsEnabled);
+
+        if (msg.IsEnabled)
+        {
+            SnapToCurrentTargetIfNeeded();
+        }
     }
 
     private void HandleEdgePanning()
@@ -150,9 +176,20 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
             return;
         }
 
+        float previousZoomDistance = _zoomDistance;
         _zoomDistance -= scrollDelta * _zoomSpeed * Time.deltaTime;
         _zoomDistance = Mathf.Clamp(_zoomDistance, _zoomMinDistance, _zoomMaxDistance);
         offset = _zoomDirection * _zoomDistance;
+
+        // In free mode we still apply zoom by moving the camera along the zoom axis.
+        if (!_cameraFocusState.FollowEnabled || _cameraFocusState.CurrentTarget == null)
+        {
+            float deltaDistance = _zoomDistance - previousZoomDistance;
+            Vector3 nextPosition = _camera.transform.position + (_zoomDirection * deltaDistance);
+            nextPosition.x = Mathf.Clamp(nextPosition.x, _minX, _maxX);
+            nextPosition.z = Mathf.Clamp(nextPosition.z, _minZ, _maxZ);
+            _camera.transform.position = nextPosition;
+        }
     }
 
     private void InitializeZoom()
@@ -174,5 +211,83 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
         _minZ = -(_config.FIELD_HEIGHT);
         _maxX = Mathf.Max(0f, (_config.FIELD_WIDTH - 1) * cellSize);
         _maxZ = Mathf.Max(0f, (_config.FIELD_HEIGHT - 1) * (cellSize / 2));
+    }
+
+    private void OnCharacterRosterUpdated(CharacterRosterUpdated msg)
+    {
+        if (msg.Characters == null || msg.Characters.Count == 0)
+        {
+            return;
+        }
+
+        CharacterInstance target = ResolvePreferredCameraTarget(msg.Characters);
+        if (target == null)
+        {
+            return;
+        }
+
+        bool targetChanged = !ReferenceEquals(_cameraFocusState.CurrentTarget, target);
+        _cameraFocusState.SetTarget(target);
+        if (targetChanged)
+        {
+            SnapToCurrentTargetIfNeeded();
+        }
+    }
+
+    private CharacterInstance ResolvePreferredCameraTarget(System.Collections.Generic.IReadOnlyList<CharacterInstance> characters)
+    {
+        if (characters == null || characters.Count == 0)
+        {
+            return null;
+        }
+
+        if (IsOnlineMatch())
+        {
+            string localPlayerId = _matchNetworkService != null ? _matchNetworkService.LocalPlayerId : string.Empty;
+            if (!string.IsNullOrWhiteSpace(localPlayerId))
+            {
+                for (int i = 0; i < characters.Count; i++)
+                {
+                    CharacterInstance character = characters[i];
+                    if (character != null &&
+                        !string.IsNullOrWhiteSpace(character.PlayerId) &&
+                        string.Equals(character.PlayerId, localPlayerId, StringComparison.Ordinal))
+                    {
+                        return character;
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < characters.Count; i++)
+        {
+            if (characters[i] != null)
+            {
+                return characters[i];
+            }
+        }
+
+        return null;
+    }
+
+    private void SnapToCurrentTargetIfNeeded()
+    {
+        if (_camera == null || !_cameraFocusState.FollowEnabled)
+        {
+            return;
+        }
+
+        CharacterInstance target = _cameraFocusState.CurrentTarget;
+        if (target?.View == null)
+        {
+            return;
+        }
+
+        _camera.transform.position = target.View.transform.position + offset;
+    }
+
+    private bool IsOnlineMatch()
+    {
+        return _matchSetupContextService != null && _matchSetupContextService.IsOnlineMatch;
     }
 }
