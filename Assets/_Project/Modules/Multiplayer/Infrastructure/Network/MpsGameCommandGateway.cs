@@ -18,6 +18,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
     private const string ActionBatchMessageName = "ds3_action_batch";
     private const string ActionAckMessageName = "ds3_action_ack";
     private const int ActionAckTimeoutMs = 2500;
+    private const int ClientSnapshotApplyGraceMs = 120;
 
     private readonly IMatchNetworkService _matchNetworkService;
     private readonly IMatchRuntimeRoleService _runtimeRoleService;
@@ -47,6 +48,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
     private readonly Dictionary<long, HashSet<ulong>> _pendingActionAcks = new();
     private MatchStateSnapshot _pendingClientSnapshot;
     private bool _hasPendingClientSnapshot;
+    private DateTime _pendingClientSnapshotReceivedAtUtc;
 
     private IDisposable _turnPhaseChangedSubscription;
     private IDisposable _gameStateChangedSubscription;
@@ -679,29 +681,11 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
             return;
         }
 
-        if (!IsClientFieldReady())
+        lock (_clientPendingStateSync)
         {
-            lock (_clientPendingStateSync)
-            {
-                _pendingClientActionBatches.Enqueue(batch);
-            }
-
-            StartClientBufferedStatePump();
-            return;
+            _pendingClientActionBatches.Enqueue(batch);
         }
-
-        try
-        {
-            if (_matchActionTimelineService != null)
-            {
-                await _matchActionTimelineService.PlayBatchLocallyAsync(batch);
-            }
-        }
-        catch (Exception exception)
-        {
-            Debug.LogWarning($"[MpsGameCommandGateway] Failed to apply action batch {batch.ActionSequence}: {exception.Message}");
-        }
-        await SendActionAckToHostAsync(batch.ActionSequence);
+        StartClientBufferedStatePump();
     }
 
     private void OnActionAckMessage(ulong senderClientId, FastBufferReader reader)
@@ -750,24 +734,17 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         }
 
         MatchStateSnapshot snapshot = ReadSnapshot(ref reader);
-        if (IsClientFieldReady() && _matchStateApplier.TryApply(snapshot))
+        lock (_clientPendingStateSync)
         {
-            return;
-        }
-
-        if (!IsClientFieldReady())
-        {
-            lock (_clientPendingStateSync)
+            if (!_hasPendingClientSnapshot || snapshot.Sequence >= _pendingClientSnapshot.Sequence)
             {
-                if (!_hasPendingClientSnapshot || snapshot.Sequence >= _pendingClientSnapshot.Sequence)
-                {
-                    _pendingClientSnapshot = snapshot;
-                    _hasPendingClientSnapshot = true;
-                }
+                _pendingClientSnapshot = snapshot;
+                _hasPendingClientSnapshot = true;
+                _pendingClientSnapshotReceivedAtUtc = DateTime.UtcNow;
             }
-
-            StartClientBufferedStatePump();
         }
+
+        StartClientBufferedStatePump();
     }
 
     private void OnRejectMessage(ulong senderClientId, FastBufferReader reader)
@@ -880,6 +857,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
                 Queue<MatchActionBatch> actionsToApply;
                 MatchStateSnapshot latestSnapshot = default;
                 bool hasSnapshotToApply;
+                DateTime snapshotReceivedAtUtc = DateTime.MinValue;
                 lock (_clientPendingStateSync)
                 {
                     actionsToApply = new Queue<MatchActionBatch>(_pendingClientActionBatches);
@@ -887,7 +865,27 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
 
                     latestSnapshot = _pendingClientSnapshot;
                     hasSnapshotToApply = _hasPendingClientSnapshot;
-                    _hasPendingClientSnapshot = false;
+                    snapshotReceivedAtUtc = _pendingClientSnapshotReceivedAtUtc;
+
+                    bool shouldHoldSnapshotForPotentialActionBatch =
+                        hasSnapshotToApply &&
+                        actionsToApply.Count == 0 &&
+                        snapshotReceivedAtUtc != DateTime.MinValue &&
+                        (DateTime.UtcNow - snapshotReceivedAtUtc).TotalMilliseconds < ClientSnapshotApplyGraceMs;
+
+                    if (!shouldHoldSnapshotForPotentialActionBatch)
+                    {
+                        _hasPendingClientSnapshot = false;
+                    }
+                }
+
+                if (hasSnapshotToApply &&
+                    actionsToApply.Count == 0 &&
+                    snapshotReceivedAtUtc != DateTime.MinValue &&
+                    (DateTime.UtcNow - snapshotReceivedAtUtc).TotalMilliseconds < ClientSnapshotApplyGraceMs)
+                {
+                    await Task.Delay(40);
+                    continue;
                 }
 
                 while (actionsToApply.Count > 0)
