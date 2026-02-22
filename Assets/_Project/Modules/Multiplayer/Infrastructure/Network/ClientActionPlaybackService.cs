@@ -97,7 +97,7 @@ public sealed class ClientActionPlaybackService : IClientActionPlaybackService
             case ActionEventType.ActorMoved:
                 if (shouldMutateReplicaWorld)
                 {
-                    if (TryBeginActorMoved(actionEvent, out Entity movedEntity, out Cell previousCell))
+                    if (TryBeginActorMoved(actionEvent, out ICellLayoutOccupant movedActor, out Entity movedEntity, out Cell previousCell))
                     {
                         if (actionEvent.DurationMs > 0)
                         {
@@ -105,6 +105,7 @@ public sealed class ClientActionPlaybackService : IClientActionPlaybackService
                         }
 
                         _characterRoster?.UpdateEntityLayout(movedEntity, previousCell);
+                        _eventBus?.Publish(new CharacterMoved(movedActor));
                         return;
                     }
                 }
@@ -215,8 +216,13 @@ public sealed class ClientActionPlaybackService : IClientActionPlaybackService
             isLocalTurn));
     }
 
-    private bool TryBeginActorMoved(ActionEventEnvelope actionEvent, out Entity movedEntity, out Cell previousCell)
+    private bool TryBeginActorMoved(
+        ActionEventEnvelope actionEvent,
+        out ICellLayoutOccupant movedActor,
+        out Entity movedEntity,
+        out Cell previousCell)
     {
+        movedActor = null;
         movedEntity = null;
         previousCell = null;
 
@@ -236,6 +242,7 @@ public sealed class ClientActionPlaybackService : IClientActionPlaybackService
             return false;
         }
 
+        movedActor = actor;
         previousCell = actor.Entity.CurrentCell;
         movedEntity = actor.Entity;
         actor.Entity.SetCell(targetCell);

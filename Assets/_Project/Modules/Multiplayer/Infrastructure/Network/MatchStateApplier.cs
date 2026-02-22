@@ -222,6 +222,7 @@ public sealed class MatchStateApplier : IMatchStateApplier
                 entity.SetCell(targetCell);
                 SyncActorViewPosition(actor, targetCell);
                 _characterRoster.UpdateEntityLayout(entity, currentCell);
+                _eventBus.Publish(new CharacterMoved(actor));
             }
         }
     }
