@@ -32,6 +32,8 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
     private readonly IEventBus _eventBus;
 
     private readonly Dictionary<ulong, string> _playerByClientId = new();
+    private readonly Queue<MatchActionBatch> _pendingClientActionBatches = new();
+    private readonly object _clientPendingStateSync = new();
     private long _localCommandId;
     private long _serverSequence;
     private long _lastAppliedCommandSequence;
@@ -40,8 +42,11 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
     private int _snapshotBroadcastInFlight;
     private int _fieldSnapshotBroadcastInFlight;
     private int _turnTimelineBusy;
+    private int _clientBufferedStatePumpInFlight;
     private CancellationTokenSource _startCts;
     private readonly Dictionary<long, HashSet<ulong>> _pendingActionAcks = new();
+    private MatchStateSnapshot _pendingClientSnapshot;
+    private bool _hasPendingClientSnapshot;
 
     private IDisposable _turnPhaseChangedSubscription;
     private IDisposable _gameStateChangedSubscription;
@@ -674,6 +679,17 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
             return;
         }
 
+        if (!IsClientFieldReady())
+        {
+            lock (_clientPendingStateSync)
+            {
+                _pendingClientActionBatches.Enqueue(batch);
+            }
+
+            StartClientBufferedStatePump();
+            return;
+        }
+
         try
         {
             if (_matchActionTimelineService != null)
@@ -723,6 +739,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         }
 
         _eventBus.Publish(new FieldSnapshotReceived(snapshot));
+        StartClientBufferedStatePump();
     }
 
     private void OnSnapshotMessage(ulong senderClientId, FastBufferReader reader)
@@ -733,7 +750,24 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         }
 
         MatchStateSnapshot snapshot = ReadSnapshot(ref reader);
-        _matchStateApplier.TryApply(snapshot);
+        if (IsClientFieldReady() && _matchStateApplier.TryApply(snapshot))
+        {
+            return;
+        }
+
+        if (!IsClientFieldReady())
+        {
+            lock (_clientPendingStateSync)
+            {
+                if (!_hasPendingClientSnapshot || snapshot.Sequence >= _pendingClientSnapshot.Sequence)
+                {
+                    _pendingClientSnapshot = snapshot;
+                    _hasPendingClientSnapshot = true;
+                }
+            }
+
+            StartClientBufferedStatePump();
+        }
     }
 
     private void OnRejectMessage(ulong senderClientId, FastBufferReader reader)
@@ -797,6 +831,109 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
             NetworkManager.ServerClientId,
             writer,
             NetworkDelivery.ReliableSequenced);
+    }
+
+    private void StartClientBufferedStatePump()
+    {
+        if (_matchNetworkService.IsHost)
+        {
+            return;
+        }
+
+        if (Interlocked.CompareExchange(ref _clientBufferedStatePumpInFlight, 1, 0) != 0)
+        {
+            return;
+        }
+
+        _ = RunClientBufferedStatePumpAsync();
+    }
+
+    private async Task RunClientBufferedStatePumpAsync()
+    {
+        try
+        {
+            DateTime deadline = DateTime.UtcNow.AddSeconds(30);
+            while (DateTime.UtcNow < deadline)
+            {
+                if (_matchNetworkService.IsHost)
+                {
+                    return;
+                }
+
+                bool hasPending;
+                lock (_clientPendingStateSync)
+                {
+                    hasPending = _pendingClientActionBatches.Count > 0 || _hasPendingClientSnapshot;
+                }
+
+                if (!hasPending)
+                {
+                    return;
+                }
+
+                if (!IsClientFieldReady())
+                {
+                    await Task.Delay(100);
+                    continue;
+                }
+
+                Queue<MatchActionBatch> actionsToApply;
+                MatchStateSnapshot latestSnapshot = default;
+                bool hasSnapshotToApply;
+                lock (_clientPendingStateSync)
+                {
+                    actionsToApply = new Queue<MatchActionBatch>(_pendingClientActionBatches);
+                    _pendingClientActionBatches.Clear();
+
+                    latestSnapshot = _pendingClientSnapshot;
+                    hasSnapshotToApply = _hasPendingClientSnapshot;
+                    _hasPendingClientSnapshot = false;
+                }
+
+                while (actionsToApply.Count > 0)
+                {
+                    MatchActionBatch batch = actionsToApply.Dequeue();
+                    try
+                    {
+                        if (_matchActionTimelineService != null)
+                        {
+                            await _matchActionTimelineService.PlayBatchLocallyAsync(batch);
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        Debug.LogWarning(
+                            $"[MpsGameCommandGateway] Buffered action batch {batch.ActionSequence} playback failed: {exception.Message}");
+                    }
+
+                    await SendActionAckToHostAsync(batch.ActionSequence);
+                }
+
+                if (hasSnapshotToApply && _matchStateApplier != null)
+                {
+                    _matchStateApplier.TryApply(latestSnapshot);
+                }
+
+                await Task.Yield();
+            }
+
+            lock (_clientPendingStateSync)
+            {
+                if (_pendingClientActionBatches.Count > 0 || _hasPendingClientSnapshot)
+                {
+                    Debug.LogWarning("[MpsGameCommandGateway] Timed out while waiting to flush buffered client state.");
+                }
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _clientBufferedStatePumpInFlight, 0);
+        }
+    }
+
+    private bool IsClientFieldReady()
+    {
+        return _fieldState?.CurrentField != null;
     }
 
     private void OnTurnPhaseChanged(TurnPhaseChanged _)
