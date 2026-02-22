@@ -97,7 +97,16 @@ public sealed class ClientActionPlaybackService : IClientActionPlaybackService
             case ActionEventType.ActorMoved:
                 if (shouldMutateReplicaWorld)
                 {
-                    ApplyActorMoved(actionEvent);
+                    if (TryBeginActorMoved(actionEvent, out Entity movedEntity, out Cell previousCell))
+                    {
+                        if (actionEvent.DurationMs > 0)
+                        {
+                            await Task.Delay(actionEvent.DurationMs, ct);
+                        }
+
+                        _characterRoster?.UpdateEntityLayout(movedEntity, previousCell);
+                        return;
+                    }
                 }
                 break;
 
@@ -206,25 +215,29 @@ public sealed class ClientActionPlaybackService : IClientActionPlaybackService
             isLocalTurn));
     }
 
-    private void ApplyActorMoved(ActionEventEnvelope actionEvent)
+    private bool TryBeginActorMoved(ActionEventEnvelope actionEvent, out Entity movedEntity, out Cell previousCell)
     {
+        movedEntity = null;
+        previousCell = null;
+
         if (_fieldState?.CurrentField == null || _actorIdentityService == null)
         {
-            return;
+            return false;
         }
 
         if (!_actorIdentityService.TryGetActor(actionEvent.ActorId, out ICellLayoutOccupant actor) || actor?.Entity == null)
         {
-            return;
+            return false;
         }
 
         Cell targetCell = _fieldState.CurrentField.GetCell(actionEvent.ToX, actionEvent.ToY);
         if (targetCell == null)
         {
-            return;
+            return false;
         }
 
-        Cell previousCell = actor.Entity.CurrentCell;
+        previousCell = actor.Entity.CurrentCell;
+        movedEntity = actor.Entity;
         actor.Entity.SetCell(targetCell);
 
         float speed = _config != null ? Mathf.Max(0.01f, _config.ENTITY_SPEED) : 4f;
@@ -238,8 +251,8 @@ public sealed class ClientActionPlaybackService : IClientActionPlaybackService
         {
             enemy.MoveToPosition(targetPosition, speed);
         }
-
-        _characterRoster?.UpdateEntityLayout(actor.Entity, previousCell);
+        
+        return true;
     }
 
     private void ApplyAttackResolved(ActionEventEnvelope actionEvent)
