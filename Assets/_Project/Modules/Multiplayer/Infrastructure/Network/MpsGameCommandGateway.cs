@@ -668,7 +668,7 @@ public sealed class MpsGameCommandGateway : IGameCommandGateway, IStartable, IDi
         _ = ReadCommand(ref reader);
     }
 
-    private async void OnActionBatchMessage(ulong senderClientId, FastBufferReader reader)
+    private void OnActionBatchMessage(ulong senderClientId, FastBufferReader reader)
     {
         if (_matchNetworkService.IsHost)
         {
