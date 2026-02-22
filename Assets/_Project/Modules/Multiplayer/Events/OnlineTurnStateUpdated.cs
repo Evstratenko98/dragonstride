@@ -2,6 +2,7 @@ public readonly struct OnlineTurnStateUpdated
 {
     public int CurrentActorId { get; }
     public string OwnerPlayerId { get; }
+    public string CurrentActorDisplayName { get; }
     public TurnState TurnState { get; }
     public int StepsTotal { get; }
     public int StepsRemaining { get; }
@@ -10,6 +11,7 @@ public readonly struct OnlineTurnStateUpdated
     public OnlineTurnStateUpdated(
         int currentActorId,
         string ownerPlayerId,
+        string currentActorDisplayName,
         TurnState turnState,
         int stepsTotal,
         int stepsRemaining,
@@ -17,6 +19,7 @@ public readonly struct OnlineTurnStateUpdated
     {
         CurrentActorId = currentActorId;
         OwnerPlayerId = ownerPlayerId;
+        CurrentActorDisplayName = currentActorDisplayName ?? string.Empty;
         TurnState = turnState;
         StepsTotal = stepsTotal;
         StepsRemaining = stepsRemaining;

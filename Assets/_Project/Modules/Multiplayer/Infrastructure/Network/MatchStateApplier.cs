@@ -102,10 +102,32 @@ public sealed class MatchStateApplier : IMatchStateApplier
         _eventBus.Publish(new OnlineTurnStateUpdated(
             snapshot.CurrentActorId,
             _clientTurnStateService.CurrentOwnerPlayerId,
+            ResolveCurrentActorDisplayName(snapshot),
             snapshot.TurnState,
             snapshot.StepsTotal,
             snapshot.StepsRemaining,
             _clientTurnStateService.IsLocalTurn));
+    }
+
+    private static string ResolveCurrentActorDisplayName(MatchStateSnapshot snapshot)
+    {
+        if (snapshot.Actors == null || snapshot.CurrentActorId <= 0)
+        {
+            return string.Empty;
+        }
+
+        for (int i = 0; i < snapshot.Actors.Count; i++)
+        {
+            ActorStateSnapshot actor = snapshot.Actors[i];
+            if (actor.ActorId != snapshot.CurrentActorId)
+            {
+                continue;
+            }
+
+            return actor.DisplayName ?? string.Empty;
+        }
+
+        return string.Empty;
     }
 
     private void ApplyOpenedCells(IReadOnlyList<OpenedCellSnapshot> openedCells, FieldGrid field)

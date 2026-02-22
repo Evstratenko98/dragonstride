@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using UnityEngine;
 using VContainer.Unity;
 
 public class ChestLootPresenter : IPostInitializable, IDisposable
@@ -9,7 +10,6 @@ public class ChestLootPresenter : IPostInitializable, IDisposable
     private readonly ChestLootView _view;
     private readonly IMultiplayerSessionService _sessionService;
     private readonly IMatchNetworkService _matchNetworkService;
-    private readonly ItemConfig _itemConfig;
 
     private readonly List<ItemDefinition> _currentLoot = new();
     private readonly Dictionary<string, ItemDefinition> _itemById = new();
@@ -27,14 +27,12 @@ public class ChestLootPresenter : IPostInitializable, IDisposable
         IEventBus eventBus,
         ChestLootView view,
         IMultiplayerSessionService sessionService,
-        IMatchNetworkService matchNetworkService,
-        ItemConfig itemConfig)
+        IMatchNetworkService matchNetworkService)
     {
         _eventBus = eventBus;
         _view = view;
         _sessionService = sessionService;
         _matchNetworkService = matchNetworkService;
-        _itemConfig = itemConfig;
     }
 
     public void PostInitialize()
@@ -87,6 +85,8 @@ public class ChestLootPresenter : IPostInitializable, IDisposable
 
     private void OnOnlineLootGenerated(OnlineLootGenerated msg)
     {
+        EnsureItemLookup();
+
         _currentCharacter = null;
         _currentOnlineActorId = msg.ActorId;
         _currentOnlineOwnerPlayerId = msg.OwnerPlayerId ?? string.Empty;
@@ -213,14 +213,15 @@ public class ChestLootPresenter : IPostInitializable, IDisposable
     private void BuildItemLookup()
     {
         _itemById.Clear();
-        if (_itemConfig?.AllItems == null)
+        ItemConfig itemConfig = ResolveLoadedItemConfig();
+        if (itemConfig?.AllItems == null)
         {
             return;
         }
 
-        for (int i = 0; i < _itemConfig.AllItems.Count; i++)
+        for (int i = 0; i < itemConfig.AllItems.Count; i++)
         {
-            ItemDefinition definition = _itemConfig.AllItems[i];
+            ItemDefinition definition = itemConfig.AllItems[i];
             if (definition == null || string.IsNullOrWhiteSpace(definition.Id))
             {
                 continue;
@@ -228,6 +229,36 @@ public class ChestLootPresenter : IPostInitializable, IDisposable
 
             _itemById[definition.Id] = definition;
         }
+    }
+
+    private void EnsureItemLookup()
+    {
+        if (_itemById.Count > 0)
+        {
+            return;
+        }
+
+        BuildItemLookup();
+    }
+
+    private static ItemConfig ResolveLoadedItemConfig()
+    {
+        ItemConfig[] configs = Resources.FindObjectsOfTypeAll<ItemConfig>();
+        if (configs == null || configs.Length == 0)
+        {
+            Debug.LogWarning("[ChestLootPresenter] ItemConfig is not loaded. Online loot names/icons may be unavailable.");
+            return null;
+        }
+
+        for (int i = 0; i < configs.Length; i++)
+        {
+            if (configs[i] != null && configs[i].AllItems != null && configs[i].AllItems.Count > 0)
+            {
+                return configs[i];
+            }
+        }
+
+        return configs[0];
     }
 
     private async Task RestoreTakeButtonIfStillPendingAsync(int actorId)

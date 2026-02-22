@@ -9,7 +9,6 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
     private readonly IEventBus _eventBus;
     private readonly IMatchSetupContextService _matchSetupContextService;
     private readonly IMatchNetworkService _matchNetworkService;
-    private readonly IActorIdentityService _actorIdentityService;
     private IDisposable _turnStateSubscription;
     private IDisposable _diceRolledSubscription;
     private IDisposable _characterMovedSubscription;
@@ -28,14 +27,12 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         IEventBus eventBus,
         GameScreenView view,
         IMatchSetupContextService matchSetupContextService,
-        IMatchNetworkService matchNetworkService,
-        IActorIdentityService actorIdentityService)
+        IMatchNetworkService matchNetworkService)
     {
         _eventBus = eventBus;
         _view = view;
         _matchSetupContextService = matchSetupContextService;
         _matchNetworkService = matchNetworkService;
-        _actorIdentityService = actorIdentityService;
     }
 
     public void PostInitialize()
@@ -455,13 +452,9 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
             return "You";
         }
 
-        if (_actorIdentityService != null &&
-            msg.CurrentActorId > 0 &&
-            _actorIdentityService.TryGetActor(msg.CurrentActorId, out ICellLayoutOccupant actor) &&
-            actor?.Entity != null &&
-            !string.IsNullOrWhiteSpace(actor.Entity.Name))
+        if (!string.IsNullOrWhiteSpace(msg.CurrentActorDisplayName))
         {
-            return actor.Entity.Name;
+            return msg.CurrentActorDisplayName;
         }
 
         if (!string.IsNullOrWhiteSpace(msg.OwnerPlayerId))

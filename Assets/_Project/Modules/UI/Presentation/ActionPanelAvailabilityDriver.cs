@@ -84,6 +84,14 @@ public class ActionPanelAvailabilityDriver : IPostInitializable, IDisposable
 
     private void OnMatchSnapshotApplied(MatchSnapshotApplied _)
     {
+        if (_runtimeRoleService != null && _runtimeRoleService.IsClientReplica && _actorIdentityService != null && _onlineCurrentActorId > 0)
+        {
+            if (_actorIdentityService.TryGetActor(_onlineCurrentActorId, out ICellLayoutOccupant actor))
+            {
+                _currentActor = actor;
+            }
+        }
+
         PublishAvailability();
     }
 

@@ -199,6 +199,7 @@ public sealed class ClientActionPlaybackService : IClientActionPlaybackService
         _eventBus.Publish(new OnlineTurnStateUpdated(
             actionEvent.ActorId,
             ownerPlayerId,
+            ResolveActorDisplayName(actionEvent.ActorId, ownerPlayerId),
             turnState,
             stepsTotal,
             stepsRemaining,
@@ -392,5 +393,24 @@ public sealed class ClientActionPlaybackService : IClientActionPlaybackService
                state == TurnState.Attack ||
                state == TurnState.OpenCell ||
                state == TurnState.Trade;
+    }
+
+    private string ResolveActorDisplayName(int actorId, string ownerPlayerId)
+    {
+        if (_actorIdentityService != null &&
+            actorId > 0 &&
+            _actorIdentityService.TryGetActor(actorId, out ICellLayoutOccupant actor) &&
+            actor?.Entity != null &&
+            !string.IsNullOrWhiteSpace(actor.Entity.Name))
+        {
+            return actor.Entity.Name;
+        }
+
+        if (!string.IsNullOrWhiteSpace(ownerPlayerId))
+        {
+            return ownerPlayerId;
+        }
+
+        return string.Empty;
     }
 }
