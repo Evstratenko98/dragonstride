@@ -64,6 +64,7 @@ public sealed class CrownOwnershipService
             return false;
         }
 
+        GameSessionState.SetWinner(entity.Name);
         _eventBus.Publish(new GameStateChanged(GameState.Finished));
         return true;
     }

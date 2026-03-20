@@ -29,7 +29,6 @@ public class UIScreenPresenter : IStartable, IDisposable
         switch (msg.State)
         {
             case GameState.Finished:
-                _view.ShowFinishScreen();
                 break;
             case GameState.Playing:
             case GameState.Loading:

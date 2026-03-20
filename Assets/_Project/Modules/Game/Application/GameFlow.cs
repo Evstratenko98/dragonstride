@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine.SceneManagement;
 using VContainer;
 using VContainer.Unity;
 
@@ -140,9 +141,10 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
 
     private void OnStateGame(GameStateChanged msg)
     {
-        if(msg.State == GameState.Finished)
+        if (msg.State == GameState.Finished && GameState != GameState.Finished)
         {
             FinishGame();
+            SceneManager.LoadScene(GameSceneNames.FinishScene);
         }
     }
 

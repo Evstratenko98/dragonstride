@@ -47,16 +47,41 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
 
     public IReadOnlyList<CharacterInstance> SpawnCharacters(Cell startCell)
     {   
+        var readySlots = GameSessionState.GetReadySlots();
+        if (readySlots.Count == 0)
+        {
+            SpawnFallbackCharacters(startCell);
+        }
+        else
+        {
+            for (int i = 0; i < readySlots.Count; i++)
+            {
+                LobbyCharacterSlot slot = readySlots[i];
+                CharacterClass characterClass = GameSessionState.CreateCharacterClass(slot.ClassId);
+                string characterName = string.IsNullOrWhiteSpace(slot.Name)
+                    ? $"Герой {i + 1}"
+                    : slot.Name.Trim();
+                _characterRoster.CreateCharacter(startCell, characterName, i, characterClass);
+            }
+        }
+
+        RegisterCharacters();
+        return _characterRoster.AllCharacters;
+    }
+
+    private void SpawnFallbackCharacters(Cell startCell)
+    {
         _characterRoster.CreateCharacter(startCell, "Arnoldo", 0, new SamuraiClass());
         _characterRoster.CreateCharacter(startCell, "Patrick", 1, new RunnerClass());
         _characterRoster.CreateCharacter(startCell, "Jonh", 2, new RunnerClass());
+    }
 
+    private void RegisterCharacters()
+    {
         foreach (var character in _characterRoster.AllCharacters)
         {
             _turnActorRegistry.Register(character);
         }
-
-        return _characterRoster.AllCharacters;
     }
 
     private void OnTurnStateChanged(TurnPhaseChanged msg)
