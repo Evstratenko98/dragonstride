@@ -22,12 +22,14 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
     private ICellLayoutOccupant _currentTurnActor;
     private List<ICellLayoutOccupant> _roundActors = new();
     private int _roundActorIndex;
+    private int _roundNumber;
 
     public GameState GameState { get; private set; } = GameState.Init;
     public GameTurnState GameTurnState { get; private set; } = GameTurnState.Init;
 
     public IReadOnlyList<Entity> TurnEntities => _turnEntities;
     public ICellLayoutOccupant CurrentTurnActor => _currentTurnActor;
+    public int RoundNumber => _roundNumber;
 
     public GameFlow(
         IEventBus eventBus,
@@ -78,6 +80,7 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         _turnEntities = Array.Empty<Entity>();
         _roundActors.Clear();
         _roundActorIndex = 0;
+        _roundNumber = 0;
 
         StartGame();
     }
@@ -94,6 +97,13 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         GameTurnState = GameTurnState.BeginTurn;
         _currentTurnActor = null;
         BuildRoundOrder();
+
+        if (_roundActors.Count > 0)
+        {
+            _roundNumber++;
+            _eventBus.Publish(new RoundChanged(_roundNumber));
+        }
+
         StartTurnFromRoundOrder();
     }
 
@@ -157,6 +167,7 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
         _currentTurnActor = null;
         _roundActors.Clear();
         _roundActorIndex = 0;
+        _roundNumber = 0;
     }
 
     private void SetGameState(GameState newState)
@@ -212,4 +223,14 @@ public class GameFlow : IPostInitializable, IDisposable, IStartable
     {
         return actor?.Entity?.CurrentCell != null;
     }
+}
+
+public readonly struct RoundChanged
+{
+    public RoundChanged(int roundNumber)
+    {
+        RoundNumber = roundNumber;
+    }
+
+    public int RoundNumber { get; }
 }

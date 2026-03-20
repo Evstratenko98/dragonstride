@@ -55,6 +55,11 @@ public class CameraFollowDriver : ITickable, IPostInitializable, IDisposable
 
     public void Tick()
     {
+        if (GameMenuPauseState.IsMenuOpen)
+        {
+            return;
+        }
+
         HandleZoomInput();
 
         if (_cameraFocusState.FollowEnabled)

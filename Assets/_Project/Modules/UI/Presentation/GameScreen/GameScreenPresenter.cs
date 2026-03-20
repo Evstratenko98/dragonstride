@@ -6,6 +6,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
     private const string FallbackValue = "—";
     private readonly GameScreenView _view;
     private readonly IEventBus _eventBus;
+    private IDisposable _roundChangedSubscription;
     private IDisposable _turnStateSubscription;
     private IDisposable _diceRolledSubscription;
     private IDisposable _characterMovedSubscription;
@@ -14,6 +15,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     private ICellLayoutOccupant _currentActor;
     private TurnState _currentTurnState = TurnState.None;
+    private int _currentRound;
     private int _stepsTotal;
     private int _stepsRemaining;
 
@@ -27,6 +29,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     public void PostInitialize()
     {
+        _roundChangedSubscription = _eventBus.Subscribe<RoundChanged>(OnRoundChanged);
         _turnStateSubscription = _eventBus.Subscribe<TurnPhaseChanged>(OnTurnStateChanged);
         _diceRolledSubscription = _eventBus.Subscribe<DiceRolled>(OnDiceRolled);
         _characterMovedSubscription = _eventBus.Subscribe<CharacterMoved>(OnCharacterMoved);
@@ -71,6 +74,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
             OnHiddenCellsToggleChanged(_view.HiddenCellsToggle.isOn);
         }
         
+        UpdateRoundText();
         UpdatePlayerText();
         UpdateTurnStateText();
         UpdateStepsText();
@@ -81,6 +85,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     public void Dispose()
     {
+        _roundChangedSubscription?.Dispose();
         _turnStateSubscription?.Dispose();
         _diceRolledSubscription?.Dispose();
         _characterMovedSubscription?.Dispose();
@@ -121,6 +126,12 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         {
             _view.HiddenCellsToggle.onValueChanged.RemoveListener(OnHiddenCellsToggleChanged);
         }
+    }
+
+    private void OnRoundChanged(RoundChanged msg)
+    {
+        _currentRound = msg.RoundNumber;
+        UpdateRoundText();
     }
 
     private void OnTurnStateChanged(TurnPhaseChanged msg)
@@ -173,6 +184,11 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         UpdateStepsText();
     }
 
+    private void UpdateRoundText()
+    {
+        _view.SetRound(_currentRound);
+    }
+
     private void UpdatePlayerText()
     {
         var playerName = _currentActor?.Entity?.Name ?? FallbackValue;
@@ -181,9 +197,7 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
 
     private void UpdateTurnStateText()
     {
-        var stateLabel = _currentTurnState == TurnState.None
-            ? FallbackValue
-            : _currentTurnState.ToString();
+        var stateLabel = GetTurnStateLabel(_currentTurnState);
         _view.SetTurnState(stateLabel);
     }
 
@@ -270,5 +284,20 @@ public class GameScreenPresenter : IPostInitializable, IDisposable
         }
 
         _view.CharacaterButton.interactable = isInteractable;
+    }
+
+    private static string GetTurnStateLabel(TurnState state)
+    {
+        return state switch
+        {
+            TurnState.RollDice => "Бросок кубика",
+            TurnState.Movement => "Перемещение",
+            TurnState.ActionSelection => "Выбор действия",
+            TurnState.Attack => "Атака",
+            TurnState.OpenCell => "Открытие клетки",
+            TurnState.Trade => "Обмен",
+            TurnState.End => "Завершение хода",
+            _ => FallbackValue
+        };
     }
 }

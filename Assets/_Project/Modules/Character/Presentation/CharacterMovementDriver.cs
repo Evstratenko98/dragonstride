@@ -107,6 +107,11 @@ public class CharacterMovementDriver : IPostInitializable, ITickable, IDisposabl
 
     public async void Tick()
     {
+        if (GameMenuPauseState.IsMenuOpen)
+        {
+            return;
+        }
+
         if (_currentCharacter == null)
             return;
 

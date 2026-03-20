@@ -43,6 +43,13 @@ public class CharacterInputReader : IDisposable
 
     private void OnMove(InputAction.CallbackContext ctx)
     {
+        if (GameMenuPauseState.IsMenuOpen)
+        {
+            _move = Vector2.zero;
+            _dir = Vector2Int.zero;
+            return;
+        }
+
         _move = ctx.ReadValue<Vector2>();
 
         if      (_move.y >  0.5f) _dir = Vector2Int.up;
@@ -60,6 +67,11 @@ public class CharacterInputReader : IDisposable
 
     private void OnEndTurn(InputAction.CallbackContext ctx)
     {
+        if (GameMenuPauseState.IsMenuOpen)
+        {
+            return;
+        }
+
         if (ctx.performed)
         {
             _eventBus.Publish(new EndTurnRequested());
@@ -68,6 +80,11 @@ public class CharacterInputReader : IDisposable
 
     private void OnAttack(InputAction.CallbackContext ctx)
     {
+        if (GameMenuPauseState.IsMenuOpen)
+        {
+            return;
+        }
+
         if (ctx.performed)
         {
             _eventBus.Publish(new AttackRequested());
@@ -76,6 +93,11 @@ public class CharacterInputReader : IDisposable
 
     private void OnOpen(InputAction.CallbackContext ctx)
     {
+        if (GameMenuPauseState.IsMenuOpen)
+        {
+            return;
+        }
+
         if (ctx.performed)
         {
             _eventBus.Publish(new OpenCellRequested());

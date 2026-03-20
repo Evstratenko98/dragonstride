@@ -55,6 +55,11 @@ public sealed class EnemyTurnDriver : IPostInitializable, ITickable, IDisposable
 
     public void Tick()
     {
+        if (GameMenuPauseState.IsMenuOpen)
+        {
+            return;
+        }
+
         if (_pendingEnemyTurn == null)
         {
             return;
