@@ -27,16 +27,11 @@ public class CharacterFactory
             return null;
         }
 
-        if (prefabIndex < 0 || prefabIndex >= _prefabs.Length)
-        {
-            Debug.LogError($"[CharacterFactory] Character prefab index {prefabIndex} is out of range (0-{_prefabs.Length - 1}).");
-            return null;
-        }
-
-        CharacterView prefab = _prefabs[prefabIndex];
+        int normalizedPrefabIndex = Mathf.Abs(prefabIndex) % _prefabs.Length;
+        CharacterView prefab = _prefabs[normalizedPrefabIndex];
         if (prefab == null)
         {
-            Debug.LogError($"[CharacterFactory] Character prefab at index {prefabIndex} is not assigned.");
+            Debug.LogError($"[CharacterFactory] Character prefab at index {normalizedPrefabIndex} is not assigned.");
             return null;
         }
 
